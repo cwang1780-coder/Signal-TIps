@@ -1,0 +1,1141 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>LuaDev — Roblox Portfolio</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@300;400;600;700&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --bg: #050a0f;
+    --bg2: #080f17;
+    --panel: #0a1520;
+    --border: #0ff3;
+    --cyan: #00f5ff;
+    --green: #39ff14;
+    --orange: #ff6b00;
+    --red: #ff2d55;
+    --text: #c8e6f0;
+    --dim: #4a7a8a;
+    --glow: 0 0 20px #00f5ff55, 0 0 40px #00f5ff22;
+    --glow-g: 0 0 20px #39ff1455, 0 0 40px #39ff1422;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    background:var(--bg);
+    color:var(--text);
+    font-family:'Rajdhani',sans-serif;
+    font-size:16px;
+    overflow-x:hidden;
+  }
+
+/* ─── CANVAS BG ─── */
+#bgCanvas{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;pointer-events:none;opacity:.35;}
+
+/* ─── NOISE OVERLAY ─── */
+body::before{
+content:’’;position:fixed;inset:0;
+background-image:url(“data:image/svg+xml,%3Csvg viewBox=‘0 0 200 200’ xmlns=‘http://www.w3.org/2000/svg’%3E%3Cfilter id=‘n’%3E%3CfeTurbulence type=‘fractalNoise’ baseFrequency=‘0.9’ numOctaves=‘4’/%3E%3C/filter%3E%3Crect width=‘100%25’ height=‘100%25’ filter=‘url(%23n)’ opacity=‘0.04’/%3E%3C/svg%3E”);
+pointer-events:none;z-index:1;opacity:.6;
+}
+
+/* ─── SCAN LINES ─── */
+body::after{
+content:’’;position:fixed;inset:0;
+background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,245,255,.015) 2px,rgba(0,245,255,.015) 4px);
+pointer-events:none;z-index:1;
+}
+
+/* ─── NAV ─── */
+nav{
+position:fixed;top:0;left:0;right:0;z-index:100;
+display:flex;align-items:center;justify-content:space-between;
+padding:14px 40px;
+background:linear-gradient(180deg,rgba(5,10,15,.95) 0%,rgba(5,10,15,.6) 100%);
+border-bottom:1px solid var(–border);
+backdrop-filter:blur(12px);
+}
+.nav-logo{
+font-family:‘Orbitron’,sans-serif;font-size:1.1rem;font-weight:900;
+color:var(–cyan);text-shadow:var(–glow);letter-spacing:.15em;
+}
+.nav-logo span{color:var(–green);}
+nav ul{display:flex;gap:30px;list-style:none;}
+nav ul a{
+color:var(–dim);font-size:.85rem;letter-spacing:.12em;text-transform:uppercase;
+text-decoration:none;font-family:‘Share Tech Mono’,monospace;
+transition:color .2s,text-shadow .2s;
+}
+nav ul a:hover{color:var(–cyan);text-shadow:0 0 10px var(–cyan);}
+
+/* ─── SECTIONS ─── */
+section{position:relative;z-index:2;}
+
+/* ─── HERO ─── */
+#hero{
+min-height:100vh;display:flex;flex-direction:column;
+align-items:center;justify-content:center;
+text-align:center;padding:120px 20px 60px;
+}
+.hero-tag{
+font-family:‘Share Tech Mono’,monospace;font-size:.75rem;
+color:var(–green);letter-spacing:.2em;text-transform:uppercase;
+border:1px solid var(–green);padding:4px 14px;border-radius:2px;
+margin-bottom:30px;box-shadow:0 0 12px #39ff1433;
+animation:pulse 2s ease-in-out infinite;
+}
+@keyframes pulse{0%,100%{opacity:.8}50%{opacity:1;box-shadow:0 0 20px #39ff1466;}}
+.hero-title{
+font-family:‘Orbitron’,sans-serif;font-size:clamp(2.5rem,7vw,6rem);
+font-weight:900;line-height:1;letter-spacing:-.02em;
+color:#fff;margin-bottom:10px;
+}
+.hero-title .hl{color:var(–cyan);text-shadow:var(–glow);}
+.hero-sub{
+font-family:‘Share Tech Mono’,monospace;font-size:clamp(.85rem,2vw,1.1rem);
+color:var(–dim);letter-spacing:.08em;margin-bottom:40px;
+}
+.hero-sub span{color:var(–orange);}
+.hero-stats{
+display:flex;gap:40px;justify-content:center;flex-wrap:wrap;margin-bottom:50px;
+}
+.stat{text-align:center;}
+.stat-n{
+font-family:‘Orbitron’,sans-serif;font-size:2rem;font-weight:700;
+color:var(–cyan);text-shadow:var(–glow);
+}
+.stat-l{font-size:.75rem;letter-spacing:.15em;text-transform:uppercase;color:var(–dim);}
+.cta-row{display:flex;gap:16px;justify-content:center;flex-wrap:wrap;}
+.btn{
+display:inline-flex;align-items:center;gap:8px;
+padding:12px 28px;font-family:‘Share Tech Mono’,monospace;
+font-size:.8rem;letter-spacing:.12em;text-transform:uppercase;
+border:1px solid;border-radius:2px;cursor:pointer;text-decoration:none;
+transition:all .25s;
+}
+.btn-cyan{color:var(–cyan);border-color:var(–cyan);background:transparent;}
+.btn-cyan:hover{background:var(–cyan);color:#000;box-shadow:var(–glow);}
+.btn-green{color:var(–green);border-color:var(–green);background:transparent;}
+.btn-green:hover{background:var(–green);color:#000;box-shadow:var(–glow-g);}
+
+/* ─── SECTION HEADER ─── */
+.sec-head{
+text-align:center;padding:80px 20px 50px;
+}
+.sec-label{
+font-family:‘Share Tech Mono’,monospace;font-size:.7rem;
+letter-spacing:.2em;color:var(–green);text-transform:uppercase;
+display:block;margin-bottom:12px;
+}
+.sec-title{
+font-family:‘Orbitron’,sans-serif;font-size:clamp(1.8rem,4vw,3rem);
+font-weight:700;color:#fff;letter-spacing:-.01em;
+}
+.sec-title .hl{color:var(–cyan);}
+.sec-line{
+width:80px;height:2px;margin:16px auto 0;
+background:linear-gradient(90deg,transparent,var(–cyan),transparent);
+}
+
+/* ─── PROJECTS ─── */
+#projects{padding-bottom:80px;}
+.projects-grid{
+display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));
+gap:24px;max-width:1200px;margin:0 auto;padding:0 24px;
+}
+.proj-card{
+background:var(–panel);border:1px solid var(–border);
+border-radius:4px;padding:28px;position:relative;overflow:hidden;
+transition:border-color .3s,transform .3s,box-shadow .3s;
+cursor:default;
+}
+.proj-card::before{
+content:’’;position:absolute;top:0;left:0;right:0;height:2px;
+background:linear-gradient(90deg,var(–cyan),var(–green));
+transform:scaleX(0);transform-origin:left;transition:transform .4s;
+}
+.proj-card:hover{
+border-color:#0ff8;transform:translateY(-4px);
+box-shadow:0 8px 40px #00f5ff18;
+}
+.proj-card:hover::before{transform:scaleX(1);}
+.proj-badge{
+display:inline-block;font-family:‘Share Tech Mono’,monospace;font-size:.65rem;
+letter-spacing:.15em;text-transform:uppercase;padding:3px 10px;
+border-radius:2px;margin-bottom:16px;
+}
+.badge-lua{background:#ff6b0022;color:var(–orange);border:1px solid #ff6b0055;}
+.badge-roblox{background:#00f5ff11;color:var(–cyan);border:1px solid #00f5ff44;}
+.badge-system{background:#39ff1411;color:var(–green);border:1px solid #39ff1444;}
+.proj-title{
+font-family:‘Orbitron’,sans-serif;font-size:1.05rem;font-weight:700;
+color:#fff;margin-bottom:10px;
+}
+.proj-desc{
+font-size:.9rem;line-height:1.6;color:var(–dim);margin-bottom:18px;
+}
+.proj-tags{display:flex;flex-wrap:wrap;gap:8px;}
+.tag{
+font-family:‘Share Tech Mono’,monospace;font-size:.65rem;
+padding:3px 8px;background:#ffffff08;border:1px solid #ffffff15;
+color:#7aa8b8;letter-spacing:.08em;
+}
+.proj-code{
+margin-top:18px;background:#020810;border:1px solid #0ff2;
+border-radius:3px;padding:14px;overflow-x:auto;
+}
+.proj-code pre{
+font-family:‘Share Tech Mono’,monospace;font-size:.72rem;
+line-height:1.7;color:#7dd3fc;white-space:pre;
+}
+.kw{color:#c084fc;}
+.fn{color:#67e8f9;}
+.str{color:#86efac;}
+.cm{color:#4a5568;}
+.nb{color:#fb923c;}
+
+/* ─── DIGITAL ART ─── */
+#art{padding-bottom:80px;}
+.art-grid{
+display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));
+gap:20px;max-width:1200px;margin:0 auto;padding:0 24px;
+}
+.art-piece{
+aspect-ratio:1;border:1px solid var(–border);border-radius:4px;overflow:hidden;
+position:relative;cursor:pointer;
+transition:border-color .3s,transform .3s,box-shadow .3s;
+}
+.art-piece:hover{border-color:var(–cyan);transform:scale(1.02);box-shadow:0 0 30px #00f5ff22;}
+.art-piece canvas{width:100%;height:100%;display:block;}
+.art-label{
+position:absolute;bottom:0;left:0;right:0;
+background:linear-gradient(0deg,rgba(5,10,15,.95),transparent);
+padding:20px 16px 12px;
+font-family:‘Share Tech Mono’,monospace;font-size:.7rem;
+letter-spacing:.1em;color:var(–cyan);
+}
+
+/* ─── API TOOL ─── */
+#api{padding-bottom:100px;}
+.api-wrap{max-width:1100px;margin:0 auto;padding:0 24px;}
+.api-tabs{
+display:flex;gap:0;border-bottom:1px solid var(–border);
+margin-bottom:30px;overflow-x:auto;
+}
+.api-tab{
+font-family:‘Share Tech Mono’,monospace;font-size:.75rem;
+letter-spacing:.12em;text-transform:uppercase;
+padding:12px 22px;border:none;background:transparent;
+color:var(–dim);cursor:pointer;border-bottom:2px solid transparent;
+white-space:nowrap;transition:color .2s,border-color .2s;
+}
+.api-tab.active{color:var(–cyan);border-bottom-color:var(–cyan);}
+.api-tab:hover:not(.active){color:var(–text);}
+
+.api-panel{display:none;}
+.api-panel.active{display:grid;grid-template-columns:1fr 1fr;gap:24px;}
+@media(max-width:700px){.api-panel.active{grid-template-columns:1fr;}}
+
+.api-card{
+background:var(–panel);border:1px solid var(–border);
+border-radius:4px;padding:24px;
+}
+.api-card h3{
+font-family:‘Orbitron’,sans-serif;font-size:.9rem;font-weight:700;
+color:var(–cyan);margin-bottom:6px;text-transform:uppercase;letter-spacing:.08em;
+}
+.api-card p{font-size:.85rem;color:var(–dim);line-height:1.5;margin-bottom:18px;}
+
+label{
+display:block;font-family:‘Share Tech Mono’,monospace;
+font-size:.7rem;letter-spacing:.12em;text-transform:uppercase;
+color:var(–dim);margin-bottom:6px;
+}
+input,select,textarea{
+width:100%;background:#020810;border:1px solid #0ff3;
+color:var(–text);font-family:‘Share Tech Mono’,monospace;
+font-size:.8rem;padding:10px 14px;border-radius:2px;
+outline:none;margin-bottom:14px;
+transition:border-color .2s,box-shadow .2s;
+}
+input:focus,select:focus,textarea:focus{
+border-color:var(–cyan);box-shadow:0 0 0 2px #00f5ff18;
+}
+select option{background:#0a1520;}
+textarea{resize:vertical;min-height:80px;}
+
+.api-btn{
+width:100%;padding:12px;background:transparent;
+border:1px solid var(–cyan);color:var(–cyan);
+font-family:‘Share Tech Mono’,monospace;font-size:.8rem;
+letter-spacing:.15em;text-transform:uppercase;cursor:pointer;
+border-radius:2px;transition:all .25s;display:flex;
+align-items:center;justify-content:center;gap:8px;
+}
+.api-btn:hover{background:var(–cyan);color:#000;box-shadow:var(–glow);}
+.api-btn:disabled{opacity:.4;cursor:not-allowed;}
+
+.api-result{
+margin-top:18px;background:#020810;border:1px solid #0ff2;
+border-radius:3px;padding:16px;min-height:60px;
+font-family:‘Share Tech Mono’,monospace;font-size:.78rem;
+line-height:1.8;color:var(–green);white-space:pre-wrap;word-break:break-word;
+display:none;
+}
+.api-result.visible{display:block;}
+.api-result.error{color:var(–red);}
+.api-result.loading{color:var(–dim);}
+
+.spin{display:inline-block;animation:spin .6s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+
+/* ─── SKILLS ─── */
+#skills{padding-bottom:80px;}
+.skills-wrap{max-width:900px;margin:0 auto;padding:0 24px;}
+.skill-row{
+display:flex;align-items:center;gap:16px;margin-bottom:20px;
+padding:16px 20px;background:var(–panel);border:1px solid var(–border);
+border-radius:4px;
+}
+.skill-name{
+font-family:‘Share Tech Mono’,monospace;font-size:.8rem;
+letter-spacing:.08em;min-width:120px;color:var(–text);
+}
+.skill-bar{flex:1;height:4px;background:#ffffff10;border-radius:2px;overflow:hidden;}
+.skill-fill{
+height:100%;border-radius:2px;
+background:linear-gradient(90deg,var(–cyan),var(–green));
+transform:scaleX(0);transform-origin:left;
+transition:transform 1.2s cubic-bezier(.4,0,.2,1);
+}
+.skill-row.visible .skill-fill{transform:scaleX(1);}
+.skill-pct{
+font-family:‘Orbitron’,monospace;font-size:.75rem;
+color:var(–cyan);min-width:36px;text-align:right;
+}
+
+/* ─── FOOTER ─── */
+footer{
+position:relative;z-index:2;border-top:1px solid var(–border);
+padding:40px 24px;text-align:center;
+font-family:‘Share Tech Mono’,monospace;font-size:.7rem;
+color:var(–dim);letter-spacing:.1em;
+}
+footer span{color:var(–cyan);}
+
+/* ─── UTILITY ─── */
+.fade-in{opacity:0;transform:translateY(20px);transition:opacity .7s,transform .7s;}
+.fade-in.visible{opacity:1;transform:none;}
+
+/* ─── SCROLLBAR ─── */
+::-webkit-scrollbar{width:6px;height:6px;}
+::-webkit-scrollbar-track{background:var(–bg);}
+::-webkit-scrollbar-thumb{background:#0ff4;border-radius:3px;}
+
+@media(max-width:600px){
+nav ul{gap:16px;}
+nav{padding:12px 20px;}
+}
+</style>
+
+</head>
+<body>
+
+<canvas id="bgCanvas"></canvas>
+
+<!-- NAV -->
+
+<nav>
+  <div class="nav-logo">LUA<span>DEV</span></div>
+  <ul>
+    <li><a href="#projects">Projects</a></li>
+    <li><a href="#art">Art</a></li>
+    <li><a href="#api">API Tool</a></li>
+    <li><a href="#skills">Skills</a></li>
+  </ul>
+</nav>
+
+<!-- HERO -->
+
+<section id="hero">
+  <div class="hero-tag">⬡ Roblox Developer</div>
+  <h1 class="hero-title"><span class="hl">LUA</span>DEV<br>PORTFOLIO</h1>
+  <p class="hero-sub">Scripting Roblox worlds · <span>Lua &amp; Luau</span> · Systems Architect</p>
+  <div class="hero-stats">
+    <div class="stat"><div class="stat-n" data-count="12">0</div><div class="stat-l">Projects</div></div>
+    <div class="stat"><div class="stat-n" data-count="4">0</div><div class="stat-l">Years Coding</div></div>
+    <div class="stat"><div class="stat-n" data-count="8">0</div><div class="stat-l">Lua Modules</div></div>
+    <div class="stat"><div class="stat-n" data-count="3">0</div><div class="stat-l">RP Servers</div></div>
+  </div>
+  <div class="cta-row">
+    <a href="#projects" class="btn btn-cyan">▶ View Projects</a>
+    <a href="#api" class="btn btn-green">⚙ RP API Tool</a>
+  </div>
+</section>
+
+<!-- PROJECTS -->
+
+<section id="projects">
+  <div class="sec-head fade-in">
+    <span class="sec-label">// 01 — WORK</span>
+    <h2 class="sec-title">Lua <span class="hl">Projects</span></h2>
+    <div class="sec-line"></div>
+  </div>
+  <div class="projects-grid">
+
+```
+<div class="proj-card fade-in">
+  <span class="proj-badge badge-roblox">Roblox RP</span>
+  <div class="proj-title">Advanced Whitelist System</div>
+  <p class="proj-desc">A DataStore-backed whitelist &amp; rank management system. Supports group ranks, custom roles, timed access, and admin commands via chat.</p>
+  <div class="proj-code"><pre><span class="cm">-- WhitelistManager.lua</span>
+```
+
+<span class="kw">local</span> DS = game:GetService(<span class="str">“DataStoreService”</span>)
+<span class="kw">local</span> wl = DS:GetDataStore(<span class="str">“Whitelist_v2”</span>)
+
+<span class="kw">local function</span> <span class="fn">isAllowed</span>(userId)
+<span class="kw">local</span> ok, data = pcall(wl.GetAsync, wl, userId)
+<span class="kw">return</span> ok <span class="kw">and</span> data ~= <span class="kw">nil</span>
+<span class="kw">end</span></pre></div>
+<div class="proj-tags"><span class="tag">DataStore</span><span class="tag">Admin</span><span class="tag">Whitelist</span><span class="tag">Luau</span></div>
+</div>
+
+```
+<div class="proj-card fade-in">
+  <span class="proj-badge badge-lua">Lua Module</span>
+  <div class="proj-title">RP Event Engine</div>
+  <p class="proj-desc">Modular event system powering roleplay scenarios — heists, pursuits, natural disasters. Each event has phases, objectives, and reward logic.</p>
+  <div class="proj-code"><pre><span class="cm">-- EventEngine.lua</span>
+```
+
+<span class="kw">local</span> EventEngine = {}
+EventEngine.__index = EventEngine
+
+<span class="kw">function</span> EventEngine.<span class="fn">new</span>(cfg)
+<span class="kw">return</span> setmetatable({
+name  = cfg.name,
+phase = <span class="nb">1</span>,
+alive = <span class="kw">true</span>
+}, EventEngine)
+<span class="kw">end</span></pre></div>
+<div class="proj-tags"><span class="tag">OOP</span><span class="tag">Events</span><span class="tag">Modulescript</span></div>
+</div>
+
+```
+<div class="proj-card fade-in">
+  <span class="proj-badge badge-system">System</span>
+  <div class="proj-title">Custom Chat &amp; Radio</div>
+  <p class="proj-desc">Proximity voice chat simulation with in-game radio channels, encrypted frequencies, and a dispatch board UI built with Roact.</p>
+  <div class="proj-code"><pre><span class="cm">-- Radio.lua (LocalScript)</span>
+```
+
+<span class="kw">local</span> Players = game:GetService(<span class="str">“Players”</span>)
+<span class="kw">local</span> freq = <span class="nb">128.5</span>
+
+RemoteEvent.OnClientEvent:<span class="fn">Connect</span>(<span class="kw">function</span>(msg, f)
+<span class="kw">if</span> f == freq <span class="kw">then</span>
+<span class="fn">showMessage</span>(msg)
+<span class="kw">end</span>
+<span class="kw">end</span>)</pre></div>
+<div class="proj-tags"><span class="tag">Roact</span><span class="tag">LocalScript</span><span class="tag">UI</span><span class="tag">RemoteEvents</span></div>
+</div>
+
+```
+<div class="proj-card fade-in">
+  <span class="proj-badge badge-roblox">Roblox RP</span>
+  <div class="proj-title">Crime &amp; Wanted System</div>
+  <p class="proj-desc">Persistent wanted levels, crime logging, police alert broadcasts, and automated court sentencing via DataStore with a clean HUD overlay.</p>
+  <div class="proj-code"><pre><span class="cm">-- CrimeService.lua</span>
+```
+
+<span class="kw">function</span> CrimeService:<span class="fn">addCrime</span>(plr, crimeId)
+<span class="kw">local</span> lvl = self.data[plr.UserId]
+lvl = math.<span class="fn">clamp</span>(lvl + crimes[crimeId].pts,
+<span class="nb">0</span>, <span class="nb">5</span>)
+self.data[plr.UserId] = lvl
+self:<span class="fn">broadcast</span>(plr, lvl)
+<span class="kw">end</span></pre></div>
+<div class="proj-tags"><span class="tag">Wanted</span><span class="tag">Police</span><span class="tag">HUD</span><span class="tag">DataStore</span></div>
+</div>
+
+```
+<div class="proj-card fade-in">
+  <span class="proj-badge badge-lua">Lua Module</span>
+  <div class="proj-title">Vehicle Physics Kit</div>
+  <p class="proj-desc">Custom vehicle handler replacing default Roblox seat physics with tunable suspension, torque curves, drift, and damage modelling.</p>
+  <div class="proj-code"><pre><span class="cm">-- VehicleKit.lua</span>
+```
+
+<span class="kw">local</span> cfg = {
+maxTorque    = <span class="nb">12000</span>,
+turnSpeed    = <span class="nb">2.4</span>,
+driftFactor  = <span class="nb">0.72</span>,
+suspension   = <span class="nb">0.35</span>,
+}
+<span class="kw">local function</span> <span class="fn">applyForce</span>(v, throttle)
+v.Body.VectorForce.Force =
+v.look * throttle * cfg.maxTorque
+<span class="kw">end</span></pre></div>
+<div class="proj-tags"><span class="tag">Physics</span><span class="tag">Vehicles</span><span class="tag">Constraints</span></div>
+</div>
+
+```
+<div class="proj-card fade-in">
+  <span class="proj-badge badge-system">System</span>
+  <div class="proj-title">Admin Panel GUI</div>
+  <p class="proj-desc">Full in-game admin dashboard: kick/ban, teleport, set wanted level, spawn props, toggle weather &amp; time — all with permission tiers.</p>
+  <div class="proj-code"><pre><span class="cm">-- AdminPanel.lua</span>
+```
+
+<span class="kw">local</span> cmds = {
+kick  = <span class="kw">function</span>(t) t:<span class="fn">Kick</span>(<span class="str">“Admin kick”</span>) <span class="kw">end</span>,
+ban   = <span class="kw">function</span>(t) BanService:<span class="fn">ban</span>(t) <span class="kw">end</span>,
+tp    = <span class="kw">function</span>(t,dest)
+t.Character:<span class="fn">PivotTo</span>(dest)
+<span class="kw">end</span>,
+}</pre></div>
+<div class="proj-tags"><span class="tag">Admin</span><span class="tag">GUI</span><span class="tag">Moderation</span></div>
+</div>
+
+  </div>
+</section>
+
+<!-- DIGITAL ART -->
+
+<section id="art">
+  <div class="sec-head fade-in">
+    <span class="sec-label">// 02 — CREATIVE</span>
+    <h2 class="sec-title">Digital <span class="hl">Art</span></h2>
+    <div class="sec-line"></div>
+  </div>
+  <div class="art-grid">
+    <div class="art-piece fade-in"><canvas id="art1"></canvas><div class="art-label">NEON GRID — Cityscape</div></div>
+    <div class="art-piece fade-in"><canvas id="art2"></canvas><div class="art-label">VOID ORBIT — Planetary</div></div>
+    <div class="art-piece fade-in"><canvas id="art3"></canvas><div class="art-label">DATA STREAM — Matrix</div></div>
+    <div class="art-piece fade-in"><canvas id="art4"></canvas><div class="art-label">FRACTAL CORE — Cyber</div></div>
+  </div>
+</section>
+
+<!-- API TOOL -->
+
+<section id="api">
+  <div class="sec-head fade-in">
+    <span class="sec-label">// 03 — TOOL</span>
+    <h2 class="sec-title">RP Server <span class="hl">API Tool</span></h2>
+    <div class="sec-line"></div>
+  </div>
+  <div class="api-wrap fade-in">
+    <p style="text-align:center;color:var(--dim);font-size:.85rem;letter-spacing:.05em;margin-bottom:28px;">
+      AI-powered utilities for your Roblox roleplay server — generate scripts, names, events &amp; more.
+    </p>
+    <div class="api-tabs">
+      <button class="api-tab active" data-tab="scripts">📜 Script Gen</button>
+      <button class="api-tab" data-tab="names">🏷 Name Gen</button>
+      <button class="api-tab" data-tab="events">🎯 Event Builder</button>
+      <button class="api-tab" data-tab="rules">📋 Rules Writer</button>
+      <button class="api-tab" data-tab="crimes">🚔 Crime Logs</button>
+      <button class="api-tab" data-tab="lore">📖 Lore Writer</button>
+    </div>
+
+```
+<!-- SCRIPTS -->
+<div class="api-panel active" id="tab-scripts">
+  <div class="api-card">
+    <h3>Lua Script Generator</h3>
+    <p>Describe what you need and get working Roblox Lua/Luau code.</p>
+    <label>Script Type</label>
+    <select id="scriptType">
+      <option>LocalScript</option>
+      <option>ModuleScript</option>
+      <option>ServerScript</option>
+    </select>
+    <label>Describe what the script should do</label>
+    <textarea id="scriptDesc" rows="4" placeholder="e.g. A system that gives a player cash when they arrest another player..."></textarea>
+    <button class="api-btn" onclick="runTool('scripts')">⚙ Generate Script</button>
+    <div class="api-result" id="res-scripts"></div>
+  </div>
+  <div class="api-card">
+    <h3>Quick Templates</h3>
+    <p>One-click starter templates for common RP server needs.</p>
+    <label>Template</label>
+    <select id="tplSelect">
+      <option>Whitelist Gate</option>
+      <option>Radio Channel System</option>
+      <option>Wanted Level HUD</option>
+      <option>Admin Kick/Ban</option>
+      <option>Cash &amp; Economy</option>
+      <option>Vehicle Spawn Pad</option>
+      <option>Proximity Chat</option>
+      <option>Job Assignment System</option>
+    </select>
+    <button class="api-btn" onclick="runTool('template')">📄 Get Template</button>
+    <div class="api-result" id="res-template"></div>
+  </div>
+</div>
+
+<!-- NAMES -->
+<div class="api-panel" id="tab-names">
+  <div class="api-card">
+    <h3>Character Name Generator</h3>
+    <p>Generate realistic RP character names with backstories.</p>
+    <label>Role / Faction</label>
+    <select id="nameRole">
+      <option>Police Officer</option>
+      <option>Criminal</option>
+      <option>Civilian</option>
+      <option>Medic / EMS</option>
+      <option>Gang Member</option>
+      <option>Politician</option>
+      <option>Lawyer</option>
+      <option>Drug Dealer</option>
+    </select>
+    <label>Nationality / Vibe</label>
+    <input id="nameNat" placeholder="e.g. Italian, Eastern European, Southern US..."/>
+    <label>How many names?</label>
+    <select id="nameCount">
+      <option>3</option><option>5</option><option>10</option>
+    </select>
+    <button class="api-btn" onclick="runTool('names')">🏷 Generate Names</button>
+    <div class="api-result" id="res-names"></div>
+  </div>
+  <div class="api-card">
+    <h3>Gang / Faction Name Gen</h3>
+    <p>Create authentic faction names, tags, and mottos for your server.</p>
+    <label>Faction Type</label>
+    <select id="factionType">
+      <option>Street Gang</option>
+      <option>Mafia / Cartel</option>
+      <option>Police Department</option>
+      <option>EMS / Fire Service</option>
+      <option>Government Agency</option>
+      <option>Biker Club</option>
+    </select>
+    <label>Theme or Vibe</label>
+    <input id="factionTheme" placeholder="e.g. dark, tech, old-school..."/>
+    <button class="api-btn" onclick="runTool('factions')">⚡ Generate Factions</button>
+    <div class="api-result" id="res-factions"></div>
+  </div>
+</div>
+
+<!-- EVENTS -->
+<div class="api-panel" id="tab-events">
+  <div class="api-card">
+    <h3>RP Event Builder</h3>
+    <p>Generate full roleplay event scenarios with phases and objectives.</p>
+    <label>Event Type</label>
+    <select id="evtType">
+      <option>Bank Heist</option>
+      <option>Police Pursuit</option>
+      <option>Gang War</option>
+      <option>Natural Disaster</option>
+      <option>Hostage Situation</option>
+      <option>Drug Bust</option>
+      <option>Assassination</option>
+      <option>Prison Break</option>
+      <option>Government Raid</option>
+    </select>
+    <label>Scale</label>
+    <select id="evtScale">
+      <option>Small (2-5 players)</option>
+      <option>Medium (5-15 players)</option>
+      <option>Large (server-wide)</option>
+    </select>
+    <button class="api-btn" onclick="runTool('events')">🎯 Build Event</button>
+    <div class="api-result" id="res-events"></div>
+  </div>
+  <div class="api-card">
+    <h3>Scenario Randomizer</h3>
+    <p>Spin up a random RP scenario to keep your server fresh.</p>
+    <label>Mood</label>
+    <select id="moodSel">
+      <option>Intense / Action</option>
+      <option>Dramatic / Tense</option>
+      <option>Comedic / Casual</option>
+      <option>Mystery / Thriller</option>
+    </select>
+    <button class="api-btn" onclick="runTool('scenario')">🎲 Random Scenario</button>
+    <div class="api-result" id="res-scenario"></div>
+  </div>
+</div>
+
+<!-- RULES -->
+<div class="api-panel" id="tab-rules">
+  <div class="api-card">
+    <h3>Server Rules Writer</h3>
+    <p>Generate professional rules for your RP server or Discord.</p>
+    <label>Server Type</label>
+    <select id="rulesType">
+      <option>City RP (GTA-style)</option>
+      <option>Military RP</option>
+      <option>Medieval RP</option>
+      <option>Sci-Fi RP</option>
+      <option>School RP</option>
+      <option>Hospital RP</option>
+    </select>
+    <label>Strictness Level</label>
+    <select id="rulesStrict">
+      <option>Relaxed / Chill</option>
+      <option>Balanced</option>
+      <option>Strict / Serious</option>
+    </select>
+    <button class="api-btn" onclick="runTool('rules')">📋 Generate Rules</button>
+    <div class="api-result" id="res-rules"></div>
+  </div>
+  <div class="api-card">
+    <h3>Staff Handbook Writer</h3>
+    <p>Auto-generate an admin &amp; moderation staff guide for your team.</p>
+    <label>Staff Roles to Include</label>
+    <input id="staffRoles" placeholder="e.g. Admin, Mod, Helper, Developer..."/>
+    <label>Server focus</label>
+    <input id="staffFocus" placeholder="e.g. City RP, 100+ players, strict realism..."/>
+    <button class="api-btn" onclick="runTool('handbook')">📘 Generate Handbook</button>
+    <div class="api-result" id="res-handbook"></div>
+  </div>
+</div>
+
+<!-- CRIMES -->
+<div class="api-panel" id="tab-crimes">
+  <div class="api-card">
+    <h3>Crime Log Formatter</h3>
+    <p>Paste raw notes and get a formatted RP police report.</p>
+    <label>Raw crime notes</label>
+    <textarea id="crimeNotes" rows="5" placeholder="e.g. player Joe robbed bank at 8pm, had gun, fled in red car, 2 officers responded..."></textarea>
+    <button class="api-btn" onclick="runTool('crimes')">🚔 Format Report</button>
+    <div class="api-result" id="res-crimes"></div>
+  </div>
+  <div class="api-card">
+    <h3>Penal Code Generator</h3>
+    <p>Generate a penal code list with charges, codes &amp; sentence times.</p>
+    <label>Jurisdiction Style</label>
+    <select id="penalStyle">
+      <option>US City Police</option>
+      <option>Military</option>
+      <option>Fantasy Kingdom</option>
+      <option>Sci-Fi Colony</option>
+    </select>
+    <label>Number of charges</label>
+    <select id="penalCount">
+      <option>10</option><option>20</option><option>30</option>
+    </select>
+    <button class="api-btn" onclick="runTool('penal')">⚖ Generate Penal Code</button>
+    <div class="api-result" id="res-penal"></div>
+  </div>
+</div>
+
+<!-- LORE -->
+<div class="api-panel" id="tab-lore">
+  <div class="api-card">
+    <h3>Server Lore Builder</h3>
+    <p>Create a rich backstory and world lore for your RP server.</p>
+    <label>Setting</label>
+    <select id="loreSet">
+      <option>Modern City</option>
+      <option>Post-Apocalyptic</option>
+      <option>Medieval Kingdom</option>
+      <option>Sci-Fi Space Colony</option>
+      <option>Cyberpunk Metropolis</option>
+      <option>Wild West</option>
+    </select>
+    <label>Tone</label>
+    <select id="loreTone">
+      <option>Dark &amp; Gritty</option>
+      <option>Hopeful &amp; Bright</option>
+      <option>Neutral / Realistic</option>
+      <option>Mysterious</option>
+    </select>
+    <button class="api-btn" onclick="runTool('lore')">📖 Build Lore</button>
+    <div class="api-result" id="res-lore"></div>
+  </div>
+  <div class="api-card">
+    <h3>NPC Dialogue Writer</h3>
+    <p>Write immersive NPC dialogue lines for shopkeepers, guards, and more.</p>
+    <label>NPC Type</label>
+    <select id="npcType">
+      <option>Shopkeeper</option>
+      <option>Police Guard</option>
+      <option>Mysterious Stranger</option>
+      <option>Crime Boss</option>
+      <option>Civilian Bystander</option>
+    </select>
+    <label>Context / Situation</label>
+    <input id="npcCtx" placeholder="e.g. Player is suspicious, town is under curfew..."/>
+    <button class="api-btn" onclick="runTool('npc')">💬 Write Dialogue</button>
+    <div class="api-result" id="res-npc"></div>
+  </div>
+</div>
+```
+
+  </div>
+</section>
+
+<!-- SKILLS -->
+
+<section id="skills">
+  <div class="sec-head fade-in">
+    <span class="sec-label">// 04 — EXPERTISE</span>
+    <h2 class="sec-title">Tech <span class="hl">Skills</span></h2>
+    <div class="sec-line"></div>
+  </div>
+  <div class="skills-wrap">
+    <div class="skill-row fade-in" data-pct="0.92"><span class="skill-name">Lua / Luau</span><div class="skill-bar"><div class="skill-fill" style="--w:0.92"></div></div><span class="skill-pct">92%</span></div>
+    <div class="skill-row fade-in" data-pct="0.85"><span class="skill-name">Roblox Studio</span><div class="skill-bar"><div class="skill-fill" style="--w:0.85"></div></div><span class="skill-pct">85%</span></div>
+    <div class="skill-row fade-in" data-pct="0.78"><span class="skill-name">DataStore API</span><div class="skill-bar"><div class="skill-fill" style="--w:0.78"></div></div><span class="skill-pct">78%</span></div>
+    <div class="skill-row fade-in" data-pct="0.80"><span class="skill-name">Roact / UI Design</span><div class="skill-bar"><div class="skill-fill" style="--w:0.80"></div></div><span class="skill-pct">80%</span></div>
+    <div class="skill-row fade-in" data-pct="0.70"><span class="skill-name">JavaScript</span><div class="skill-bar"><div class="skill-fill" style="--w:0.70"></div></div><span class="skill-pct">70%</span></div>
+    <div class="skill-row fade-in" data-pct="0.65"><span class="skill-name">HTML / CSS</span><div class="skill-bar"><div class="skill-fill" style="--w:0.65"></div></div><span class="skill-pct">65%</span></div>
+    <div class="skill-row fade-in" data-pct="0.75"><span class="skill-name">OOP Architecture</span><div class="skill-bar"><div class="skill-fill" style="--w:0.75"></div></div><span class="skill-pct">75%</span></div>
+    <div class="skill-row fade-in" data-pct="0.60"><span class="skill-name">Digital Art</span><div class="skill-bar"><div class="skill-fill" style="--w:0.60"></div></div><span class="skill-pct">60%</span></div>
+  </div>
+</section>
+
+<footer>
+  <p>Built with <span>Lua</span> love · <span>LuaDev Portfolio</span> · All scripts handcrafted</p>
+</footer>
+
+<script>
+/* ════════════════════════════════
+   BACKGROUND PARTICLE CANVAS
+════════════════════════════════ */
+(function(){
+  const cv = document.getElementById('bgCanvas');
+  const ctx = cv.getContext('2d');
+  let W,H,pts=[];
+  function resize(){W=cv.width=window.innerWidth;H=cv.height=window.innerHeight;}
+  window.addEventListener('resize',()=>{resize();init();});
+  function rand(a,b){return a+Math.random()*(b-a);}
+  function init(){
+    pts=[];
+    const N=Math.floor(W*H/10000);
+    for(let i=0;i<N;i++) pts.push({x:rand(0,W),y:rand(0,H),vx:rand(-.3,.3),vy:rand(-.3,.3),r:rand(.5,2)});
+  }
+  function draw(){
+    ctx.clearRect(0,0,W,H);
+    pts.forEach(p=>{
+      p.x+=p.vx; p.y+=p.vy;
+      if(p.x<0)p.x=W; if(p.x>W)p.x=0;
+      if(p.y<0)p.y=H; if(p.y>H)p.y=0;
+      ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
+      ctx.fillStyle='#00f5ff';ctx.fill();
+    });
+    // draw connections
+    for(let i=0;i<pts.length;i++){
+      for(let j=i+1;j<pts.length;j++){
+        const dx=pts[i].x-pts[j].x, dy=pts[i].y-pts[j].y;
+        const d=Math.sqrt(dx*dx+dy*dy);
+        if(d<120){
+          ctx.beginPath();ctx.moveTo(pts[i].x,pts[i].y);ctx.lineTo(pts[j].x,pts[j].y);
+          ctx.strokeStyle=`rgba(0,245,255,${.18*(1-d/120)})`;ctx.lineWidth=.5;ctx.stroke();
+        }
+      }
+    }
+    requestAnimationFrame(draw);
+  }
+  resize();init();draw();
+})();
+
+/* ════════════════════════════════
+   COUNTER ANIMATION
+════════════════════════════════ */
+document.querySelectorAll('[data-count]').forEach(el=>{
+  const target=+el.dataset.count;
+  let cur=0;
+  const step=()=>{cur=Math.min(cur+1,target);el.textContent=cur+(target>5?'+':'');if(cur<target)setTimeout(step,120);};
+  setTimeout(step,600);
+});
+
+/* ════════════════════════════════
+   SCROLL FADE-IN
+════════════════════════════════ */
+const obs=new IntersectionObserver(entries=>{
+  entries.forEach(e=>{
+    if(e.isIntersecting){e.target.classList.add('visible');}
+  });
+},{threshold:.15});
+document.querySelectorAll('.fade-in,.skill-row').forEach(el=>obs.observe(el));
+
+/* ════════════════════════════════
+   TABS
+════════════════════════════════ */
+document.querySelectorAll('.api-tab').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    document.querySelectorAll('.api-tab').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('.api-panel').forEach(p=>p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('tab-'+btn.dataset.tab).classList.add('active');
+  });
+});
+
+/* ════════════════════════════════
+   DIGITAL ART
+════════════════════════════════ */
+function drawArt1(){
+  const cv=document.getElementById('art1');
+  cv.width=cv.offsetWidth||400;cv.height=cv.offsetHeight||400;
+  const ctx=cv.getContext('2d');
+  const W=cv.width,H=cv.height;
+  ctx.fillStyle='#020810';ctx.fillRect(0,0,W,H);
+  // grid lines
+  for(let x=0;x<W;x+=30){
+    const alpha=0.04+0.1*Math.abs(Math.sin(x*0.05));
+    ctx.strokeStyle=`rgba(0,245,255,${alpha})`;ctx.lineWidth=1;
+    ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke();
+  }
+  for(let y=0;y<H;y+=30){
+    const alpha=0.04+0.1*Math.abs(Math.sin(y*0.05));
+    ctx.strokeStyle=`rgba(0,245,255,${alpha})`;ctx.lineWidth=1;
+    ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();
+  }
+  // buildings silhouette
+  ctx.fillStyle='#0a1520';
+  [[0,60,50,160],[55,90,40,130],[100,40,60,180],[165,70,45,150],[215,50,55,170],[275,80,50,140],[330,45,60,175],[390,65,55,155]].forEach(([x,h,w,base])=>{
+    ctx.fillRect(x,H-base,w,base);
+  });
+  // windows
+  ctx.fillStyle='rgba(255,200,50,0.6)';
+  for(let i=0;i<60;i++){
+    const bx=Math.floor(Math.random()*8);
+    const configs=[[0,50,160],[55,40,130],[100,60,180],[165,45,150],[215,55,170],[275,50,140],[330,60,175],[390,55,155]];
+    const [bx2,bw,bbase]=configs[bx];
+    const wx=bx2+5+Math.random()*(bw-10);
+    const wy=H-bbase+5+Math.random()*(bbase-20);
+    ctx.fillRect(wx,wy,4,6);
+  }
+  // glow horizon
+  const grad=ctx.createLinearGradient(0,H*.6,0,H);
+  grad.addColorStop(0,'rgba(0,245,255,0.08)');grad.addColorStop(1,'transparent');
+  ctx.fillStyle=grad;ctx.fillRect(0,H*.6,W,H*.4);
+  // moon
+  ctx.beginPath();ctx.arc(W*.75,H*.15,22,0,Math.PI*2);
+  ctx.fillStyle='rgba(0,245,255,0.15)';ctx.fill();
+  ctx.strokeStyle='rgba(0,245,255,0.5)';ctx.lineWidth=1;ctx.stroke();
+}
+
+function drawArt2(){
+  const cv=document.getElementById('art2');
+  cv.width=cv.offsetWidth||400;cv.height=cv.offsetHeight||400;
+  const ctx=cv.getContext('2d');
+  const W=cv.width,H=cv.height;
+  ctx.fillStyle='#020810';ctx.fillRect(0,0,W,H);
+  const cx=W/2,cy=H/2;
+  // rings
+  [140,110,80,55,35].forEach((r,i)=>{
+    ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);
+    const alpha=[.12,.18,.25,.35,.5][i];
+    ctx.strokeStyle=`rgba(0,245,255,${alpha})`;ctx.lineWidth=i===4?2:1;ctx.stroke();
+    if(i<4){
+      // orbit dot
+      const angle=Math.random()*Math.PI*2;
+      ctx.beginPath();ctx.arc(cx+Math.cos(angle)*r,cy+Math.sin(angle)*r,3,0,Math.PI*2);
+      ctx.fillStyle=['#ff6b00','#39ff14','#ff2d55','#00f5ff'][i];ctx.fill();
+    }
+  });
+  // planet core
+  const grd=ctx.createRadialGradient(cx,cy,0,cx,cy,30);
+  grd.addColorStop(0,'rgba(0,245,255,0.8)');
+  grd.addColorStop(.5,'rgba(0,100,200,0.4)');
+  grd.addColorStop(1,'transparent');
+  ctx.fillStyle=grd;ctx.beginPath();ctx.arc(cx,cy,30,0,Math.PI*2);ctx.fill();
+  // stars
+  for(let i=0;i<80;i++){
+    const sx=Math.random()*W,sy=Math.random()*H;
+    const d=Math.sqrt((sx-cx)**2+(sy-cy)**2);
+    if(d>150){
+      ctx.fillStyle=`rgba(255,255,255,${Math.random()*.7})`;
+      ctx.fillRect(sx,sy,1,1);
+    }
+  }
+}
+
+function drawArt3(){
+  const cv=document.getElementById('art3');
+  cv.width=cv.offsetWidth||400;cv.height=cv.offsetHeight||400;
+  const ctx=cv.getContext('2d');
+  const W=cv.width,H=cv.height;
+  ctx.fillStyle='#020810';ctx.fillRect(0,0,W,H);
+  const chars='01アイウエオルABCXYZ!@#$%<>';
+  ctx.font=`${14}px 'Share Tech Mono'`;
+  for(let x=0;x<W;x+=16){
+    for(let y=0;y<H;y+=20){
+      const c=chars[Math.floor(Math.random()*chars.length)];
+      const t=y/H;
+      const alpha=.05+t*.4*(Math.random()>.7?1:.3);
+      const g=Math.floor(100+t*155);
+      ctx.fillStyle=`rgba(57,255,20,${alpha})`;
+      ctx.fillText(c,x,y);
+    }
+  }
+  // vertical bright streaks
+  for(let i=0;i<5;i++){
+    const sx=Math.random()*W;
+    const grad=ctx.createLinearGradient(sx,0,sx,H);
+    grad.addColorStop(0,'transparent');
+    grad.addColorStop(Math.random()*.5,'rgba(57,255,20,0.6)');
+    grad.addColorStop(1,'transparent');
+    ctx.fillStyle=grad;ctx.fillRect(sx,0,2,H);
+  }
+}
+
+function drawArt4(){
+  const cv=document.getElementById('art4');
+  cv.width=cv.offsetWidth||400;cv.height=cv.offsetHeight||400;
+  const ctx=cv.getContext('2d');
+  const W=cv.width,H=cv.height;
+  ctx.fillStyle='#020810';ctx.fillRect(0,0,W,H);
+  const cx=W/2,cy=H/2;
+  function drawFractal(x,y,size,depth){
+    if(depth<=0||size<2)return;
+    const t=depth/8;
+    const r=Math.round(0+t*0);const g=Math.round(200*t);const b=Math.round(255*t);
+    ctx.strokeStyle=`rgba(${r},${g},${b+50},${t*.8})`;
+    ctx.lineWidth=depth*.4;
+    for(let a=0;a<6;a++){
+      const angle=(a/6)*Math.PI*2;
+      const nx=x+Math.cos(angle)*size,ny=y+Math.sin(angle)*size;
+      ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(nx,ny);ctx.stroke();
+      drawFractal(nx,ny,size*.55,depth-1);
+    }
+  }
+  drawFractal(cx,cy,80,8);
+  // center glow
+  const grd=ctx.createRadialGradient(cx,cy,0,cx,cy,40);
+  grd.addColorStop(0,'rgba(0,245,255,0.9)');
+  grd.addColorStop(.4,'rgba(0,245,255,0.2)');
+  grd.addColorStop(1,'transparent');
+  ctx.fillStyle=grd;ctx.beginPath();ctx.arc(cx,cy,40,0,Math.PI*2);ctx.fill();
+}
+
+// draw all art after layout
+window.addEventListener('load',()=>{
+  drawArt1();drawArt2();drawArt3();drawArt4();
+});
+window.addEventListener('resize',()=>{
+  drawArt1();drawArt2();drawArt3();drawArt4();
+});
+
+/* ════════════════════════════════
+   API TOOL (Claude-powered)
+════════════════════════════════ */
+async function callClaude(prompt){
+  const resp = await fetch("https://api.anthropic.com/v1/messages",{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({
+      model:"claude-sonnet-4-20250514",
+      max_tokens:1000,
+      messages:[{role:"user",content:prompt}]
+    })
+  });
+  const data=await resp.json();
+  return data.content.map(b=>b.text||'').join('\n');
+}
+
+function showResult(id,text,isError){
+  const el=document.getElementById('res-'+id);
+  el.className='api-result visible'+(isError?' error':'');
+  el.textContent=text;
+}
+function showLoading(id){
+  const el=document.getElementById('res-'+id);
+  el.className='api-result visible loading';
+  el.textContent='⟳ Generating...';
+}
+
+async function runTool(type){
+  let prompt='', resultId=type;
+  try{
+    switch(type){
+      case 'scripts':{
+        const st=document.getElementById('scriptType').value;
+        const desc=document.getElementById('scriptDesc').value.trim();
+        if(!desc){showResult('scripts','⚠ Please describe what the script should do.',true);return;}
+        prompt=`You are a Roblox Lua/Luau expert. Write a clean, working ${st} for a Roblox roleplay server that does the following: ${desc}. Include comments. Output ONLY the Lua code.`;
+        break;
+      }
+      case 'template':{
+        const tpl=document.getElementById('tplSelect').value;
+        prompt=`Write a clean, working Roblox Luau script template for a roleplay server for the following: "${tpl}". Include comments explaining each section. Output ONLY the Lua code.`;
+        resultId='template';
+        break;
+      }
+      case 'names':{
+        const role=document.getElementById('nameRole').value;
+        const nat=document.getElementById('nameNat').value||'mixed';
+        const count=document.getElementById('nameCount').value;
+        prompt=`Generate ${count} unique roleplay character names for a Roblox RP server. Role: ${role}. Nationality/vibe: ${nat}. For each name give: Full Name, Nickname, and a 1-sentence backstory. Format as a numbered list.`;
+        break;
+      }
+      case 'factions':{
+        const ft=document.getElementById('factionType').value;
+        const th=document.getElementById('factionTheme').value||'generic';
+        prompt=`Generate 4 unique faction/gang names for a Roblox RP server. Type: ${ft}. Theme: ${th}. For each include: Name, Tag/Abbreviation, Motto, and 1-line description. Format clearly.`;
+        resultId='factions';
+        break;
+      }
+      case 'events':{
+        const et=document.getElementById('evtType').value;
+        const es=document.getElementById('evtScale').value;
+        prompt=`Design a detailed roleplay event for a Roblox RP server. Event type: ${et}. Scale: ${es}. Include: Overview, Phases (step by step), Roles needed, Objectives, Possible outcomes, and suggested rewards. Be specific and immersive.`;
+        break;
+      }
+      case 'scenario':{
+        const mood=document.getElementById('moodSel').value;
+        prompt=`Create a random, creative roleplay scenario for a Roblox RP server. Mood: ${mood}. Include: Setup (2 sentences), the inciting incident, 3 possible directions the RP could go, and a dramatic twist. Make it feel cinematic.`;
+        resultId='scenario';
+        break;
+      }
+      case 'rules':{
+        const rt=document.getElementById('rulesType').value;
+        const rs=document.getElementById('rulesStrict').value;
+        prompt=`Write a complete set of server rules for a Roblox ${rt} roleplay server. Strictness: ${rs}. Include sections for: General Conduct, Roleplay Rules, Combat Rules, Staff Rules, and Punishment Guidelines. Use clear numbered formatting.`;
+        break;
+      }
+      case 'handbook':{
+        const roles=document.getElementById('staffRoles').value||'Admin, Mod, Helper';
+        const focus=document.getElementById('staffFocus').value||'City RP server';
+        prompt=`Write a concise staff handbook for a Roblox ${focus}. Include roles: ${roles}. Cover: Responsibilities per role, Moderation guidelines, How to handle reports, Do's and Don'ts, and escalation procedures. Keep it professional.`;
+        resultId='handbook';
+        break;
+      }
+      case 'crimes':{
+        const notes=document.getElementById('crimeNotes').value.trim();
+        if(!notes){showResult('crimes','⚠ Please enter crime notes to format.',true);return;}
+        prompt=`Format the following raw notes into a professional Roblox RP police report. Include: Incident #, Date/Time (make one up), Reporting Officer, Suspect Info, Crime Description, Evidence, Actions Taken, and Charges Filed. Notes: "${notes}"`;
+        break;
+      }
+      case 'penal':{
+        const ps=document.getElementById('penalStyle').value;
+        const pc=document.getElementById('penalCount').value;
+        prompt=`Generate a penal code for a Roblox RP server with ${pc} charges. Style: ${ps}. For each charge include: Code number, Charge name, Description, and Sentence time (in-game minutes). Format as a clean table or numbered list.`;
+        resultId='penal';
+        break;
+      }
+      case 'lore':{
+        const ls=document.getElementById('loreSet').value;
+        const lt=document.getElementById('loreTone').value;
+        prompt=`Write rich server lore for a Roblox RP server set in a ${ls} world. Tone: ${lt}. Include: City/World name, History (2 paragraphs), Current state of affairs, Major factions in power, and a rumor/mystery that players can explore. Make it immersive.`;
+        break;
+      }
+      case 'npc':{
+        const nt=document.getElementById('npcType').value;
+        const nc=document.getElementById('npcCtx').value||'neutral situation';
+        prompt=`Write 6 immersive NPC dialogue lines for a Roblox RP server. NPC type: ${nt}. Context: ${nc}. Mix greetings, warnings, hints, and reactions. Make them feel alive and unique. Number each line.`;
+        resultId='npc';
+        break;
+      }
+    }
+
+    // Find and disable the button
+    showLoading(resultId);
+    const result=await callClaude(prompt);
+    showResult(resultId,result,false);
+  } catch(err){
+    showResult(resultId,'❌ Error: '+err.message,true);
+  }
+}
+</script>
+
+</body>
+</html>
