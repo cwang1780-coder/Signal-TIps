@@ -135,6 +135,36 @@ const PLAIN = {
   "STRONG SELL": "Strong downtrend. Stay out for now.",
 };
 
+// The technical numbers, each with a one-line explanation of how to read it.
+function techTableHtml(r) {
+  const t = r.tech;
+  if (!t) return "";
+  const diff = (a, b) => `<span class="${a >= b ? "up" : "down"}">${pct(a / b - 1)}</span>`;
+  const num = (n) => (n == null ? "–" : Math.abs(n) >= 100 ? n.toFixed(0) : Math.abs(n) >= 1 ? n.toFixed(2) : n.toPrecision(3));
+  const rows = [];
+  if (r.sma200 != null) rows.push(["200-period average", `${fmt(r.sma200)} · price is ${diff(r.price, r.sma200)}`,
+    r.price >= r.sma200 ? "Price is above its long-term average: an uptrend." : "Price is below its long-term average: a downtrend. This is the most important line."]);
+  if (r.sma50 != null) rows.push(["50-period average", `${fmt(r.sma50)} · price is ${diff(r.price, r.sma50)}`,
+    r.price >= r.sma50 ? "Short-term strength." : "Short-term weakness."]);
+  if (r.sma50 != null && r.sma200 != null) rows.push(["50 vs 200 average", r.sma50 >= r.sma200 ? "50 above 200" : "50 below 200",
+    r.sma50 >= r.sma200 ? "Traders call this the \"golden cross\" zone: recent prices are stronger than the long-term trend." : "Traders call this the \"death cross\" zone: recent prices are weaker than the long-term trend."]);
+  rows.push(["RSI (14)", `<b>${r.rsi.toFixed(1)}</b>`,
+    (r.rsi < 30 ? "Oversold: it has fallen fast." : r.rsi > 70 ? "Overbought: it has risen fast." : "In the normal range.") + " Scale is 0 to 100; under 30 is oversold, over 70 is overbought."]);
+  if (t.macd != null && t.macdSignal != null) rows.push(["MACD (12, 26, 9)", `line ${num(t.macd)} · signal ${num(t.macdSignal)} · histogram <span class="${t.macdHist >= 0 ? "up" : "down"}">${num(t.macdHist)}</span>`,
+    t.macdHist >= 0 ? "Momentum is positive: the line is above its signal line." : "Momentum is negative: the line is below its signal line."]);
+  if (t.bbUpper != null) {
+    const pos = (r.price - t.bbLower) / (t.bbUpper - t.bbLower || 1);
+    rows.push(["Bollinger bands (20, 2)", `${fmt(t.bbLower)} to ${fmt(t.bbUpper)}`,
+      (pos >= 1 ? "Price is above its usual range: stretched upward." : pos <= 0 ? "Price is below its usual range: stretched downward." : `Price is ${Math.round(pos * 100)}% of the way up its usual recent range.`)]);
+  }
+  if (t.volRatio != null) rows.push(["Volume", `${t.volRatio.toFixed(1)}× the 20-period average`,
+    t.volRatio > 1.5 ? "Unusually heavy trading. Big moves on heavy volume mean more." : t.volRatio < 0.6 ? "Quiet trading." : "Normal trading activity."]);
+  rows.push(["Signal score", `<b>${r.score > 0 ? "+" : ""}${r.score.toFixed(1)}</b>`, "The total of the points above. +2 or more is BUY, −2 or less is SELL, in between is HOLD. ±4.5 is STRONG."]);
+  return `<h2>Technical details <span class="muted">the numbers behind the signal, and how to read them</span></h2>
+    <div class="tablewrap"><table class="tech"><tr><th>Indicator</th><th>Now</th><th>What it means</th></tr>
+    ${rows.map(([a, b, c]) => `<tr><td>${a}</td><td>${b}</td><td class="muted">${c}</td></tr>`).join("")}</table></div>`;
+}
+
 function renderSummary() {
   const rs = allSyms().map((s) => results[s]).filter((r) => r && !r.error);
   if (!rs.length) return;
@@ -161,6 +191,9 @@ function render() {
       <div class="price">${fmt(r.price)}</div>
       <div class="chg ${r.change24 >= 0 ? "up" : "down"}">${r.change24 >= 0 ? "▲" : "▼"} ${pct(r.change24)} in 24h</div>
       <div class="plain">${PLAIN[r.action]}</div>
+      <div class="techrow" title="RSI: 0 to 100, under 30 is oversold, over 70 is overbought. Score: total of the signal points. Trend: how far the price is from its 200-period average.">
+        <span>RSI <b>${r.rsi != null ? r.rsi.toFixed(0) : "–"}</b></span><span>Score <b>${r.score > 0 ? "+" : ""}${r.score.toFixed(1)}</b></span>${r.sma200 ? `<span>vs 200 avg <b class="${r.price >= r.sma200 ? "up" : "down"}">${pct(r.price / r.sma200 - 1).replace(/\.\d+%/, "%")}</b></span>` : ""}
+      </div>
       <div class="meter" title="Signal strength ${r.score.toFixed(1)}"><i style="left:${left}%;width:${w}%;background:${color}"></i><i style="left:50%;width:1px;background:var(--dim)"></i></div>
     </div>`;
   }).join("");
@@ -184,6 +217,7 @@ function renderDetail() {
     <div class="muted">Price (white) · 50-period avg (blue) · 200-period avg (orange) · Pick a tool above the chart to draw. Drawings are saved for this coin.</div>
     <h2>Why? <span class="muted">each line adds or removes points; the total (${r.score.toFixed(1)}) decides the signal</span></h2>
     <ul class="reasons">${r.reasons.map((x) => `<li><span class="pts" style="color:${x.pts > 0 ? "var(--buy)" : x.pts < 0 ? "var(--sell)" : "var(--dim)"}">${x.pts > 0 ? "+" : ""}${x.pts}</span><span>${x.text}</span></li>`).join("")}</ul>
+    ${techTableHtml(r)}
     ${trackRecordHtml(bt)}
     <div class="links">
       ${siteConfig.coinbaseRef

@@ -135,7 +135,13 @@
     else if (score <= -2) action = "SELL";
     else action = "HOLD";
 
-    return { ...base, score, action, reasons };
+    // Raw indicator values for the technical table
+    const tech = {
+      macd: last(m.line), macdSignal: last(m.signal), macdHist: h ?? null,
+      bbUpper: upB ?? null, bbLower: loB ?? null, bbMid: last(bb.mid) ?? null,
+      volRatio: v20 ? last(vols) / v20 : null,
+    };
+    return { ...base, score, action, reasons, tech };
   }
 
   // Replays the signals over past candles: buy when the signal says BUY, sell when it says SELL, hold otherwise.

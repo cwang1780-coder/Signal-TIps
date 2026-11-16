@@ -136,6 +136,10 @@
   .card { padding: 16px; border-radius: 14px; }
   .card .name { color: var(--dim); font-size: 13px; margin-left: 6px; font-weight: 400; }
   .card .plain { margin-top: 8px; font-size: 14px; color: var(--text); }
+  .techrow { display: flex; flex-wrap: wrap; gap: 4px 12px; margin-top: 8px; font-size: 12.5px; color: var(--dim); font-variant-numeric: tabular-nums; }
+  .techrow b { color: var(--text); font-weight: 600; } .techrow b.up { color: var(--buy); } .techrow b.down { color: var(--sell); }
+  table.tech td:first-child { white-space: nowrap; font-weight: 600; } table.tech td { vertical-align: top; font-size: 14px; }
+  table.tech td:nth-child(2) { font-variant-numeric: tabular-nums; }
   .card .tap { color: var(--dim); font-size: 12px; margin-top: 6px; }
   .addrow { display: flex; gap: 8px; margin: 14px 0; } .addrow input { flex: 0 1 220px; min-width: 0; }
   .help { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 10px 14px; margin-bottom: 14px; }
@@ -172,9 +176,9 @@
     <div class="controls">
       <label class="muted" for="tf">View</label>
       <select id="tf" title="How far ahead you're thinking">
-        <option value="86400" selected>Long-term (days to months)</option>
-        <option value="21600">Medium-term (days)</option>
-        <option value="3600">Short-term (hours)</option>
+        <option value="86400" selected>Long-term · daily candles</option>
+        <option value="21600">Medium-term · 6-hour candles</option>
+        <option value="3600">Short-term · 1-hour candles</option>
       </select>
       <button id="refresh" title="Refresh prices now">↻ Refresh</button>
     </div>
@@ -218,12 +222,21 @@
     </div>
 
     <details class="help">
-      <summary>What do BUY, HOLD and SELL mean?</summary>
+      <summary>What do BUY, HOLD, SELL and the numbers mean?</summary>
       <ul>
         <li><span class="badge b-BUY">BUY</span> The coin is in an uptrend and conditions look good. <b>STRONG BUY</b> means an uptrend plus a dip.</li>
         <li><span class="badge b-HOLD">HOLD</span> Mixed signals. If you own it, sit tight. If you don't, wait.</li>
         <li><span class="badge b-SELL">SELL</span> The coin is in a downtrend. If you don't own it, this simply means <b>stay out for now</b>.</li>
         <li>The signals follow the trend. They are automated, often wrong, and never a promise. Each coin shows how they did in the past.</li>
+      </ul>
+      <p style="margin-top:10px"><b>The technical terms</b></p>
+      <ul>
+        <li><b>Candle:</b> one bar of price history. On daily candles, each bar is one day.</li>
+        <li><b>Moving average (50 / 200):</b> the average price over the last 50 or 200 candles. Price above the 200 average means a long-term uptrend.</li>
+        <li><b>RSI:</b> a 0 to 100 gauge of how fast the price has moved. Under 30 is "oversold", over 70 is "overbought".</li>
+        <li><b>MACD:</b> a momentum gauge. When its line crosses above its signal line, momentum is turning up.</li>
+        <li><b>Bollinger bands:</b> the price's usual recent range. Outside the bands means an unusually big move.</li>
+        <li><b>Score:</b> each indicator adds or removes points. The total decides BUY, HOLD or SELL. Tap any coin to see the full breakdown.</li>
       </ul>
     </details>
 
