@@ -60,6 +60,43 @@ how many trades won, and the biggest drop along the way. ▲ and ▼ on the char
 Each step only uses data available at that moment. The numbers are shown as they are, including when the signals lose to holding.
 
 ## Earning from it
+
+### Pro subscriptions (Stripe)
+Visitors pay a monthly subscription to unlock Ask AI. There is no database and no user accounts:
+Stripe holds the subscriptions, and the app checks with Stripe on every Pro request.
+
+Set up (about 15 minutes):
+1. Create a Stripe account at https://stripe.com and finish its business details so you can take live payments.
+2. In Stripe: **Product catalog → Add product**. Name it (for example "Crypto Signal Tips Pro"), choose **Recurring**, monthly, and set your price. Copy the **price ID** (starts with `price_`).
+3. In Stripe: **Settings → Billing → Customer portal**, switch it on so subscribers can cancel or update their card themselves.
+4. In Stripe: **Developers → API keys**, copy the **secret key**. Start with the test key (`sk_test_...`) and Stripe's test card `4242 4242 4242 4242`.
+5. In Vercel → **Settings → Environment Variables**, add the values below, then redeploy.
+
+| Name | Value |
+|---|---|
+| `STRIPE_SECRET_KEY` | Your Stripe secret key |
+| `STRIPE_PRICE_ID` | The price ID from step 2 |
+| `ANTHROPIC_API_KEY` | Your Anthropic API key (it pays for subscribers' questions) |
+| `APP_PASSWORD` | Your owner password (you keep free access through "Owner login") |
+| `PRO_AI_MONTHLY_LIMIT` | Optional. AI questions per subscriber per month. Default 150. |
+| `AI_MODEL` | Optional. Which Claude model answers. Default `claude-opus-5-5`. |
+
+How it works for a subscriber:
+- **Go Pro** opens Stripe's hosted checkout. Card details never touch this app.
+- After paying they come back and the browser stores a **Pro key** (the subscription ID plus a signature only this server can make).
+- **Copy my Pro key** lets them unlock Pro on another device. **Manage subscription** opens Stripe's portal to cancel or change card.
+- If they cancel or a payment fails, Pro switches off within about a minute. No webhooks are needed.
+- Their monthly question count is stored on their Stripe subscription and resets each calendar month.
+
+What a subscriber costs you: a typical question is roughly 4,000 tokens in and under 1,000 out. On `claude-opus-5-5`
+($4 / $20 per million tokens) that is about 3 to 4 cents, so a subscriber who uses all 150 questions costs about $5 to $6 a month.
+`claude-sonnet-5-5` is about half that. Stripe's fee comes on top (see Stripe's pricing for your country).
+Set the price and `PRO_AI_MONTHLY_LIMIT` so the worst case still leaves you a margin.
+
+Before taking real payments: publish terms of service, a privacy policy and a refund policy; check the commercial-use terms
+of the data sources (CoinGecko, StockTwits); and get legal advice on whether paid signals count as investment advice where you live.
+
+### Referral link
 Set `COINBASE_REFERRAL_URL` (an https coinbase.com affiliate link) in the environment. The "Trade on Coinbase"
 button becomes a labelled referral link.
 

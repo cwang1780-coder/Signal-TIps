@@ -109,6 +109,13 @@
   .stats div { background: var(--panel2); border-radius: 8px; padding: 8px 10px; display: flex; flex-direction: column; gap: 2px; }
   .stats b { font-size: 18px; font-variant-numeric: tabular-nums; }
   .links small { color: var(--dim); }
+  #proBox { border: 1px solid var(--accent); border-radius: 10px; padding: 10px 12px; margin-bottom: 12px; background: #0f2238; }
+  #proBox[hidden] { display: none; }
+  .proRow { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; }
+  .proBtns { display: flex; flex-wrap: wrap; gap: 6px; }
+  .proRestore { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 8px; font-size: 13px; }
+  .proRestore input { flex: 1 1 180px; min-width: 0; font-size: 13px; padding: 5px 8px; } .proRestore button { font-size: 13px; padding: 5px 10px; }
+  .proNote { margin-top: 8px; font-size: 13px; color: #f3d9a4; overflow-wrap: anywhere; }
 </style>
 </head>
 <body>
@@ -171,6 +178,7 @@
 
   <h2 id="aiTitle">Ask AI <span class="muted">— questions about these signals and your holdings</span></h2>
   <div id="aiPanel">
+    <div id="proBox" hidden></div>
     <div class="chips" id="aiChips">
       <button data-q="Which coin has the strongest buy signal right now, and why?">Strongest buy signal?</button>
       <button data-q="Review my holdings: what looks risky and what would you consider doing?">Review my holdings</button>
@@ -210,6 +218,7 @@
 <script src="draw.js"></script>
 <script src="app.js"></script>
 <script src="extras.js"></script>
+<script src="pro.js"></script>
 <script src="ai-chat.js"></script>
 <div id="toasts" aria-live="polite"></div>
 </body>

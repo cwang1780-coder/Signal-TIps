@@ -4,6 +4,7 @@ const crypto = require("crypto");
 const { loadKey, getHoldings } = require("./coinbase.js");
 const ai = require("./ai.js");
 const { getSocial } = require("./social.js");
+const pro = require("./pro.js");
 
 const ON_VERCEL = Boolean(process.env.VERCEL);
 let cache = { at: 0, data: null };
@@ -67,10 +68,27 @@ async function readJson(req) {
   return JSON.parse(body);
 }
 
+// Who may use Ask AI: the owner (password), or a Pro subscriber with questions left this month.
+// Returns { subId } for subscribers, {} for the owner, or null after sending a refusal.
+async function askAccess(req, res) {
+  const proKey = req.headers["x-pro-key"];
+  if (pro.enabled() && proKey) {
+    const c = await pro.check(proKey);
+    if (!c.ok) { json(res, 402, { error: "pro", reason: c.reason }); return null; }
+    if (c.used >= c.limit) { json(res, 429, { error: "limit", reason: `You've used all ${c.limit} AI questions for this month. They reset on the 1st.` }); return null; }
+    return { subId: c.subId };
+  }
+  const password = process.env.APP_PASSWORD;
+  const isOwner = password && sameSecret(req.headers["x-app-password"] || "", password);
+  if (pro.enabled() && ON_VERCEL && !isOwner) { json(res, 402, { error: "pro", reason: "Ask AI is a Pro feature." }); return null; }
+  return (await authorize(req, res)) ? {} : null;
+}
+
 async function askHandler(req, res) {
   if (req.method !== "POST") return json(res, 405, { reason: "POST only" });
   if (!(req.headers["content-type"] || "").startsWith("application/json")) return json(res, 403, { reason: "Forbidden" });
-  if (!(await authorize(req, res))) return;
+  const access = await askAccess(req, res);
+  if (!access) return;
   let input;
   try { input = await readJson(req); } catch (e) { return json(res, e.status || 400, { reason: e.message }); }
   if (!input || typeof input.question !== "string" || !input.question.trim()) return json(res, 400, { reason: "Missing question" });
@@ -79,6 +97,7 @@ async function askHandler(req, res) {
   res.writeHead(200, { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store", "X-Accel-Buffering": "no" });
   try {
     await ai.ask(input, (text) => res.write(text));
+    if (access.subId) await pro.consume(access.subId).catch((e) => console.error("[pro] usage count failed:", e.message));
   } catch (e) {
     console.error("[ai]", e.message);
     res.write("\n\n⚠️ " + ai.friendlyError(e));
@@ -101,14 +120,43 @@ async function socialHandler(req, res) {
 }
 
 // Public site settings. COINBASE_REFERRAL_URL: your Coinbase affiliate link (must be an https coinbase.com link).
-function configHandler(req, res) {
+async function configHandler(req, res) {
   let ref = null;
   try {
     const u = new URL(process.env.COINBASE_REFERRAL_URL || "");
     if (u.protocol === "https:" && /(^|\.)coinbase\.com$/.test(u.hostname)) ref = u.href;
   } catch {}
+  let proInfo = { enabled: false };
+  if (pro.enabled()) {
+    try { proInfo = { enabled: true, price: await pro.getPrice(), monthlyLimit: pro.monthlyLimit() }; }
+    catch (e) { console.error("[pro] price lookup failed:", e.message); }
+  }
   res.writeHead(200, { "Content-Type": "application/json", "Cache-Control": "public, max-age=300" });
-  res.end(JSON.stringify({ coinbaseRef: ref }));
+  res.end(JSON.stringify({ coinbaseRef: ref, pro: proInfo }));
 }
 
-module.exports = { holdingsHandler, askHandler, socialHandler, configHandler, authorize };
+// Pro subscription endpoints: /api/pro?action=checkout|activate|status|portal
+async function proHandler(req, res) {
+  if (!pro.enabled()) return json(res, 503, { reason: "Pro isn't set up on this site." });
+  const url = new URL(req.url, "http://x");
+  const action = url.searchParams.get("action");
+  const host = req.headers.host || "";
+  const origin = (ON_VERCEL || req.headers["x-forwarded-proto"] === "https" ? "https://" : "http://") + host;
+  if (!/^[a-z0-9.-]+(:\d+)?$/i.test(host)) return json(res, 400, { reason: "Bad host" });
+  try {
+    if (action === "checkout" && req.method === "POST") return json(res, 200, { url: await pro.createCheckout(origin) });
+    if (action === "activate") return json(res, 200, { key: await pro.activate(url.searchParams.get("session_id")) });
+    if (action === "status" || action === "portal") {
+      const c = await pro.check(req.headers["x-pro-key"], { fresh: action === "status" });
+      if (!c.subId) return json(res, 401, { pro: false, reason: c.reason });
+      if (action === "portal") return json(res, 200, { url: await pro.portalUrl(c.subId, origin) });
+      return json(res, 200, { pro: c.ok, reason: c.reason, status: c.status, used: c.used, limit: c.limit, cancelAtPeriodEnd: c.cancelAtPeriodEnd, periodEnd: c.periodEnd });
+    }
+    return json(res, 400, { reason: "Unknown action" });
+  } catch (e) {
+    console.error("[pro]", e.message);
+    return json(res, e.status && e.status < 500 ? e.status : 502, { reason: e.status && e.status < 500 ? e.message : "Payment service unavailable. Try again shortly." });
+  }
+}
+
+module.exports = { holdingsHandler, askHandler, socialHandler, configHandler, proHandler, authorize };

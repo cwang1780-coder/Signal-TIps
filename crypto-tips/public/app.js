@@ -43,7 +43,12 @@ function trackRecordHtml(bt) {
 }
 
 // Private endpoints (Coinbase sync, Ask AI) need the app password when the app is online.
-const authHeaders = () => { const p = store.get("appPassword", ""); return p ? { "X-App-Password": p } : {}; };
+const authHeaders = () => {
+  const h = {}, p = store.get("appPassword", ""), k = store.get("proKey", "");
+  if (p) h["X-App-Password"] = p;
+  if (k) h["X-Pro-Key"] = k; // Pro subscribers (see pro.js)
+  return h;
+};
 function showLock(message) {
   $("lockMsg").textContent = message || "Enter the app password to see your Coinbase holdings and use Ask AI.";
   $("lockBar").hidden = false;
@@ -256,7 +261,7 @@ $("tf").onchange = () => { results = {}; render(); refresh(); };
 window.addEventListener("resize", () => selected && renderDetail());
 
 if (location.protocol !== "file:") {
-  fetch("/api/config").then((r) => (r.ok ? r.json() : null)).then((c) => { if (c) { siteConfig = c; renderDetail(); } }).catch(() => {});
+  fetch("/api/config").then((r) => (r.ok ? r.json() : null)).then((c) => { if (c) { siteConfig = c; renderDetail(); window.onSiteConfig?.(c); } }).catch(() => {});
 }
 render();
 syncCoinbase().then(refresh);

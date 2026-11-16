@@ -91,6 +91,8 @@
         const t = await res.text();
         let reason = t;
         try { reason = JSON.parse(t).reason || t; } catch {}
+        if (res.status === 402) { window.showUpgrade?.(); window.refreshPro?.(); throw new Error(reason === "Ask AI is a Pro feature." ? "Ask AI is a Pro feature. Tap \"Go Pro\" above to unlock it." : reason); }
+        if (res.status === 429) { window.refreshPro?.(); throw new Error(reason); }
         if (res.status === 401) throw new Error("Ask AI is only for the site owner right now. If that's you, tap \"Owner login\" under My holdings.");
         if (res.status === 503) throw new Error("Ask AI isn't turned on for this site yet.");
         throw new Error(reason || "HTTP " + res.status);
@@ -104,6 +106,7 @@
         render();
       }
       if (!answer.content.trim()) answer.content = "⚠️ No answer came back. Try again.";
+      window.refreshPro?.();
     } catch (e) {
       answer.content = "⚠️ " + (e.message || "Request failed");
     }
