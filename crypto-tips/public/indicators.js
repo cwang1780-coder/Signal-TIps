@@ -137,7 +137,47 @@
     };
   }
 
-  const api = { sma, ema, rsi, macd, bollinger, analyze };
+  // Replays the signals over past candles: buy when the signal says BUY, sell when it says SELL, hold otherwise.
+  // Each step only sees candles up to that point (no peeking ahead). fee = cost per buy or sell (0.005 = 0.5%).
+  function backtest(candles, { start = 60, fee = 0.005 } = {}) {
+    if (candles.length < start + 30) return null;
+    let inPos = false, entry = 0, equity = 1, peak = 1, maxDrawdown = 0;
+    const trades = [], markers = [];
+    for (let i = start; i < candles.length; i++) {
+      const { action } = analyze(candles.slice(0, i + 1));
+      const { close: price, time } = candles[i];
+      if (!inPos && action.includes("BUY")) {
+        inPos = true; entry = price; equity *= 1 - fee;
+        markers.push({ time, price, side: "buy" });
+      } else if (inPos && action.includes("SELL")) {
+        inPos = false;
+        trades.push((price / entry) * (1 - fee) * (1 - fee) - 1);
+        equity *= (price / entry) * (1 - fee);
+        markers.push({ time, price, side: "sell" });
+      }
+      const value = inPos ? (equity * price) / entry : equity;
+      peak = Math.max(peak, value);
+      maxDrawdown = Math.max(maxDrawdown, 1 - value / peak);
+    }
+    const lastPrice = candles[candles.length - 1].close;
+    const finalValue = inPos ? (equity * lastPrice) / entry : equity;
+    const wins = trades.filter((t) => t > 0).length;
+    return {
+      bars: candles.length - start,
+      from: candles[start].time,
+      trades: trades.length,
+      wins,
+      winRate: trades.length ? wins / trades.length : null,
+      strategyReturn: finalValue - 1,
+      holdReturn: lastPrice / candles[start].close - 1,
+      maxDrawdown,
+      openTrade: inPos ? lastPrice / entry - 1 : null,
+      fee,
+      markers,
+    };
+  }
+
+  const api = { sma, ema, rsi, macd, bollinger, analyze, backtest };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   else root.Indicators = api;
 })(typeof window !== "undefined" ? window : globalThis);

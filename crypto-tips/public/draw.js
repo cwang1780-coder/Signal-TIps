@@ -15,7 +15,7 @@
   const PAD = { l: 8, r: 72, t: 12, b: 22 };
 
   let tool = "view", color = COLORS[0];
-  let sym = null, candles = [], canvas = null, wrap = null, drawings = [], history = [];
+  let sym = null, candles = [], canvas = null, wrap = null, drawings = [], history = [], markers = [];
   let active = null;     // drawing in progress
   let noteOpen = false;  // note input showing
   let hover = null;      // {x,y} for crosshair
@@ -85,6 +85,13 @@
     // last price tag
     const last = s.closes[s.closes.length - 1];
     tag(ctx, s, last, "#3b82f6");
+
+    // past buy/sell signals (from the track record)
+    for (const m of markers) {
+      const X = s.x(m.time), Y = s.y(m.price), up = m.side === "buy", o = up ? 14 : -14;
+      ctx.fillStyle = up ? "#16c784" : "#ea3943";
+      ctx.beginPath(); ctx.moveTo(X, Y + (up ? 5 : -5)); ctx.lineTo(X - 6, Y + o); ctx.lineTo(X + 6, Y + o); ctx.closePath(); ctx.fill();
+    }
 
     for (const d of drawings) drawShape(ctx, s, d);
     if (active) drawShape(ctx, s, active);
@@ -233,9 +240,9 @@
     hover = null; paint();
   }
 
-  function mount(container, symbol, data) {
+  function mount(container, symbol, data, signalMarkers) {
     if (symbol !== sym) { drawings = load(symbol); history = []; }
-    sym = symbol; candles = data; wrap = container;
+    sym = symbol; candles = data; wrap = container; markers = signalMarkers || [];
     container.innerHTML = `
       <div class="drawBar">
         ${TOOLS.map(([id, icon, title]) => `<button data-tool="${id}" title="${title}" aria-label="${title}">${icon}</button>`).join("")}

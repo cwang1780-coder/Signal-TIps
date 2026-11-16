@@ -49,6 +49,13 @@
       }),
       cash: cb.cash,
       social: window.socialSnapshot ? window.socialSnapshot() : null,
+      trackRecordOfSelectedCoin: (() => {
+        const r = results[selected];
+        if (!r?.candles) return null;
+        const bt = trackRecord(selected, r.candles);
+        return bt && { coin: selected, candles: bt.bars, followingSignalsPct: round(bt.strategyReturn * 100, 1), justHoldingPct: round(bt.holdReturn * 100, 1),
+          finishedTrades: bt.trades, tradesWon: bt.wins, maxDrawdownPct: round(bt.maxDrawdown * 100, 0), feePerTradePct: bt.fee * 100 };
+      })(),
     };
   }
 

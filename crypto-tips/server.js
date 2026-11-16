@@ -7,20 +7,21 @@ const fs = require("fs");
 const path = require("path");
 const { loadKey } = require("./coinbase.js");
 const ai = require("./ai.js");
-const { holdingsHandler, askHandler, socialHandler } = require("./handlers.js");
+const { holdingsHandler, askHandler, socialHandler, configHandler } = require("./handlers.js");
 
 const PORT = +process.env.PORT || 8000;
 const PUBLIC = path.join(__dirname, "public");
-const TYPES = { ".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8" };
+const TYPES = { ".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".svg": "image/svg+xml", ".webmanifest": "application/manifest+json" };
 
 const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, "http://localhost");
   if (url.pathname === "/api/coinbase/holdings") return holdingsHandler(req, res);
   if (url.pathname === "/api/ask") return askHandler(req, res);
   if (url.pathname === "/api/social") return socialHandler(req, res);
+  if (url.pathname === "/api/config") return configHandler(req, res);
 
   const file = url.pathname === "/" ? "index.html" : url.pathname.slice(1);
-  if (!/^[\w-]+\.(html|js)$/.test(file) || !fs.existsSync(path.join(PUBLIC, file))) { res.writeHead(404); return res.end("Not found"); }
+  if (!/^[\w-]+\.(html|js|svg|webmanifest)$/.test(file) || !fs.existsSync(path.join(PUBLIC, file))) { res.writeHead(404); return res.end("Not found"); }
   res.writeHead(200, { "Content-Type": TYPES[path.extname(file)] });
   fs.createReadStream(path.join(PUBLIC, file)).pipe(res);
 });

@@ -13,6 +13,34 @@ let results = {}; // sym -> analysis
 let cb = { holdings: [], cash: [], status: "" }; // synced from Coinbase via local server
 const allSyms = () => [...new Set([...coins, ...cb.holdings.map((h) => h.sym)])];
 let selected = null;
+let siteConfig = { coinbaseRef: null }; // from /api/config
+const btCache = {}; // sym -> {key, result}
+function trackRecord(sym, candles) {
+  const key = candles.length + ":" + candles[candles.length - 1].time + ":" + $("tf").value;
+  if (btCache[sym]?.key !== key) btCache[sym] = { key, result: Indicators.backtest(candles) };
+  return btCache[sym].result;
+}
+function trackRecordHtml(bt) {
+  if (!bt) return "";
+  const p = (n) => (n >= 0 ? "+" : "") + (n * 100).toFixed(1) + "%";
+  const cls = (n) => (n >= 0 ? "up" : "down");
+  const diff = bt.strategyReturn - bt.holdReturn;
+  const since = new Date(bt.from * 1000).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+  const verdict = bt.trades + (bt.openTrade != null ? 1 : 0) === 0
+    ? "The signals never said BUY in this period, so there is nothing to judge yet."
+    : Math.abs(diff) < 0.02 ? "About the same as simply holding."
+    : diff > 0 ? `Following the signals did <b>${(diff * 100).toFixed(1)} points better</b> than simply holding.`
+    : `Following the signals did <b>${(-diff * 100).toFixed(1)} points worse</b> than simply holding.`;
+  return `<h2>Track record on this chart</h2>
+    <div class="stats">
+      <div><span class="muted">Following the signals</span><b class="${cls(bt.strategyReturn)}">${p(bt.strategyReturn)}</b></div>
+      <div><span class="muted">Just holding</span><b class="${cls(bt.holdReturn)}">${p(bt.holdReturn)}</b></div>
+      <div><span class="muted">Finished trades won</span><b>${bt.trades ? bt.wins + " of " + bt.trades : "none yet"}</b></div>
+      <div><span class="muted">Biggest drop along the way</span><b class="down">−${(bt.maxDrawdown * 100).toFixed(0)}%</b></div>
+    </div>
+    <p class="muted" style="margin-top:8px">${verdict} Since ${since}: buy when the signal turns BUY, sell when it turns SELL, with a ${(bt.fee * 100).toFixed(1)}% fee each time.
+    ▲ and ▼ on the chart mark those moments.${bt.openTrade != null ? ` Currently in a trade (${p(bt.openTrade)}).` : ""} Past results do not predict future results.</p>`;
+}
 
 // Private endpoints (Coinbase sync, Ask AI) need the app password when the app is online.
 const authHeaders = () => { const p = store.get("appPassword", ""); return p ? { "X-App-Password": p } : {}; };
@@ -87,20 +115,24 @@ function renderDetail() {
   // Don't rebuild the chart in the middle of a drawing; the next refresh will catch up.
   if (window.Draw?.isBusy() && Draw.currentSym() === selected && el.style.display === "block") return;
   el.style.display = "block";
+  const bt = trackRecord(selected, r.candles);
   el.innerHTML = `
     <div class="row"><h2 style="margin:0">${selected}-USD · ${fmt(r.price)}</h2><span class="${actionClass(r.action)}">${r.action} (score ${r.score.toFixed(1)})</span></div>
     <div id="chartWrap"></div>
     <div class="muted">Price (white) · 50-period avg (blue) · 200-period avg (orange) · Pick a tool above the chart to draw. Drawings are saved for this coin.</div>
     <h2>Why this tip?</h2>
     <ul class="reasons">${r.reasons.map((x) => `<li><span class="pts" style="color:${x.pts > 0 ? "var(--buy)" : x.pts < 0 ? "var(--sell)" : "var(--dim)"}">${x.pts > 0 ? "+" : ""}${x.pts}</span><span>${x.text}</span></li>`).join("")}</ul>
+    ${trackRecordHtml(bt)}
     <div class="links">
-      <a href="https://www.coinbase.com/advanced-trade/spot/${selected}-USD" target="_blank" rel="noopener">Trade on Coinbase ↗</a>
+      ${siteConfig.coinbaseRef
+        ? `<a href="${siteConfig.coinbaseRef}" target="_blank" rel="noopener sponsored">Sign up for Coinbase ↗ <small>(referral link: we may earn a commission)</small></a>`
+        : `<a href="https://www.coinbase.com/advanced-trade/spot/${selected}-USD" target="_blank" rel="noopener">Trade on Coinbase ↗</a>`}
       <a href="https://www.exodus.com/" target="_blank" rel="noopener">Open Exodus ↗</a>
       <a href="https://www.tradingview.com/symbols/${selected}USD/" target="_blank" rel="noopener">Chart on TradingView ↗</a>
       <button class="primary" onclick="askAI('Should I buy, sell or hold ${selected} right now? Walk me through the signals and what people are saying.')">Ask AI about ${selected}</button>
     </div>
     <div id="detailSocial"></div>`;
-  Draw.mount($("chartWrap"), selected, r.candles);
+  Draw.mount($("chartWrap"), selected, r.candles, bt?.markers);
   window.renderDetailSocial?.(selected);
 }
 
@@ -197,6 +229,9 @@ $("lockBar").addEventListener("submit", (e) => {
 $("tf").onchange = () => { results = {}; render(); refresh(); };
 window.addEventListener("resize", () => selected && renderDetail());
 
+if (location.protocol !== "file:") {
+  fetch("/api/config").then((r) => (r.ok ? r.json() : null)).then((c) => { if (c) { siteConfig = c; renderDetail(); } }).catch(() => {});
+}
 render();
 syncCoinbase().then(refresh);
 setInterval(refresh, 60000);

@@ -21,4 +21,20 @@ const down = Array.from({ length: 250 }, (_, i) => 500 - i + Math.sin(i) * 3);
 const d = I.analyze(mk(down));
 assert(d.score < 0, "downtrend should score negative, got " + d.score);
 
+// Backtest: no look-ahead, fees applied, sane accounting
+const wave = Array.from({ length: 300 }, (_, i) => 100 + 30 * Math.sin(i / 18) + i * 0.05);
+const bt = I.backtest(mk(wave));
+assert(bt && bt.bars === 240 && bt.trades >= 1, "wave should produce trades");
+assert(bt.markers.every((m, i, a) => i === 0 || m.side !== a[i - 1].side), "buys and sells alternate");
+assert.strictEqual(bt.markers[0].side, "buy");
+assert(Math.abs(bt.holdReturn - (wave[299] / wave[60] - 1)) < 1e-9);
+assert(bt.maxDrawdown >= 0 && bt.maxDrawdown < 1);
+// Signals at step i must not change when future candles are appended
+const early = I.backtest(mk(wave.slice(0, 200))), full = I.backtest(mk(wave));
+const upTo = mk(wave)[199].time;
+assert.deepStrictEqual(full.markers.filter((m) => m.time <= upTo), early.markers, "no peeking ahead");
+// Fees make results worse, never better
+assert(I.backtest(mk(wave), { fee: 0.02 }).strategyReturn < I.backtest(mk(wave), { fee: 0 }).strategyReturn);
+assert.strictEqual(I.backtest(mk(wave.slice(0, 50))), null);
+
 console.log("all tests passed", { dip: a.action, down: d.action });

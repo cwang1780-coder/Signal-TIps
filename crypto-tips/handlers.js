@@ -100,4 +100,15 @@ async function socialHandler(req, res) {
   }
 }
 
-module.exports = { holdingsHandler, askHandler, socialHandler, authorize };
+// Public site settings. COINBASE_REFERRAL_URL: your Coinbase affiliate link (must be an https coinbase.com link).
+function configHandler(req, res) {
+  let ref = null;
+  try {
+    const u = new URL(process.env.COINBASE_REFERRAL_URL || "");
+    if (u.protocol === "https:" && /(^|\.)coinbase\.com$/.test(u.hostname)) ref = u.href;
+  } catch {}
+  res.writeHead(200, { "Content-Type": "application/json", "Cache-Control": "public, max-age=300" });
+  res.end(JSON.stringify({ coinbaseRef: ref }));
+}
+
+module.exports = { holdingsHandler, askHandler, socialHandler, configHandler, authorize };

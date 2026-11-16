@@ -53,6 +53,19 @@ Notes:
 - If Claude declines a question for safety reasons, the request is automatically retried on a fallback model.
 - To use a different model, set `AI_MODEL` (for example `AI_MODEL=claude-sonnet-5-5`, which is cheaper).
 
+## Track record
+Each coin's detail view replays the app's own signals over the chart's history: buy when the signal turns BUY,
+sell when it turns SELL, with a 0.5% fee per trade. It shows the result next to simply holding the coin,
+how many trades won, and the biggest drop along the way. ▲ and ▼ on the chart mark each buy and sell.
+Each step only uses data available at that moment. The numbers are shown as they are, including when the signals lose to holding.
+
+## Earning from it
+Set `COINBASE_REFERRAL_URL` (an https coinbase.com affiliate link) in the environment. The "Trade on Coinbase"
+button becomes a labelled referral link.
+
+## Install on a phone
+Open the site in the phone's browser and choose **Add to Home Screen**. It opens full-screen like an app.
+
 ## Draw on the chart
 Open any coin to see its chart with a drawing toolbar:
 - 👆 **Look**: no drawing. On a phone this lets the page scroll normally.

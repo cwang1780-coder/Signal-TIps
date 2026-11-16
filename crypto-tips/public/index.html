@@ -4,6 +4,11 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Crypto Signal Tips</title>
+<link rel="manifest" href="manifest.webmanifest" />
+<link rel="icon" href="icon.svg" type="image/svg+xml" />
+<link rel="apple-touch-icon" href="icon.svg" />
+<meta name="theme-color" content="#0b0f17" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="description" content="Free crypto buy/sell signals from live market data, a social hype check, chart drawing tools and price alerts. Not financial advice." />
 <style>
   :root {
@@ -100,6 +105,10 @@
   .linkbtn { background: none; border: none; color: var(--accent); padding: 0 4px; text-decoration: underline; }
   footer { margin-top: 28px; padding-top: 14px; border-top: 1px solid var(--border); color: var(--dim); font-size: 12.5px; }
   footer p { margin-bottom: 8px; } footer a { color: var(--accent); }
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; }
+  .stats div { background: var(--panel2); border-radius: 8px; padding: 8px 10px; display: flex; flex-direction: column; gap: 2px; }
+  .stats b { font-size: 18px; font-variant-numeric: tabular-nums; }
+  .links small { color: var(--dim); }
 </style>
 </head>
 <body>
