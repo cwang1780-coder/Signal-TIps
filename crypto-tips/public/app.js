@@ -113,9 +113,16 @@ async function syncCoinbase(force) {
   try {
     const res = await fetch("/api/coinbase/holdings" + (force ? "?force=1" : ""), { headers: authHeaders() });
     const d = await res.json().catch(() => ({}));
-    if (res.status === 401) { showLock(store.get("appPassword", "") ? "Wrong password, try again." : null); cb = { holdings: [], cash: [], status: "🔒 Locked: enter the app password above." }; return render(); }
+    // Public visitors: Coinbase sync and Ask AI belong to the site owner. Keep the page clean for everyone else.
+    if (res.status === 401 || res.status === 503) {
+      const tried = store.get("appPassword", "");
+      if (res.status === 401 && tried) showLock("Wrong password, try again.");
+      $("cbSync").hidden = true;
+      cb = { holdings: [], cash: [], status: "Add what you own below to get a tip for each coin." + (res.status === 401 ? ` <button id="ownerBtn" class="linkbtn" type="button">Owner login</button>` : "") };
+      return render();
+    }
     if (!res.ok) throw new Error(d.reason || "server not reachable (HTTP " + res.status + ")");
-    $("lockBar").hidden = true;
+    $("lockBar").hidden = true; $("cbSync").hidden = false;
     if (!d.connected) { cb = { holdings: [], cash: [], status: "Coinbase not connected: " + d.reason }; return renderHoldings(); }
     cb = { holdings: d.holdings, cash: d.cash, status: "✅ Coinbase connected · synced " + new Date(d.updated).toLocaleTimeString() };
     const missing = d.holdings.map((h) => h.sym).filter((s) => !results[s]);
@@ -180,6 +187,7 @@ $("hAdd").onclick = async () => {
 };
 $("refresh").onclick = () => { refresh(); syncCoinbase(true); };
 $("cbSync").onclick = () => syncCoinbase(true);
+$("cbStatus").addEventListener("click", (e) => { if (e.target.id === "ownerBtn") { showLock(); $("lockInput").focus(); } });
 $("lockBar").addEventListener("submit", (e) => {
   e.preventDefault();
   store.set("appPassword", $("lockInput").value);

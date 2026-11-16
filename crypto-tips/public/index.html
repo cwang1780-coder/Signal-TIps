@@ -4,6 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Crypto Signal Tips</title>
+<meta name="description" content="Free crypto buy/sell signals from live market data, a social hype check, chart drawing tools and price alerts. Not financial advice." />
 <style>
   :root {
     --bg: #0b0f17; --panel: #131a26; --panel2: #1a2333; --border: #24304a;
@@ -96,6 +97,9 @@
   #alValue { width: 130px; } #alValue[hidden] { display: none; }
   #toasts { position: fixed; right: 16px; bottom: 16px; left: 16px; display: flex; flex-direction: column; align-items: flex-end; gap: 8px; z-index: 50; pointer-events: none; }
   .toast { pointer-events: auto; max-width: 380px; background: var(--panel2); border: 1px solid var(--accent); border-radius: 10px; padding: 10px 12px; box-shadow: 0 6px 24px #0008; cursor: pointer; }
+  .linkbtn { background: none; border: none; color: var(--accent); padding: 0 4px; text-decoration: underline; }
+  footer { margin-top: 28px; padding-top: 14px; border-top: 1px solid var(--border); color: var(--dim); font-size: 12.5px; }
+  footer p { margin-bottom: 8px; } footer a { color: var(--accent); }
 </style>
 </head>
 <body>
@@ -183,7 +187,14 @@
     <input id="hCost" placeholder="Avg buy price $" type="number" step="any" />
     <button id="hAdd">Add holding</button>
   </div>
-  <p class="muted" style="margin-top:6px">Manual entries are for Exodus or other wallets and are saved only in this browser.</p>
+  <p class="muted" style="margin-top:6px">Your holdings, alerts and drawings are saved only in this browser. Nothing you enter is sent to us.</p>
+
+  <footer>
+    <p><b>Not financial advice.</b> This site shows automated technical indicators and public social media posts for general information only.
+    It does not know your situation and does not recommend any trade. Crypto is very risky and you can lose everything you put in.</p>
+    <p>Prices: Coinbase public market data · Social posts: StockTwits · Trending: Powered by <a href="https://www.coingecko.com/" target="_blank" rel="noopener">CoinGecko</a>.
+    This site is not affiliated with Coinbase, Exodus, StockTwits or CoinGecko.</p>
+  </footer>
 </div>
 
 <script src="indicators.js"></script>
