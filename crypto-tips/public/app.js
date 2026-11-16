@@ -54,11 +54,37 @@ const fmt = (n) => n == null ? "—" : "$" + (n >= 1 ? n.toLocaleString(undefine
 const pct = (n) => (n >= 0 ? "+" : "") + (n * 100).toFixed(2) + "%";
 const actionClass = (a) => "badge b-" + a.replace(" ", ".");
 
-async function fetchCandles(sym, gran) {
-  const res = await fetch(`${API}/products/${sym}-USD/candles?granularity=${gran}`);
+// One page = up to 300 candles. `end` (unix seconds) fetches an older page; without it, the newest.
+async function fetchPage(sym, gran, end) {
+  const range = end ? `&start=${new Date((end - 299 * gran) * 1000).toISOString()}&end=${new Date(end * 1000).toISOString()}` : "";
+  let res = await fetch(`${API}/products/${sym}-USD/candles?granularity=${gran}${range}`);
+  if (res.status === 429) { await new Promise((r) => setTimeout(r, 1200)); res = await fetch(`${API}/products/${sym}-USD/candles?granularity=${gran}${range}`); }
   if (!res.ok) throw new Error(res.status === 404 ? "not on Coinbase" : "HTTP " + res.status);
   const raw = await res.json(); // [time, low, high, open, close, volume], newest first
   return raw.reverse().map(([time, low, high, open, close, volume]) => ({ time, low, high, open, close, volume }));
+}
+
+// ~900 candles per coin: the signals need a 200-period average, and the track record needs room after that.
+// Older pages are fetched once and cached; each refresh only re-fetches the newest page.
+const histCache = {}; // "SYM:gran" -> Map(time -> candle)
+async function fetchCandles(sym, gran) {
+  const key = sym + ":" + gran;
+  const latest = await fetchPage(sym, gran);
+  if (!histCache[key]) {
+    const map = new Map();
+    let end = latest[0]?.time;
+    for (let k = 0; k < 2 && end; k++) {
+      try {
+        const older = await fetchPage(sym, gran, end - gran);
+        if (!older.length) break;
+        older.forEach((c) => map.set(c.time, c));
+        end = older[0].time;
+      } catch { break; } // older history is a bonus; carry on with what we have
+    }
+    histCache[key] = map;
+  }
+  latest.forEach((c) => histCache[key].set(c.time, c));
+  return [...histCache[key].values()].sort((a, b) => a.time - b.time);
 }
 
 async function analyzeCoin(sym) {

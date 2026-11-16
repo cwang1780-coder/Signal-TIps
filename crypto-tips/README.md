@@ -55,7 +55,7 @@ Notes:
 
 ## Track record
 Each coin's detail view replays the app's own signals over the chart's history: buy when the signal turns BUY,
-sell when it turns SELL, with a 0.5% fee per trade. It shows the result next to simply holding the coin,
+sell when it turns SELL, with a 0.5% fee per trade, over roughly the last 700 candles of the chart. It shows the result next to simply holding the coin,
 how many trades won, and the biggest drop along the way. ▲ and ▼ on the chart mark each buy and sell.
 Each step only uses data available at that moment. The numbers are shown as they are, including when the signals lose to holding.
 
@@ -125,18 +125,37 @@ Security notes:
 - Use a password you don't use anywhere else, and keep the Coinbase key **View-only**.
 
 ## How tips are scored
-Each indicator adds or removes points:
+The signals are **trend-aware**: the long-term trend decides how everything else is read.
 
 | Signal | Bullish | Bearish |
 |---|---|---|
-| RSI(14) | < 30 (+2), < 40 (+1) | > 70 (−2), > 60 (−1) |
-| MACD(12,26,9) | fresh cross up (+2), above signal (+0.5/+1) | fresh cross down (−2), below signal (−0.5/−1) |
-| Price vs 50 avg | above (+1) | below (−1) |
-| 50 avg vs 200 avg | above (+1) | below (−1) |
-| Bollinger(20,2) | at lower band (+1) | at upper band (−1) |
-| Volume spike > 1.5× | on up move (+0.5) | on down move (−0.5) |
+| Price vs 200-period average (long-term trend) | above (+2) | below (−2) |
+| Price vs 50-period average | above (+1) | below (−1) |
+| MACD(12,26,9) | fresh cross up (+1.5), above signal (+0.5) | fresh cross down (−1.5), below signal (−0.5) |
+| RSI(14) in an **uptrend** | dip under 35 (+1.5), under 45 (+0.5) | — |
+| RSI(14) in a **downtrend** | oversold earns **nothing** | bounce over 65 (−1) |
+| RSI over 80 (either trend) | — | extremely stretched (−1) |
 
-Total ≥ 4 = STRONG BUY, ≥ 1.5 = BUY, ≤ −1.5 = SELL, ≤ −4 = STRONG SELL, otherwise HOLD.
+Total ≥ 2 = BUY, ≥ 4.5 = STRONG BUY, ≤ −2 = SELL, ≤ −4.5 = STRONG SELL, otherwise HOLD.
+Bollinger bands and volume spikes are shown as context but earn no points.
+
+### Why these rules
+The first version bought every "oversold" dip. Tested on about 4 years of daily data for 10 coins
+(buy on BUY, sell on SELL, 0.5% fee per trade), it did no better than holding and often worse, because in a
+falling market oversold coins keep falling. The trend-aware rules were then checked on a period they were not
+tuned on, on 6-hour candles, and with their settings nudged up and down:
+
+| Test (median of 10 coins) | These signals | Just holding | Beat holding |
+|---|---|---|---|
+| Daily, ~4 years | +23% | −15% | 6 of 10 |
+| Daily, most recent 2 years (falling market, not used for tuning) | −25% | −57% | 10 of 10 |
+| Daily, first ~1.5 years (rising market) | +44% | +49% | 5 of 10 |
+| 6-hour, most recent ~600 days | about −10% | −30% to −43% | 9–10 of 10 |
+
+What that means in plain terms: the signals mostly help by **stepping aside in downtrends**. They lost about half as
+much as holding when the market fell, and roughly kept up when it rose. They still lost money in falling markets,
+they trail the strongest bull runs (BTC and SOL beat them over 4 years), and worst drops of 50%+ still happened.
+Ten coins over four years is a small sample, and past results do not predict future results.
 
 ## Holdings
 Type in what you hold on Coinbase, Exodus or any other wallet. The app shows the value,

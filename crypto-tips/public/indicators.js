@@ -74,6 +74,12 @@
   const prev = (arr) => arr[arr.length - 2];
 
   // candles: [{time, low, high, open, close, volume}] oldest -> newest
+  //
+  // Trend-aware scoring. The long-term trend decides how everything else is read:
+  // - In an uptrend, dips are buying opportunities and strength is left alone.
+  // - In a downtrend, "oversold" is NOT a buy reason (falling prices often keep falling) and bounces are suspect.
+  // Chosen after testing on ~4 years of daily data for 10 coins: the older version, which bought every oversold dip,
+  // did no better than holding; this one lost about half as much in falling markets. See README → How tips are scored.
   function analyze(candles) {
     const closes = candles.map((c) => c.close);
     const vols = candles.map((c) => c.volume);
@@ -83,63 +89,59 @@
     const add = (pts, text) => { score += pts; reasons.push({ pts, text }); };
 
     const r = last(rsi(closes, 14));
-    if (r != null) {
-      if (r < 30) add(2, `RSI ${r.toFixed(0)} — oversold, bounce possible`);
-      else if (r < 40) add(1, `RSI ${r.toFixed(0)} — leaning oversold`);
-      else if (r > 70) add(-2, `RSI ${r.toFixed(0)} — overbought, pullback risk`);
-      else if (r > 60) add(-1, `RSI ${r.toFixed(0)} — leaning overbought`);
-      else add(0, `RSI ${r.toFixed(0)} — neutral`);
-    }
+    const s50 = last(sma(closes, 50)), s200 = last(sma(closes, 200));
+    const longTerm = s200 ?? s50;
+    const change = closes.length > 1 ? (price - prev(closes)) / prev(closes) : 0;
+    const base = { price, rsi: r, sma50: s50, sma200: s200, change24: change };
+    if (longTerm == null || r == null) return { ...base, score: 0, action: "HOLD", reasons: [{ pts: 0, text: "Not enough price history yet to judge the trend" }] };
+
+    const up = price > longTerm;
+    const ltName = s200 != null ? "200-period" : "50-period";
+    add(up ? 2 : -2, up ? `Price above its ${ltName} average — long-term uptrend` : `Price below its ${ltName} average — long-term downtrend`);
+    if (s200 != null) add(price > s50 ? 1 : -1, price > s50 ? "Price above 50-period average — short-term strength" : "Price below 50-period average — short-term weakness");
 
     const m = macd(closes);
     const h = last(m.hist), hp = prev(m.hist);
     if (h != null && hp != null) {
-      if (hp <= 0 && h > 0) add(2, "MACD just crossed above signal — bullish momentum");
-      else if (hp >= 0 && h < 0) add(-2, "MACD just crossed below signal — bearish momentum");
-      else if (h > 0) add(h > hp ? 1 : 0.5, `MACD above signal${h > hp ? ", strengthening" : ", fading"}`);
-      else add(h < hp ? -1 : -0.5, `MACD below signal${h < hp ? ", weakening" : ", recovering"}`);
+      if (hp <= 0 && h > 0) add(1.5, "MACD just crossed above its signal line — momentum turning up");
+      else if (hp >= 0 && h < 0) add(-1.5, "MACD just crossed below its signal line — momentum turning down");
+      else add(h > 0 ? 0.5 : -0.5, h > 0 ? "MACD above its signal line — momentum positive" : "MACD below its signal line — momentum negative");
     }
 
-    const s50 = last(sma(closes, 50)), s200 = last(sma(closes, 200));
-    if (s50 != null) {
-      if (price > s50) add(1, "Price above 50-period average — uptrend");
-      else add(-1, "Price below 50-period average — downtrend");
+    const R = r.toFixed(0);
+    if (up) {
+      if (r < 35) add(1.5, `RSI ${R} — a dip inside an uptrend, often a good entry`);
+      else if (r < 45) add(0.5, `RSI ${R} — mild pullback inside an uptrend`);
+      else if (r <= 80) add(0, `RSI ${R} — ${r > 70 ? "strong, but strength is normal in an uptrend" : "neutral"}`);
+    } else {
+      if (r > 65) add(-1, `RSI ${R} — a bounce inside a downtrend, these often fade`);
+      else if (r < 30) add(0, `RSI ${R} — oversold, but in a downtrend falling prices often keep falling, so this is not a buy reason`);
+      else add(0, `RSI ${R} — neutral`);
     }
-    if (s50 != null && s200 != null) {
-      if (s50 > s200) add(1, "50 avg above 200 avg — long-term bullish (golden cross zone)");
-      else add(-1, "50 avg below 200 avg — long-term bearish (death cross zone)");
-    }
+    if (r > 80) add(-1, `RSI ${R} — extremely stretched, pullback risk`);
 
+    // Context only (no points)
     const bb = bollinger(closes);
-    const up = last(bb.upper), lo = last(bb.lower);
-    if (up != null) {
-      if (price <= lo) add(1, "Price at/below lower Bollinger band — stretched to downside");
-      else if (price >= up) add(-1, "Price at/above upper Bollinger band — stretched to upside");
-    }
-
+    const upB = last(bb.upper), loB = last(bb.lower);
+    if (upB != null && price >= upB) add(0, "Price at the upper Bollinger band — stretched to the upside");
+    if (loB != null && price <= loB) add(0, "Price at the lower Bollinger band — stretched to the downside");
     const v20 = last(sma(vols, 20));
-    const change = closes.length > 1 ? (price - prev(closes)) / prev(closes) : 0;
-    if (v20 && last(vols) > v20 * 1.5) {
-      add(change >= 0 ? 0.5 : -0.5, `Volume spike (${(last(vols) / v20).toFixed(1)}× avg) on ${change >= 0 ? "up" : "down"} move`);
-    }
+    if (v20 && last(vols) > v20 * 1.5) add(0, `Volume spike (${(last(vols) / v20).toFixed(1)}× average) on ${change >= 0 ? "an up" : "a down"} move`);
 
     let action;
-    if (score >= 4) action = "STRONG BUY";
-    else if (score >= 1.5) action = "BUY";
-    else if (score <= -4) action = "STRONG SELL";
-    else if (score <= -1.5) action = "SELL";
+    if (score >= 4.5) action = "STRONG BUY";
+    else if (score >= 2) action = "BUY";
+    else if (score <= -4.5) action = "STRONG SELL";
+    else if (score <= -2) action = "SELL";
     else action = "HOLD";
 
-    return {
-      price, score, action, reasons,
-      rsi: r, sma50: s50, sma200: s200,
-      change24: closes.length > 1 ? change : 0,
-    };
+    return { ...base, score, action, reasons };
   }
 
   // Replays the signals over past candles: buy when the signal says BUY, sell when it says SELL, hold otherwise.
   // Each step only sees candles up to that point (no peeking ahead). fee = cost per buy or sell (0.005 = 0.5%).
-  function backtest(candles, { start = 60, fee = 0.005 } = {}) {
+  // Starts at candle 200 so the long-term average the signals rely on is always available.
+  function backtest(candles, { start = 200, fee = 0.005 } = {}) {
     if (candles.length < start + 30) return null;
     let inPos = false, entry = 0, equity = 1, peak = 1, maxDrawdown = 0;
     const trades = [], markers = [];
