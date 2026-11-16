@@ -113,7 +113,7 @@
     busy = false; render();
   }
 
-  window.askAI = (q) => { $("aiPanel").scrollIntoView({ behavior: "smooth", block: "start" }); ask(q); };
+  window.askAI = (q) => { showTab("ai"); ask(q); };
 
   $("aiForm").addEventListener("submit", (e) => { e.preventDefault(); const q = $("aiInput").value; $("aiInput").value = ""; ask(q); });
   $("aiChips").addEventListener("click", (e) => { if (e.target.dataset.q) ask(e.target.dataset.q); });

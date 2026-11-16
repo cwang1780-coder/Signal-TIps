@@ -67,7 +67,8 @@
     ctx.textBaseline = "alphabetic";
     for (let i = 0; i <= 3; i++) {
       const t = s.t0 + ((s.t1 - s.t0) * i) / 3;
-      const label = new Date(t * 1000).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+      const longRange = s.t1 - s.t0 > 300 * 86400; // show the year when the chart covers about a year or more
+      const label = new Date(t * 1000).toLocaleDateString(undefined, longRange ? { month: "short", year: "2-digit" } : { month: "short", day: "numeric" });
       ctx.fillStyle = "#8a98b3";
       ctx.textAlign = i === 0 ? "left" : i === 3 ? "right" : "center";
       ctx.fillText(label, s.x(t), s.H - 6);

@@ -13,12 +13,12 @@
   const save = () => store.set("alerts", alerts);
 
   const TYPES = {
-    above: { label: "Price goes above", needsValue: "$", test: (a, r) => r.price >= a.value, text: (a) => `${a.sym} above ${fmt(a.value)}` },
-    below: { label: "Price drops below", needsValue: "$", test: (a, r) => r.price <= a.value, text: (a) => `${a.sym} below ${fmt(a.value)}` },
-    move: { label: "Moves more than ±% in 24h", needsValue: "%", test: (a, r) => Math.abs(r.change24 * 100) >= a.value, text: (a) => `${a.sym} moves ±${a.value}% in 24h` },
-    buy: { label: "Signal turns BUY", test: (a, r) => r.action.includes("BUY"), text: (a) => `${a.sym} signal turns BUY` },
-    sell: { label: "Signal turns SELL", test: (a, r) => r.action.includes("SELL"), text: (a) => `${a.sym} signal turns SELL` },
-    hype: { label: "Social hype gets high", test: (a, r, s) => s && ["high", "very high"].includes(s.hype), text: (a) => `${a.sym} social hype high` },
+    above: { label: "price goes above", needsValue: "$", test: (a, r) => r.price >= a.value, text: (a) => `${a.sym} above ${fmt(a.value)}` },
+    below: { label: "price drops below", needsValue: "$", test: (a, r) => r.price <= a.value, text: (a) => `${a.sym} below ${fmt(a.value)}` },
+    move: { label: "moves more than ±% in a day", needsValue: "%", test: (a, r) => Math.abs(r.change24 * 100) >= a.value, text: (a) => `${a.sym} moves ±${a.value}% in 24h` },
+    buy: { label: "signal turns BUY", test: (a, r) => r.action.includes("BUY"), text: (a) => `${a.sym} signal turns BUY` },
+    sell: { label: "signal turns SELL", test: (a, r) => r.action.includes("SELL"), text: (a) => `${a.sym} signal turns SELL` },
+    hype: { label: "social hype gets high", test: (a, r, s) => s && ["high", "very high"].includes(s.hype), text: (a) => `${a.sym} social hype high` },
   };
 
   function describeHit(a, r, s) {
@@ -67,7 +67,9 @@
           ${a.triggeredAt ? `<span class="muted">— triggered ${ago(new Date(a.triggeredAt).toISOString())}: ${esc(a.hit || "")}</span>` : results[a.sym]?.price ? `<span class="muted">— now ${fmt(results[a.sym].price)}</span>` : ""}</span>
           <span>${a.triggeredAt ? `<button data-rearm="${a.id}">Re-arm</button>` : ""}<button class="x" data-del="${a.id}" title="Delete">✕</button></span>
         </li>`).join("")
-      : `<li class="muted">No alerts yet. Add one above. Example: BTC drops below $60,000.</li>`;
+      : `<li class="muted">No alerts yet. Pick a coin and what to watch for above. Example: tell me when BTC drops below $60,000.</li>`;
+    const waiting = alerts.filter((a) => !a.triggeredAt).length;
+    $("alCount").hidden = !waiting; $("alCount").textContent = waiting;
     const perm = "Notification" in window ? Notification.permission : "unsupported";
     $("alNotify").hidden = perm !== "default";
     $("alNote").textContent = perm === "granted"

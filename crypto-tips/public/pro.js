@@ -90,12 +90,12 @@
       const { key: k } = await api("activate&session_id=" + encodeURIComponent(session));
       store.set("proKey", k);
       note = "Welcome to Pro! Ask AI is unlocked on this device.";
-      $("aiTitle").scrollIntoView({ behavior: "smooth", block: "start" });
+      window.showTab?.("ai");
     } catch (e) { note = "Couldn't confirm your payment: " + e.message + " If you were charged, reload this page or contact support."; }
   }
 
   window.onSiteConfig = async (c) => { cfg = c.pro || null; await handleReturn(); await loadStatus(); };
   window.refreshPro = loadStatus;
-  window.showUpgrade = () => { if (cfg?.enabled) box.scrollIntoView({ behavior: "smooth", block: "center" }); };
+  window.showUpgrade = () => { if (cfg?.enabled) { window.showTab?.("ai"); box.scrollIntoView({ behavior: "smooth", block: "center" }); } };
   window.proEnabled = () => Boolean(cfg?.enabled);
 })();

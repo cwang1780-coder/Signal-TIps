@@ -119,20 +119,49 @@ async function refresh() {
   document.dispatchEvent(new Event("prices-updated"));
 }
 
+const COIN_NAMES = {
+  BTC: "Bitcoin", ETH: "Ethereum", SOL: "Solana", XRP: "XRP", DOGE: "Dogecoin", ADA: "Cardano", AVAX: "Avalanche", LINK: "Chainlink",
+  LTC: "Litecoin", DOT: "Polkadot", SHIB: "Shiba Inu", PEPE: "Pepe", UNI: "Uniswap", BCH: "Bitcoin Cash", XLM: "Stellar", ATOM: "Cosmos",
+  NEAR: "NEAR", APT: "Aptos", ARB: "Arbitrum", OP: "Optimism", SUI: "Sui", HBAR: "Hedera", AAVE: "Aave", ETC: "Ethereum Classic",
+  ALGO: "Algorand", FIL: "Filecoin", ICP: "Internet Computer", POL: "Polygon", BONK: "Bonk", WIF: "dogwifhat", TRUMP: "Official Trump",
+};
+const coinName = (sym) => (COIN_NAMES[sym] && COIN_NAMES[sym] !== sym ? COIN_NAMES[sym] : "");
+// What each signal means in everyday words
+const PLAIN = {
+  "STRONG BUY": "Uptrend with a dip. Conditions look very good.",
+  BUY: "In an uptrend. Conditions look good.",
+  HOLD: "Mixed signals. Wait and watch.",
+  SELL: "In a downtrend. Better to stay out for now.",
+  "STRONG SELL": "Strong downtrend. Stay out for now.",
+};
+
+function renderSummary() {
+  const rs = allSyms().map((s) => results[s]).filter((r) => r && !r.error);
+  if (!rs.length) return;
+  const good = rs.filter((r) => r.action.includes("BUY")).length, bad = rs.filter((r) => r.action.includes("SELL")).length, mixed = rs.length - good - bad;
+  const mood = good > bad && good >= rs.length / 2 ? "🟢 Most coins are in an uptrend right now."
+    : bad > good && bad >= rs.length / 2 ? "🔴 Most coins are in a downtrend right now."
+    : "🟡 The market is mixed right now.";
+  $("summary").innerHTML = `${mood}<small>${good} look${good === 1 ? "s" : ""} good · ${mixed} mixed · ${bad} in a downtrend. Tap a coin to see why.</small>`;
+}
+
 function render() {
-  const sorted = allSyms().sort((a, b) => Math.abs(results[b]?.score ?? 0) - Math.abs(results[a]?.score ?? 0));
-  $("grid").innerHTML = sorted.map((sym) => {
+  renderSummary();
+  // Keep your own order (no reshuffling on every refresh), so coins stay where you expect them.
+  $("grid").innerHTML = allSyms().map((sym) => {
     const r = results[sym];
-    if (!r) return `<div class="card"><div class="sym">${sym}</div><div class="muted">loading…</div></div>`;
-    if (r.error) return `<div class="card"><div class="row"><span class="sym">${sym}</span><button class="x" data-rm="${sym}">✕</button></div><div class="muted">${r.error}</div></div>`;
-    const w = Math.min(Math.abs(r.score) / 7, 1) * 50;
+    const title = `<span class="sym">${sym}<span class="name">${coinName(sym)}</span></span>`;
+    if (!r) return `<div class="card">${title}<div class="muted">Loading…</div></div>`;
+    if (r.error) return `<div class="card"><div class="row">${title}<button class="x" data-rm="${sym}" title="Remove ${sym}" aria-label="Remove ${sym}">✕</button></div><div class="muted">${r.error === "not on Coinbase" ? "Couldn't find this coin on Coinbase." : "Couldn't load this coin (" + r.error + ")."}</div></div>`;
+    const w = Math.min(Math.abs(r.score) / 6, 1) * 50;
     const color = r.score >= 0 ? "var(--buy)" : "var(--sell)";
     const left = r.score >= 0 ? 50 : 50 - w;
-    return `<div class="card ${selected === sym ? "sel" : ""}" data-sym="${sym}">
-      <div class="row"><span class="sym">${sym}</span><span class="${actionClass(r.action)}">${r.action}</span></div>
+    return `<div class="card ${selected === sym ? "sel" : ""}" data-sym="${sym}" role="button" tabindex="0" aria-label="${sym} ${r.action}">
+      <div class="row">${title}<span class="${actionClass(r.action)}">${r.action}</span></div>
       <div class="price">${fmt(r.price)}</div>
-      <div class="row"><span class="chg ${r.change24 >= 0 ? "up" : "down"}">${pct(r.change24)} 24h</span><span class="muted">RSI ${r.rsi?.toFixed(0) ?? "—"}</span></div>
-      <div class="meter" title="Signal score ${r.score.toFixed(1)}"><i style="left:${left}%;width:${w}%;background:${color}"></i><i style="left:50%;width:1px;background:var(--dim)"></i></div>
+      <div class="chg ${r.change24 >= 0 ? "up" : "down"}">${r.change24 >= 0 ? "▲" : "▼"} ${pct(r.change24)} in 24h</div>
+      <div class="plain">${PLAIN[r.action]}</div>
+      <div class="meter" title="Signal strength ${r.score.toFixed(1)}"><i style="left:${left}%;width:${w}%;background:${color}"></i><i style="left:50%;width:1px;background:var(--dim)"></i></div>
     </div>`;
   }).join("");
   renderDetail();
@@ -148,10 +177,12 @@ function renderDetail() {
   el.style.display = "block";
   const bt = trackRecord(selected, r.candles);
   el.innerHTML = `
-    <div class="row"><h2 style="margin:0">${selected}-USD · ${fmt(r.price)}</h2><span class="${actionClass(r.action)}">${r.action} (score ${r.score.toFixed(1)})</span></div>
+    <div class="row detailHead"><h2 style="margin:0">${coinName(selected) || selected} <span class="muted">${selected}</span> · ${fmt(r.price)}</h2>
+      <span><span class="${actionClass(r.action)}">${r.action}</span> <button class="x" id="detailClose" title="Close" aria-label="Close ${selected} details">✕</button></span></div>
+    <p style="margin-top:6px">${PLAIN[r.action]}</p>
     <div id="chartWrap"></div>
     <div class="muted">Price (white) · 50-period avg (blue) · 200-period avg (orange) · Pick a tool above the chart to draw. Drawings are saved for this coin.</div>
-    <h2>Why this tip?</h2>
+    <h2>Why? <span class="muted">each line adds or removes points; the total (${r.score.toFixed(1)}) decides the signal</span></h2>
     <ul class="reasons">${r.reasons.map((x) => `<li><span class="pts" style="color:${x.pts > 0 ? "var(--buy)" : x.pts < 0 ? "var(--sell)" : "var(--dim)"}">${x.pts > 0 ? "+" : ""}${x.pts}</span><span>${x.text}</span></li>`).join("")}</ul>
     ${trackRecordHtml(bt)}
     <div class="links">
@@ -201,7 +232,7 @@ function renderHoldings() {
   const cash = cb.cash.filter((c) => c.amt >= 0.01).map((c) => `${c.amt.toLocaleString(undefined, { maximumFractionDigits: 2 })} ${c.sym}`).join(" · ");
   $("cbCash").textContent = cash ? "Cash on Coinbase: " + cash : "";
   const all = [...cb.holdings.map((h) => ({ ...h, src: "Coinbase" })), ...holdings.map((h, i) => ({ ...h, src: "Manual", idx: i }))];
-  if (!all.length) { $("holdings").innerHTML = `<tr><td class="muted">No holdings yet. Add what you own to get a tip for each.</td></tr>`; return; }
+  if (!all.length) { $("holdings").innerHTML = `<tr><td class="muted">Nothing here yet. Add a coin you own below to see what it's worth and the signal for it.</td></tr>`; return; }
   let total = 0, totalCost = 0, costedValue = 0;
   const rows = all.map((h) => {
     const r = results[h.sym];
@@ -225,8 +256,27 @@ $("grid").addEventListener("click", (e) => {
   const rm = e.target.dataset.rm;
   if (rm) { coins = coins.filter((c) => c !== rm); store.set("coins", coins); delete results[rm]; render(); return; }
   const card = e.target.closest("[data-sym]");
-  if (card) { selected = card.dataset.sym; render(); $("detail").scrollIntoView({ behavior: "smooth", block: "nearest" }); }
+  if (card) { selected = card.dataset.sym; render(); $("detail").scrollIntoView({ behavior: "smooth", block: "start" }); }
 });
+$("grid").addEventListener("keydown", (e) => { if ((e.key === "Enter" || e.key === " ") && e.target.dataset.sym) { e.preventDefault(); e.target.click(); } });
+$("detail").addEventListener("click", (e) => { if (e.target.id === "detailClose") { selected = null; render(); } });
+
+// ── Tabs ──
+const TABS = ["signals", "buzz", "alerts", "ai", "coins"];
+function showTab(name) {
+  if (!TABS.includes(name)) name = "signals";
+  document.querySelectorAll("section.tab").forEach((s) => (s.hidden = s.dataset.tab !== name));
+  document.querySelectorAll("#tabs button").forEach((b) => { const on = b.dataset.go === name; b.classList.toggle("on", on); b.setAttribute("aria-current", on ? "page" : "false"); });
+  store.set("tab", name);
+  if (name === "signals") renderDetail(); // the chart needs to be visible to size itself
+  window.scrollTo(0, 0);
+}
+window.showTab = showTab;
+$("tabs").addEventListener("click", (e) => { const b = e.target.closest("[data-go]"); if (b) showTab(b.dataset.go); });
+
+// ── First-visit welcome ──
+if (!store.get("welcomed", false)) $("welcome").hidden = false;
+for (const id of ["welcomeOk", "welcomeClose"]) $(id).onclick = () => { store.set("welcomed", true); $("welcome").hidden = true; };
 $("holdings").addEventListener("click", (e) => {
   const i = e.target.dataset.hrm;
   if (i != null) { holdings.splice(+i, 1); store.set("holdings", holdings); renderHoldings(); }
@@ -263,6 +313,7 @@ window.addEventListener("resize", () => selected && renderDetail());
 if (location.protocol !== "file:") {
   fetch("/api/config").then((r) => (r.ok ? r.json() : null)).then((c) => { if (c) { siteConfig = c; renderDetail(); window.onSiteConfig?.(c); } }).catch(() => {});
 }
+showTab(new URLSearchParams(location.search).has("pro_session") ? "ai" : store.get("tab", "signals"));
 render();
 syncCoinbase().then(refresh);
 setInterval(refresh, 60000);
