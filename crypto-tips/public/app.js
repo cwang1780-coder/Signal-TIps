@@ -84,11 +84,13 @@ function renderDetail() {
   const el = $("detail");
   const r = results[selected];
   if (!r || r.error) { el.style.display = "none"; return; }
+  // Don't rebuild the chart in the middle of a drawing; the next refresh will catch up.
+  if (window.Draw?.isBusy() && Draw.currentSym() === selected && el.style.display === "block") return;
   el.style.display = "block";
   el.innerHTML = `
     <div class="row"><h2 style="margin:0">${selected}-USD · ${fmt(r.price)}</h2><span class="${actionClass(r.action)}">${r.action} (score ${r.score.toFixed(1)})</span></div>
-    <canvas id="chart"></canvas>
-    <div class="muted">Price (white) · 50-period avg (blue) · 200-period avg (orange)</div>
+    <div id="chartWrap"></div>
+    <div class="muted">Price (white) · 50-period avg (blue) · 200-period avg (orange) · Pick a tool above the chart to draw. Drawings are saved for this coin.</div>
     <h2>Why this tip?</h2>
     <ul class="reasons">${r.reasons.map((x) => `<li><span class="pts" style="color:${x.pts > 0 ? "var(--buy)" : x.pts < 0 ? "var(--sell)" : "var(--dim)"}">${x.pts > 0 ? "+" : ""}${x.pts}</span><span>${x.text}</span></li>`).join("")}</ul>
     <div class="links">
@@ -98,29 +100,8 @@ function renderDetail() {
       <button class="primary" onclick="askAI('Should I buy, sell or hold ${selected} right now? Walk me through the signals and what people are saying.')">Ask AI about ${selected}</button>
     </div>
     <div id="detailSocial"></div>`;
-  drawChart($("chart"), r.candles);
+  Draw.mount($("chartWrap"), selected, r.candles);
   window.renderDetailSocial?.(selected);
-}
-
-function drawChart(canvas, candles) {
-  const dpr = window.devicePixelRatio || 1;
-  const W = canvas.clientWidth, H = canvas.clientHeight;
-  canvas.width = W * dpr; canvas.height = H * dpr;
-  const ctx = canvas.getContext("2d");
-  ctx.scale(dpr, dpr);
-  const closes = candles.map((c) => c.close);
-  const s50 = Indicators.sma(closes, 50), s200 = Indicators.sma(closes, 200);
-  const all = closes.concat(s50, s200).filter((v) => v != null);
-  const min = Math.min(...all), max = Math.max(...all);
-  const x = (i) => (i / (closes.length - 1)) * (W - 10) + 5;
-  const y = (v) => H - 10 - ((v - min) / (max - min || 1)) * (H - 20);
-  const line = (arr, color, width) => {
-    ctx.beginPath(); ctx.strokeStyle = color; ctx.lineWidth = width;
-    let started = false;
-    arr.forEach((v, i) => { if (v == null) return; started ? ctx.lineTo(x(i), y(v)) : ctx.moveTo(x(i), y(v)); started = true; });
-    ctx.stroke();
-  };
-  line(s200, "#f59e0b", 1.5); line(s50, "#3b82f6", 1.5); line(closes, "#e6ecf5", 2);
 }
 
 async function syncCoinbase(force) {

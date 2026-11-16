@@ -37,7 +37,19 @@
   .meter i { position: absolute; top: 0; bottom: 0; }
   .muted { color: var(--dim); font-size: 13px; }
   #detail { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 16px; margin-top: 14px; display: none; }
-  canvas { width: 100%; height: 220px; display: block; margin: 10px 0; }
+  .chartBox { position: relative; margin: 8px 0; }
+  .chartBox canvas { width: 100%; height: 340px; display: block; background: #0d1320; border-radius: 8px; }
+  .drawBar { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; margin-top: 10px; }
+  .drawBar button { min-width: 36px; height: 34px; padding: 0 8px; }
+  .drawBar button.on { background: var(--accent); border-color: var(--accent); }
+  .drawBar .swatch { min-width: 24px; width: 24px; height: 24px; padding: 0; border-radius: 50%; border: 2px solid transparent; }
+  .drawBar .swatch.on { border-color: #fff; background-clip: padding-box; }
+  .drawBar .sep { width: 1px; height: 22px; background: var(--border); margin: 0 4px; }
+  .noteInput { position: absolute; width: 200px; font-size: 13px; padding: 5px 8px; z-index: 5; }
+  .drawList { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center; font-size: 14px; }
+  .lvl { display: inline-flex; align-items: center; gap: 6px; } .lvl i { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+  .lvl button { font-size: 12px; padding: 3px 8px; }
+  @media (max-width: 600px) { .chartBox canvas { height: 280px; } }
   .reasons li { list-style: none; padding: 6px 0; border-bottom: 1px solid var(--border); display: flex; gap: 10px; }
   .reasons .pts { min-width: 38px; font-weight: 700; text-align: right; font-variant-numeric: tabular-nums; }
   .links { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
@@ -175,6 +187,7 @@
 </div>
 
 <script src="indicators.js"></script>
+<script src="draw.js"></script>
 <script src="app.js"></script>
 <script src="extras.js"></script>
 <script src="ai-chat.js"></script>

@@ -75,6 +75,15 @@
       : "Alerts show on this page and are checked every minute while it's open (it can be in a background tab).";
   }
 
+  window.hasAlert = (sym, value) => alerts.some((a) => a.sym === sym && a.value === value && (a.type === "above" || a.type === "below") && !a.triggeredAt);
+  // Used by chart drawings: turn a price level into an alert.
+  window.addAlert = (sym, type, value) => {
+    if (!TYPES[type] || alerts.some((a) => a.sym === sym && a.type === type && a.value === value && !a.triggeredAt)) return true;
+    alerts.push({ id: Date.now().toString(36), sym, type, value, triggeredAt: null });
+    save(); renderAlerts(); checkAlerts();
+    return true;
+  };
+
   $("alType").innerHTML = Object.entries(TYPES).map(([k, t]) => `<option value="${k}">${t.label}</option>`).join("");
   $("alType").onchange = renderAlerts;
   $("alForm").addEventListener("submit", (e) => {

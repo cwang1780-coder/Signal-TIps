@@ -53,6 +53,20 @@ Notes:
 - If Claude declines a question for safety reasons, the request is automatically retried on a fallback model.
 - To use a different model, set `AI_MODEL` (for example `AI_MODEL=claude-sonnet-5-5`, which is cheaper).
 
+## Draw on the chart
+Open any coin to see its chart with a drawing toolbar:
+- 👆 **Look**: no drawing. On a phone this lets the page scroll normally.
+- ✏️ **Pen**: draw freely.
+- ╱ **Trend line**: drag between two points.
+- ― **Price level**: tap to mark support or resistance. The price shows on the right.
+- ➚ **Arrow**: drag to point at something.
+- **T Note**: tap and type a label.
+- 🧽 **Eraser**: tap a drawing to delete it.
+- **6 colours, Undo, and Clear** (tap Clear twice to confirm).
+
+Drawings are pinned to a price and date, so they stay in the right place when prices update or you switch timeframe.
+They're saved per coin in your browser. Every price level you draw shows a **🔔 Alert** button that turns it into a price alert.
+
 ## Price alerts
 Set alerts for any coin you track:
 - the price goes above or drops below a level
