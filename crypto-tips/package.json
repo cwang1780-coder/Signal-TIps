@@ -1,0 +1,16 @@
+{
+  "name": "crypto-signal-tips",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Indicator-based crypto buy/sell tips with Coinbase sync and an AI assistant",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node test.js && node test-coinbase.js && node test-ai.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^1.8.0"
+  }
+}

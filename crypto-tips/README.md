@@ -2,13 +2,15 @@
 
 A browser app that pulls live market data from Coinbase's public API and turns standard
 technical indicators into simple BUY / SELL / HOLD tips, each with the reasons behind it.
+You can sync your Coinbase balances and ask an AI questions about the signals and your holdings.
 
 **Not financial advice.** The tips come from indicators that are often wrong.
 
 ## Run it
-You need [Node.js](https://nodejs.org) 18 or newer. Nothing else to install.
+You need [Node.js](https://nodejs.org) 18 or newer.
 
     cd crypto-tips
+    npm install           # first time only
     node server.js        # then open http://localhost:8000
 
 Without a Coinbase key the app still works on public market data, and you can type holdings in manually.
@@ -31,6 +33,26 @@ How the key is kept safe:
 
 Exodus has no public API, so add Exodus holdings by typing them into the table.
 
+## Ask AI
+The "Ask AI" panel lets you ask questions in plain English, such as "Should I buy more ETH or wait?"
+or "Review my holdings". Each question is sent with the data on the page: every coin's signals and
+reasons, plus your holdings and cash. The answer streams back from Claude (`claude-opus-5-5`).
+
+To turn it on:
+1. Create an API key at https://console.anthropic.com/ (API usage is billed by Anthropic, separately from any Claude subscription).
+2. Start the server with the key set:
+
+       ANTHROPIC_API_KEY=sk-ant-...  node server.js          # macOS / Linux
+       $env:ANTHROPIC_API_KEY="sk-ant-..."; node server.js   # Windows PowerShell
+
+   The server prints "Ask AI enabled" when it finds the key.
+
+Notes:
+- The key stays in the server process. The browser never sees it.
+- The endpoint only accepts requests from the app's own page, so other websites can't use your key through it.
+- If Claude declines a question for safety reasons, the request is automatically retried on a fallback model.
+- To use a different model, set `AI_MODEL` (for example `AI_MODEL=claude-sonnet-5-5`, which is cheaper).
+
 ## How tips are scored
 Each indicator adds or removes points:
 
@@ -50,5 +72,4 @@ Type in what you hold on Coinbase, Exodus or any other wallet. The app shows the
 profit or loss, and the current tip for each coin. This data stays in your browser's localStorage.
 
 ## Tests
-    node test.js            # indicators
-    node test-coinbase.js   # Coinbase auth + balance parsing (uses generated keys, no real account)
+    npm test   # indicators, Coinbase auth/parsing, AI request + endpoint (all offline, mocked APIs)

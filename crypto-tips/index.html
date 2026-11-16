@@ -50,6 +50,16 @@
   .addh input { width: 120px; }
   code { background: var(--panel2); padding: 1px 5px; border-radius: 4px; }
   .x { background: none; border: none; color: var(--dim); padding: 2px 6px; }
+  #aiPanel { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 14px; }
+  #aiLog { max-height: 460px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; margin-bottom: 12px; }
+  .msg { padding: 10px 12px; border-radius: 10px; max-width: 88%; overflow-wrap: anywhere; }
+  .msg.user { align-self: flex-end; background: var(--accent); color: #fff; white-space: pre-wrap; }
+  .msg.assistant { align-self: flex-start; background: var(--panel2); }
+  .msg p { margin: 0 0 8px; } .msg p:last-child { margin: 0; }
+  .msg ul { margin: 4px 0 8px 18px; } .msg li { margin: 2px 0; }
+  #aiForm { display: flex; gap: 8px; } #aiInput { flex: 1; min-width: 0; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+  .chips button { font-size: 13px; padding: 5px 10px; border-radius: 999px; }
 </style>
 </head>
 <body>
@@ -82,6 +92,23 @@
 
   <div id="detail"></div>
 
+  <h2 id="aiTitle">Ask AI <span class="muted">— questions about these signals and your holdings</span></h2>
+  <div id="aiPanel">
+    <div class="chips" id="aiChips">
+      <button data-q="Which coin has the strongest buy signal right now, and why?">Strongest buy signal?</button>
+      <button data-q="Review my holdings: what looks risky and what would you consider doing?">Review my holdings</button>
+      <button data-q="Explain today's signals like I'm a beginner.">Explain like I'm new</button>
+      <button data-q="Are any coins showing a SELL signal I should pay attention to?">Any sell warnings?</button>
+    </div>
+    <div id="aiLog"></div>
+    <form id="aiForm">
+      <input id="aiInput" placeholder="e.g. Should I buy more ETH or wait?" autocomplete="off" />
+      <button id="aiSend" class="primary" type="submit">Ask</button>
+      <button id="aiClear" type="button" title="Clear chat">Clear</button>
+    </form>
+    <p class="muted" style="margin-top:8px">AI answers use the live data on this page. They can be wrong and are not financial advice.</p>
+  </div>
+
   <h2>My holdings</h2>
   <div class="row" style="margin-bottom:8px"><span class="muted" id="cbStatus"></span><button id="cbSync">Sync Coinbase</button></div>
   <div class="muted" id="cbCash" style="margin-bottom:8px"></div>
@@ -97,5 +124,6 @@
 
 <script src="indicators.js"></script>
 <script src="app.js"></script>
+<script src="ai-chat.js"></script>
 </body>
 </html>

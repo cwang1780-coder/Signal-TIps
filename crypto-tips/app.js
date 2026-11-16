@@ -87,6 +87,7 @@ function renderDetail() {
       <a href="https://www.coinbase.com/advanced-trade/spot/${selected}-USD" target="_blank" rel="noopener">Trade on Coinbase ↗</a>
       <a href="https://www.exodus.com/" target="_blank" rel="noopener">Open Exodus ↗</a>
       <a href="https://www.tradingview.com/symbols/${selected}USD/" target="_blank" rel="noopener">Chart on TradingView ↗</a>
+      <button class="primary" onclick="askAI('Should I buy, sell or hold ${selected} right now? Walk me through the signals.')">Ask AI about ${selected}</button>
     </div>`;
   drawChart($("chart"), r.candles);
 }
@@ -169,14 +170,14 @@ $("holdings").addEventListener("click", (e) => {
 });
 $("addSym").onclick = async () => {
   const sym = $("newSym").value.trim().toUpperCase();
-  if (!sym || coins.includes(sym)) return;
+  if (!/^[A-Z0-9]{1,15}$/.test(sym) || coins.includes(sym)) return;
   coins.push(sym); store.set("coins", coins); $("newSym").value = "";
   try { results[sym] = await analyzeCoin(sym); } catch (e) { results[sym] = { error: e.message }; }
   render();
 };
 $("hAdd").onclick = async () => {
   const sym = $("hSym").value.trim().toUpperCase(), amt = parseFloat($("hAmt").value), cost = parseFloat($("hCost").value) || 0;
-  if (!sym || !(amt > 0)) return;
+  if (!/^[A-Z0-9]{1,15}$/.test(sym) || !(amt > 0)) return;
   holdings.push({ sym, amt, cost }); store.set("holdings", holdings);
   if (!coins.includes(sym)) { coins.push(sym); store.set("coins", coins); }
   $("hSym").value = $("hAmt").value = $("hCost").value = "";
