@@ -48,6 +48,7 @@
   .tablewrap { overflow-x: auto; }
   .addh { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
   .addh input { width: 120px; }
+  code { background: var(--panel2); padding: 1px 5px; border-radius: 4px; }
   .x { background: none; border: none; color: var(--dim); padding: 2px 6px; }
 </style>
 </head>
@@ -81,7 +82,9 @@
 
   <div id="detail"></div>
 
-  <h2>My holdings <span class="muted">(Coinbase, Exodus or any wallet — enter manually, saved only in this browser)</span></h2>
+  <h2>My holdings</h2>
+  <div class="row" style="margin-bottom:8px"><span class="muted" id="cbStatus"></span><button id="cbSync">Sync Coinbase</button></div>
+  <div class="muted" id="cbCash" style="margin-bottom:8px"></div>
   <div class="tablewrap"><table id="holdings"></table></div>
   <div class="addh">
     <input id="hSym" placeholder="Coin (BTC)" />
@@ -89,6 +92,7 @@
     <input id="hCost" placeholder="Avg buy price $" type="number" step="any" />
     <button id="hAdd">Add holding</button>
   </div>
+  <p class="muted" style="margin-top:6px">Manual entries are for Exodus or other wallets and are saved only in this browser.</p>
 </div>
 
 <script src="indicators.js"></script>

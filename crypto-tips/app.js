@@ -10,6 +10,8 @@ const store = {
 let coins = store.get("coins", DEFAULT_COINS);
 let holdings = store.get("holdings", []); // [{sym, amt, cost}]
 let results = {}; // sym -> analysis
+let cb = { holdings: [], cash: [], status: "" }; // synced from Coinbase via local server
+const allSyms = () => [...new Set([...coins, ...cb.holdings.map((h) => h.sym)])];
 let selected = null;
 
 const $ = (id) => document.getElementById(id);
@@ -39,8 +41,9 @@ async function analyzeCoin(sym) {
 async function refresh() {
   $("status").textContent = "Fetching live data from Coinbase…";
   // small batches to stay under public rate limits
-  for (let i = 0; i < coins.length; i += 4) {
-    await Promise.all(coins.slice(i, i + 4).map(async (sym) => {
+  const syms = allSyms();
+  for (let i = 0; i < syms.length; i += 4) {
+    await Promise.all(syms.slice(i, i + 4).map(async (sym) => {
       try { results[sym] = await analyzeCoin(sym); }
       catch (e) { results[sym] = { error: e.message }; }
     }));
@@ -50,7 +53,7 @@ async function refresh() {
 }
 
 function render() {
-  const sorted = coins.slice().sort((a, b) => Math.abs(results[b]?.score ?? 0) - Math.abs(results[a]?.score ?? 0));
+  const sorted = allSyms().sort((a, b) => Math.abs(results[b]?.score ?? 0) - Math.abs(results[a]?.score ?? 0));
   $("grid").innerHTML = sorted.map((sym) => {
     const r = results[sym];
     if (!r) return `<div class="card"><div class="sym">${sym}</div><div class="muted">loading…</div></div>`;
@@ -109,24 +112,48 @@ function drawChart(canvas, candles) {
   line(s200, "#f59e0b", 1.5); line(s50, "#3b82f6", 1.5); line(closes, "#e6ecf5", 2);
 }
 
+async function syncCoinbase(force) {
+  if (location.protocol === "file:") {
+    cb.status = "To connect Coinbase, run <code>node server.js</code> and open http://localhost:8000";
+    return renderHoldings();
+  }
+  cb.status = "Syncing Coinbase…"; renderHoldings();
+  try {
+    const res = await fetch("/api/coinbase/holdings" + (force ? "?force=1" : ""));
+    if (!res.ok) throw new Error("server not running (HTTP " + res.status + ")");
+    const d = await res.json();
+    if (!d.connected) { cb = { holdings: [], cash: [], status: "Coinbase not connected: " + d.reason }; return renderHoldings(); }
+    cb = { holdings: d.holdings, cash: d.cash, status: "✅ Coinbase connected · synced " + new Date(d.updated).toLocaleTimeString() };
+    const missing = d.holdings.map((h) => h.sym).filter((s) => !results[s]);
+    await Promise.all(missing.map(async (s) => { try { results[s] = await analyzeCoin(s); } catch (e) { results[s] = { error: e.message }; } }));
+  } catch (e) {
+    cb.status = "Coinbase sync unavailable: " + e.message;
+  }
+  render();
+}
+
 function renderHoldings() {
-  if (!holdings.length) { $("holdings").innerHTML = `<tr><td class="muted">No holdings yet. Add what you own to get a tip for each.</td></tr>`; return; }
-  let total = 0, totalCost = 0;
-  const rows = holdings.map((h, i) => {
+  $("cbStatus").innerHTML = cb.status;
+  const cash = cb.cash.filter((c) => c.amt >= 0.01).map((c) => `${c.amt.toLocaleString(undefined, { maximumFractionDigits: 2 })} ${c.sym}`).join(" · ");
+  $("cbCash").textContent = cash ? "Cash on Coinbase: " + cash : "";
+  const all = [...cb.holdings.map((h) => ({ ...h, src: "Coinbase" })), ...holdings.map((h, i) => ({ ...h, src: "Manual", idx: i }))];
+  if (!all.length) { $("holdings").innerHTML = `<tr><td class="muted">No holdings yet. Add what you own to get a tip for each.</td></tr>`; return; }
+  let total = 0, totalCost = 0, costedValue = 0;
+  const rows = all.map((h) => {
     const r = results[h.sym];
     const value = r?.price ? r.price * h.amt : null;
     const pl = value != null && h.cost ? value - h.cost * h.amt : null;
     if (value != null) total += value;
-    if (h.cost) totalCost += h.cost * h.amt;
+    if (h.cost && value != null) { totalCost += h.cost * h.amt; costedValue += value; }
     let tip = r?.action ? `<span class="${actionClass(r.action)}">${r.action}</span>` : `<span class="muted">${r?.error || "loading"}</span>`;
     if (r?.action?.includes("SELL") && pl > 0) tip += ` <span class="muted">— consider taking some profit</span>`;
     if (r?.action?.includes("BUY") && pl < 0) tip += ` <span class="muted">— could average down</span>`;
-    return `<tr><td><b>${h.sym}</b></td><td>${h.amt}</td><td>${fmt(value)}</td>
+    return `<tr><td><b>${h.sym}</b> <span class="muted">${h.src}</span></td><td>${+h.amt.toPrecision(8)}</td><td>${fmt(value)}</td>
       <td class="chg ${pl >= 0 ? "up" : "down"}">${pl == null ? "—" : (pl >= 0 ? "+" : "-") + fmt(Math.abs(pl))}</td>
-      <td>${tip}</td><td><button class="x" data-hrm="${i}">✕</button></td></tr>`;
+      <td>${tip}</td><td>${h.idx != null ? `<button class="x" data-hrm="${h.idx}" title="Remove">✕</button>` : ""}</td></tr>`;
   }).join("");
   $("holdings").innerHTML = `<tr><th>Coin</th><th>Amount</th><th>Value</th><th>Profit/Loss</th><th>Tip</th><th></th></tr>${rows}
-    <tr><td><b>Total</b></td><td></td><td><b>${fmt(total)}</b></td><td class="chg ${total - totalCost >= 0 ? "up" : "down"}">${totalCost ? pct((total - totalCost) / totalCost) : ""}</td><td></td><td></td></tr>`;
+    <tr><td><b>Total</b></td><td></td><td><b>${fmt(total)}</b></td><td class="chg ${costedValue - totalCost >= 0 ? "up" : "down"}">${totalCost ? pct((costedValue - totalCost) / totalCost) + " on coins with a buy price" : ""}</td><td></td><td></td></tr>`;
 }
 
 // events
@@ -156,10 +183,12 @@ $("hAdd").onclick = async () => {
   if (!results[sym]) { try { results[sym] = await analyzeCoin(sym); } catch (e) { results[sym] = { error: e.message }; } }
   render();
 };
-$("refresh").onclick = refresh;
+$("refresh").onclick = () => { refresh(); syncCoinbase(true); };
+$("cbSync").onclick = () => syncCoinbase(true);
 $("tf").onchange = () => { results = {}; render(); refresh(); };
 window.addEventListener("resize", () => selected && renderDetail());
 
 render();
-refresh();
+syncCoinbase().then(refresh);
 setInterval(refresh, 60000);
+setInterval(() => location.protocol !== "file:" && syncCoinbase(), 120000);
