@@ -14,6 +14,13 @@ let cb = { holdings: [], cash: [], status: "" }; // synced from Coinbase via loc
 const allSyms = () => [...new Set([...coins, ...cb.holdings.map((h) => h.sym)])];
 let selected = null;
 
+// Private endpoints (Coinbase sync, Ask AI) need the app password when the app is online.
+const authHeaders = () => { const p = store.get("appPassword", ""); return p ? { "X-App-Password": p } : {}; };
+function showLock(message) {
+  $("lockMsg").textContent = message || "Enter the app password to see your Coinbase holdings and use Ask AI.";
+  $("lockBar").hidden = false;
+}
+
 const $ = (id) => document.getElementById(id);
 const fmt = (n) => n == null ? "—" : "$" + (n >= 1 ? n.toLocaleString(undefined, { maximumFractionDigits: 2 }) : n.toPrecision(4));
 const pct = (n) => (n >= 0 ? "+" : "") + (n * 100).toFixed(2) + "%";
@@ -120,9 +127,11 @@ async function syncCoinbase(force) {
   }
   cb.status = "Syncing Coinbase…"; renderHoldings();
   try {
-    const res = await fetch("/api/coinbase/holdings" + (force ? "?force=1" : ""));
-    if (!res.ok) throw new Error("server not running (HTTP " + res.status + ")");
-    const d = await res.json();
+    const res = await fetch("/api/coinbase/holdings" + (force ? "?force=1" : ""), { headers: authHeaders() });
+    const d = await res.json().catch(() => ({}));
+    if (res.status === 401) { showLock(store.get("appPassword", "") ? "Wrong password, try again." : null); cb = { holdings: [], cash: [], status: "🔒 Locked: enter the app password above." }; return render(); }
+    if (!res.ok) throw new Error(d.reason || "server not reachable (HTTP " + res.status + ")");
+    $("lockBar").hidden = true;
     if (!d.connected) { cb = { holdings: [], cash: [], status: "Coinbase not connected: " + d.reason }; return renderHoldings(); }
     cb = { holdings: d.holdings, cash: d.cash, status: "✅ Coinbase connected · synced " + new Date(d.updated).toLocaleTimeString() };
     const missing = d.holdings.map((h) => h.sym).filter((s) => !results[s]);
@@ -186,6 +195,12 @@ $("hAdd").onclick = async () => {
 };
 $("refresh").onclick = () => { refresh(); syncCoinbase(true); };
 $("cbSync").onclick = () => syncCoinbase(true);
+$("lockBar").addEventListener("submit", (e) => {
+  e.preventDefault();
+  store.set("appPassword", $("lockInput").value);
+  $("lockInput").value = "";
+  syncCoinbase(true);
+});
 $("tf").onchange = () => { results = {}; render(); refresh(); };
 window.addEventListener("resize", () => selected && renderDetail());
 

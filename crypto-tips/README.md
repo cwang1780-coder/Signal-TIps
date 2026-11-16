@@ -53,6 +53,27 @@ Notes:
 - If Claude declines a question for safety reasons, the request is automatically retried on a fallback model.
 - To use a different model, set `AI_MODEL` (for example `AI_MODEL=claude-sonnet-5-5`, which is cheaper).
 
+## Put it online (Vercel)
+The app deploys to Vercel as-is: `public/` is the page, and `api/` holds the two serverless
+functions (Coinbase sync and Ask AI).
+
+1. Deploy: `npx vercel deploy` from this folder. Or import the GitHub repo in Vercel and set **Root Directory** to `crypto-tips`.
+2. In the Vercel project go to **Settings → Environment Variables** and add:
+
+   | Name | Value |
+   |---|---|
+   | `APP_PASSWORD` | A long password you choose. **Required.** Without it, Coinbase sync and Ask AI stay switched off online. |
+   | `ANTHROPIC_API_KEY` | Your Anthropic API key (for Ask AI) |
+   | `COINBASE_API_KEY_NAME` | The key's `name` from your Coinbase key file |
+   | `COINBASE_API_PRIVATE_KEY` | The key's `privateKey` from the same file (paste it as-is, including the BEGIN/END lines) |
+
+3. Redeploy so the variables take effect. Open the site, enter the password once, and the browser remembers it.
+
+Security notes:
+- Prices and tips are public data, so anyone with the link can see those.
+- Your balances and the AI need the password. Wrong guesses are slowed down.
+- Use a password you don't use anywhere else, and keep the Coinbase key **View-only**.
+
 ## How tips are scored
 Each indicator adds or removes points:
 

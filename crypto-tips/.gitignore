@@ -2,3 +2,5 @@ coinbase-key.json
 .env
 *.pem
 node_modules/
+.vercel
+.vercel

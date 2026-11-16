@@ -76,10 +76,16 @@
     try {
       const res = await fetch("/api/ask", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...authHeaders() },
         body: JSON.stringify({ question, history, snapshot: snapshot() }),
       });
-      if (!res.ok) throw new Error((await res.text()) || "HTTP " + res.status);
+      if (!res.ok) {
+        const t = await res.text();
+        let reason = t;
+        try { reason = JSON.parse(t).reason || t; } catch {}
+        if (res.status === 401) showLock();
+        throw new Error(reason || "HTTP " + res.status);
+      }
       const reader = res.body.getReader();
       const dec = new TextDecoder();
       for (;;) {

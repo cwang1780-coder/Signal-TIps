@@ -60,6 +60,8 @@
   #aiForm { display: flex; gap: 8px; } #aiInput { flex: 1; min-width: 0; }
   .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
   .chips button { font-size: 13px; padding: 5px 10px; border-radius: 999px; }
+  .lock { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; background: var(--panel); border: 1px solid var(--accent); border-radius: 10px; padding: 10px 12px; margin-bottom: 14px; }
+  .lock[hidden] { display: none; } .lock span { flex: 1 1 220px; }
 </style>
 </head>
 <body>
@@ -78,6 +80,11 @@
     </div>
   </header>
 
+  <form id="lockBar" class="lock" hidden>
+    <span id="lockMsg"></span>
+    <input id="lockInput" type="password" placeholder="App password" autocomplete="current-password" />
+    <button class="primary" type="submit">Unlock</button>
+  </form>
   <div class="disclaimer">
     ⚠️ <b>Not financial advice.</b> Tips are generated automatically from technical indicators
     (RSI, MACD, moving averages, Bollinger bands, volume) on live Coinbase market data. Indicators

@@ -1,0 +1,6 @@
+coinbase-key.json
+.env
+*.pem
+node_modules
+test*.js
+server.js

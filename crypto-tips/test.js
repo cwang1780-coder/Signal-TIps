@@ -1,6 +1,6 @@
 // Run: node crypto-tips/test.js
 const assert = require("assert");
-const I = require("./indicators.js");
+const I = require("./public/indicators.js");
 
 assert.deepStrictEqual(I.sma([1, 2, 3, 4], 2), [null, 1.5, 2.5, 3.5]);
 assert.strictEqual(I.ema([1, 2, 3], 3)[2], 2);

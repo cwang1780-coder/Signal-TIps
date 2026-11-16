@@ -1,0 +1,9 @@
+{
+  "framework": null,
+  "buildCommand": "",
+  "outputDirectory": "public",
+  "functions": {
+    "api/ask.js": { "maxDuration": 60 },
+    "api/coinbase/holdings.js": { "maxDuration": 30 }
+  }
+}
