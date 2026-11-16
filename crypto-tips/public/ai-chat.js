@@ -48,6 +48,7 @@
           profitUSD: p && h.cost ? round((p - h.cost) * h.amt) : null, source: h.source };
       }),
       cash: cb.cash,
+      social: window.socialSnapshot ? window.socialSnapshot() : null,
     };
   }
 

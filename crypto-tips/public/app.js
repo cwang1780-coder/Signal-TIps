@@ -57,6 +57,7 @@ async function refresh() {
   }
   $("status").textContent = "Updated " + new Date().toLocaleTimeString();
   render();
+  document.dispatchEvent(new Event("prices-updated"));
 }
 
 function render() {
@@ -94,9 +95,11 @@ function renderDetail() {
       <a href="https://www.coinbase.com/advanced-trade/spot/${selected}-USD" target="_blank" rel="noopener">Trade on Coinbase ↗</a>
       <a href="https://www.exodus.com/" target="_blank" rel="noopener">Open Exodus ↗</a>
       <a href="https://www.tradingview.com/symbols/${selected}USD/" target="_blank" rel="noopener">Chart on TradingView ↗</a>
-      <button class="primary" onclick="askAI('Should I buy, sell or hold ${selected} right now? Walk me through the signals.')">Ask AI about ${selected}</button>
-    </div>`;
+      <button class="primary" onclick="askAI('Should I buy, sell or hold ${selected} right now? Walk me through the signals and what people are saying.')">Ask AI about ${selected}</button>
+    </div>
+    <div id="detailSocial"></div>`;
   drawChart($("chart"), r.candles);
+  window.renderDetailSocial?.(selected);
 }
 
 function drawChart(canvas, candles) {
@@ -183,6 +186,7 @@ $("addSym").onclick = async () => {
   coins.push(sym); store.set("coins", coins); $("newSym").value = "";
   try { results[sym] = await analyzeCoin(sym); } catch (e) { results[sym] = { error: e.message }; }
   render();
+  document.dispatchEvent(new Event("prices-updated"));
 };
 $("hAdd").onclick = async () => {
   const sym = $("hSym").value.trim().toUpperCase(), amt = parseFloat($("hAmt").value), cost = parseFloat($("hCost").value) || 0;

@@ -53,6 +53,29 @@ Notes:
 - If Claude declines a question for safety reasons, the request is automatically retried on a fallback model.
 - To use a different model, set `AI_MODEL` (for example `AI_MODEL=claude-sonnet-5-5`, which is cheaper).
 
+## Price alerts
+Set alerts for any coin you track:
+- the price goes above or drops below a level
+- the price moves more than a set % in 24h
+- the signal turns BUY or SELL
+- social hype gets high
+
+When an alert fires it shows a pop-up on the page and, if you allow it, a phone or desktop notification.
+Alerts are checked every minute while the page is open (a background tab is fine) and are saved in your browser.
+Each alert fires once; press **Re-arm** to use it again.
+
+## Social buzz
+Shows what people are posting about each coin, so you can see the hype as well as the chart:
+- **StockTwits** posts. Many are tagged Bullish or Bearish by their authors, so you see the crowd's mood (% bullish) and how fast people are posting.
+- **CoinGecko trending:** the coins people are searching for most right now.
+- **Hype level** (low → very high) combines how fast people are posting, how one-sided the mood is, and trending rank.
+- **Warnings** when the crowd and the chart disagree, or when everyone is bullish (often a sign of a top).
+- Tap a coin to read the latest posts with links to the originals. The coin's detail view shows them too.
+- Ask AI sees this data, so you can ask things like "Is the BTC hype real?"
+
+Posts are strangers' opinions, not facts, and hype is often used for pump-and-dumps.
+Reddit, X/Twitter and CryptoPanic need paid or approved API access, so they aren't included yet.
+
 ## Put it online (Vercel)
 The app deploys to Vercel as-is: `public/` is the page, and `api/` holds the two serverless
 functions (Coinbase sync and Ask AI).

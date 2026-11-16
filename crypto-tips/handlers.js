@@ -3,6 +3,7 @@
 const crypto = require("crypto");
 const { loadKey, getHoldings } = require("./coinbase.js");
 const ai = require("./ai.js");
+const { getSocial } = require("./social.js");
 
 const ON_VERCEL = Boolean(process.env.VERCEL);
 let cache = { at: 0, data: null };
@@ -85,4 +86,18 @@ async function askHandler(req, res) {
   res.end();
 }
 
-module.exports = { holdingsHandler, askHandler, authorize };
+// Public: social buzz for up to 15 coins. GET /api/social?coins=BTC,ETH
+async function socialHandler(req, res) {
+  const q = new URL(req.url, "http://x").searchParams.get("coins") || "";
+  const syms = [...new Set(q.toUpperCase().split(",").filter((s) => /^[A-Z0-9]{1,15}$/.test(s)))].slice(0, 15);
+  if (!syms.length) return json(res, 400, { reason: "Pass ?coins=BTC,ETH" });
+  try {
+    const data = await getSocial(syms);
+    res.writeHead(200, { "Content-Type": "application/json", "Cache-Control": "public, max-age=120, s-maxage=300" });
+    res.end(JSON.stringify(data));
+  } catch (e) {
+    json(res, 502, { reason: "Social sources unavailable: " + e.message });
+  }
+}
+
+module.exports = { holdingsHandler, askHandler, socialHandler, authorize };

@@ -62,6 +62,28 @@
   .chips button { font-size: 13px; padding: 5px 10px; border-radius: 999px; }
   .lock { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; background: var(--panel); border: 1px solid var(--accent); border-radius: 10px; padding: 10px 12px; margin-bottom: 14px; }
   .lock[hidden] { display: none; } .lock span { flex: 1 1 220px; }
+  .panel { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 14px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-bottom: 10px; }
+  a.chip { color: var(--text); text-decoration: none; background: var(--panel2); border: 1px solid var(--border); border-radius: 999px; padding: 3px 10px; font-size: 13px; }
+  a.chip.mine { border-color: var(--accent); }
+  .up { color: var(--buy); } .down { color: var(--sell); }
+  .soc { border-top: 1px solid var(--border); padding: 10px 0; cursor: pointer; }
+  .socrow { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; }
+  .socrow .sym { min-width: 48px; } .caret { margin-left: auto; }
+  .mood { display: inline-block; width: 90px; height: 8px; border-radius: 4px; background: #ea394366; overflow: hidden; vertical-align: middle; }
+  .mood i { display: block; height: 100%; background: var(--buy); }
+  .h-low { background: #8a98b322; color: var(--dim); } .h-mod { background: #3b82f622; color: #7fb0ff; }
+  .h-high { background: #f5a62322; color: var(--hold); } .h-vhigh { background: #ea394322; color: var(--sell); }
+  .warn, .note { margin-top: 8px; font-size: 13px; padding: 6px 10px; border-radius: 8px; }
+  .warn { background: #2a1f0b; color: #f3d9a4; } .note { background: #0f2238; color: #b9d4f5; }
+  .posts { list-style: none; margin-top: 8px; } .posts li { background: var(--panel2); border-radius: 8px; padding: 8px 10px; margin-bottom: 6px; overflow-wrap: anywhere; }
+  .posts a, a.more { color: var(--accent); }
+  .tag { font-size: 11px; font-weight: 700; padding: 1px 6px; border-radius: 999px; } .tag.bull { background: #16c78422; color: var(--buy); } .tag.bear { background: #ea394322; color: var(--sell); }
+  .alerts { list-style: none; margin-top: 10px; } .alerts li { display: flex; justify-content: space-between; gap: 8px; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--border); }
+  .alerts li.hit b { color: var(--buy); } .alerts button { margin-left: 6px; }
+  #alValue { width: 130px; } #alValue[hidden] { display: none; }
+  #toasts { position: fixed; right: 16px; bottom: 16px; left: 16px; display: flex; flex-direction: column; align-items: flex-end; gap: 8px; z-index: 50; pointer-events: none; }
+  .toast { pointer-events: auto; max-width: 380px; background: var(--panel2); border: 1px solid var(--accent); border-radius: 10px; padding: 10px 12px; box-shadow: 0 6px 24px #0008; cursor: pointer; }
 </style>
 </head>
 <body>
@@ -99,6 +121,29 @@
 
   <div id="detail"></div>
 
+  <h2>Social buzz <span class="muted">— what people are posting, so you can spot the hype</span></h2>
+  <div class="panel">
+    <div class="disclaimer" style="margin-bottom:10px">📣 These are opinions from strangers on social media, not facts. Hype often peaks right before a drop,
+      and coordinated "pump and dump" groups use posts to push prices. Use this to see the mood, not as a reason to buy.</div>
+    <div class="row" style="margin-bottom:8px"><span class="muted" id="socStatus">Loading…</span><button id="socRefresh">Refresh</button></div>
+    <div id="socTrending" class="chips"></div>
+    <div id="socList"></div>
+    <p class="muted" style="margin-top:8px">Sources: StockTwits posts (authors tag them Bullish or Bearish) and CoinGecko trending searches. Tap a coin to read the latest posts.</p>
+  </div>
+
+  <h2>Price alerts</h2>
+  <div class="panel">
+    <form id="alForm" class="addh" style="margin-top:0">
+      <select id="alSym" aria-label="Coin"></select>
+      <select id="alType" aria-label="Alert type"></select>
+      <input id="alValue" type="number" step="any" min="0" aria-label="Alert value" />
+      <button class="primary" type="submit">Add alert</button>
+      <button id="alNotify" type="button" hidden>🔔 Turn on notifications</button>
+    </form>
+    <ul id="alList" class="alerts"></ul>
+    <p class="muted" id="alNote"></p>
+  </div>
+
   <h2 id="aiTitle">Ask AI <span class="muted">— questions about these signals and your holdings</span></h2>
   <div id="aiPanel">
     <div class="chips" id="aiChips">
@@ -131,6 +176,8 @@
 
 <script src="indicators.js"></script>
 <script src="app.js"></script>
+<script src="extras.js"></script>
 <script src="ai-chat.js"></script>
+<div id="toasts" aria-live="polite"></div>
 </body>
 </html>

@@ -7,7 +7,7 @@ const fs = require("fs");
 const path = require("path");
 const { loadKey } = require("./coinbase.js");
 const ai = require("./ai.js");
-const { holdingsHandler, askHandler } = require("./handlers.js");
+const { holdingsHandler, askHandler, socialHandler } = require("./handlers.js");
 
 const PORT = +process.env.PORT || 8000;
 const PUBLIC = path.join(__dirname, "public");
@@ -17,6 +17,7 @@ const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, "http://localhost");
   if (url.pathname === "/api/coinbase/holdings") return holdingsHandler(req, res);
   if (url.pathname === "/api/ask") return askHandler(req, res);
+  if (url.pathname === "/api/social") return socialHandler(req, res);
 
   const file = url.pathname === "/" ? "index.html" : url.pathname.slice(1);
   if (!/^[\w-]+\.(html|js)$/.test(file) || !fs.existsSync(path.join(PUBLIC, file))) { res.writeHead(404); return res.end("Not found"); }

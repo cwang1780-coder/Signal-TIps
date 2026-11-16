@@ -3,7 +3,14 @@
   "buildCommand": "",
   "outputDirectory": "public",
   "functions": {
-    "api/ask.js": { "maxDuration": 60 },
-    "api/coinbase/holdings.js": { "maxDuration": 30 }
+    "api/ask.js": {
+      "maxDuration": 60
+    },
+    "api/coinbase/holdings.js": {
+      "maxDuration": 30
+    },
+    "api/social.js": {
+      "maxDuration": 30
+    }
   }
 }
