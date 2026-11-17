@@ -209,6 +209,36 @@
   .tc-actions .pill { min-height: 40px; font-size: 14px; }
   .pill-link { color: var(--accent); font-weight: 600; font-size: 14px; text-decoration: none; padding: 0 8px; }
 
+  /* Why it's moving */
+  .move { background: #fff; border-radius: var(--r-lg); padding: 20px 22px; margin: 10px 0 20px; border-top: 4px solid #f0b90b; }
+  .move.move-up { border-top-color: var(--buy); } .move.move-down { border-top-color: var(--sell); }
+  .move h2 { margin: 0 0 6px; } .move-sum { margin: 0 0 12px; font-size: 17px; }
+  .mchips { display: flex; gap: 8px; flex-wrap: wrap; } .mchip { background: var(--panel); border-radius: 12px; padding: 6px 12px; display: inline-flex; gap: 8px; align-items: baseline; }
+  .drivers { list-style: none; padding: 0; margin: 8px 0 10px; display: flex; flex-direction: column; gap: 10px; }
+  .drivers li { display: grid; grid-template-columns: 28px minmax(0, 1fr); gap: 8px; } .drivers li > span:last-child { display: flex; flex-direction: column; gap: 2px; }
+  .drv-ic { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; font-size: 12px; background: var(--panel); }
+  .drv-up .drv-ic { background: #e3f4ea; color: var(--buy); } .drv-down .drv-ic { background: #fbe7e9; color: var(--sell); }
+  .drivers a { color: var(--accent); }
+  /* Trading simulator */
+  .sim { margin-bottom: 8px; } .sim-title { margin: 0 0 12px; }
+  .sim-intro p { margin: 0 0 14px; }
+  .sim-pick { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+  .sim-pick button { min-height: 38px; font-size: 14px; background: #fff; } .sim-pick button.on { background: var(--text); color: #fff; } .sim-pick button.on .muted { color: #ccc; }
+  .sim-head { display: flex; flex-direction: column; gap: 2px; margin-bottom: 10px; } .sim-head b { font-size: 18px; }
+  .sim-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 8px; margin-bottom: 10px; }
+  .sim-stats div { background: #fff; border-radius: 14px; padding: 8px 12px; display: flex; flex-direction: column; } .sim-stats b { font-size: 17px; font-variant-numeric: tabular-nums; } .sim-stats small { font-size: 13px; }
+  .sim-chart { background: #fff; border-radius: 16px; } .sim-chart canvas { width: 100%; height: 260px; display: block; }
+  .sim-news { margin: 10px 0; padding: 10px 14px; border-radius: 14px; background: #fdf6e7; color: #5c3d00; font-weight: 600; min-height: 44px; }
+  .sim-news.stop { background: #fbe7e9; color: var(--sell); } .sim-news.empty { background: transparent; }
+  .sim-ctl { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 6px 0; }
+  .sim-ctl button { min-height: 42px; font-size: 14px; } .sim-ctl button.buy { background: var(--buy); color: #fff; } .sim-ctl button.sell { background: var(--sell); color: #fff; }
+  .sim-ctl button:disabled { opacity: .4; cursor: default; }
+  .sim-speed { display: inline-flex; gap: 6px; margin-left: auto; }
+  .sim-result { background: #fff; border-radius: 16px; padding: 18px; margin-top: 10px; } .sim-result h3 { margin: 4px 0 12px; }
+  .sim-result .sim-stats div { background: var(--panel); }
+  .stars { font-size: 30px; color: #f0b90b; letter-spacing: 4px; }
+  .sim-lesson { background: #eaf1ff; color: #002a80; border-radius: 14px; padding: 12px 14px; }
+
   /* Welcome cards */
   .welcome { position: relative; background: #fff; border-radius: var(--r-lg); padding: 24px; margin-bottom: 32px; box-shadow: 0 0 0 1px var(--border); }
   .welcome[hidden] { display: none; }
@@ -454,7 +484,7 @@
       <button data-go="alerts"><span class="ico">🔔</span><span>Alerts</span><b class="count" id="alCount" hidden></b></button>
       <button data-go="ai"><span class="ico">🤖</span><span>Ask AI</span></button>
       <button data-go="coins"><span class="ico">💼</span><span>My coins</span></button>
-      <button data-go="learn" class="forBeginner"><span class="ico">🎓</span><span>Learn</span></button>
+      <button data-go="learn"><span class="ico">🎓</span><span>Learn</span></button>
       <button data-go="me"><span class="ico">👤</span><span>Me</span></button>
     </nav>
     <div class="header-right">
@@ -702,9 +732,11 @@
     <div class="band alt">
       <div class="wrap narrow">
         <div class="section-head"><div><h2 class="display">Learn to trade</h2>
-          <p class="lead">Seven short lessons, about 20 minutes in total. Each ends with one quick question.</p>
+          <p class="lead">Practise in the trading simulator with pretend money, then take seven short lessons (about 20 minutes). Each lesson ends with one quick question.</p>
           <div class="learnProgress" id="learnProgress"></div></div>
           <div class="art-card"><img src="art/learn.svg" alt="" width="480" height="320" /></div></div>
+        <div class="panel sim" id="simWrap"><h2 class="sim-title">🎮 Trading simulator <span class="muted">practise with pretend money</span></h2><div id="simGame"></div></div>
+        <h2 class="subh" style="margin-top:28px">Lessons</h2>
         <div id="learnList" class="lessons"></div>
         <p class="muted" style="margin-top:16px">Lessons are general education, not financial advice. Your progress is saved in this browser.</p>
       </div>
@@ -793,6 +825,7 @@
 <script src="learn.js"></script>
 <script src="wallets.js"></script>
 <script src="trench-ui.js"></script>
+<script src="sim.js"></script>
 <div id="toasts" aria-live="polite"></div>
 </body>
 </html>

@@ -252,9 +252,10 @@ function renderDetail() {
       <span><span class="${actionClass(r.action)}">${r.action}</span> <button class="x" id="detailClose" title="Close" aria-label="Close ${selected} details">✕</button></span></div>
     <p style="margin-top:6px">${PLAIN[r.action]}</p>
     <nav class="dnav" aria-label="Jump to">
-      ${[["d-chart", "Chart"], ["d-why", "Why"], ["d-pattern", "Pattern"], ["d-reasons", "Reasons"], ["d-history", "History"], ["d-track", "Track record"], ["techDetails", "Details"], ["d-news", "News"]]
+      ${[["d-move", "Why it's moving"], ["d-chart", "Chart"], ["d-why", "Score"], ["d-pattern", "Pattern"], ["d-reasons", "Reasons"], ["d-history", "History"], ["d-track", "Track record"], ["techDetails", "Details"], ["d-news", "News"]]
         .map(([id, t]) => `<button data-jump="${id}">${t}</button>`).join("")}
     </nav>
+    <div id="detailMove"></div>
     <div id="d-chart"></div>
     <div id="chartWrap"></div>
     <div class="muted">Price (black) · 50-period avg (blue) · 200-period avg (orange) · Pick a tool above the chart to draw. Drawings are saved for this coin.</div>

@@ -96,6 +96,14 @@ Each coin's detail view adds context that does **not** change the score:
 What testing showed: similar-pattern matches called the next move's direction right about half the time (no better than chance), and
 "buy on extreme fear" was barely better than any ordinary day for Bitcoin from 2018 to 2026. The app says this next to those sections.
 
+## Why it's moving
+
+At the top of every coin view: is it **doing well, badly or just mid** (from its 7-day and 30-day change), and what's behind it. The coin's week is split into the part the whole market explains (Bitcoin's move × how closely the coin usually follows it, measured over the last 90 candles) and its own part. The other clues are trading volume compared with the previous month, a break above its 30-day high or below its 30-day low, the long-term trend, headlines from the last 4 days, social buzz and trending searches. It describes the recent move; it doesn't forecast.
+
+## Trading simulator (Learn tab)
+
+A mini game: $1,000 of pretend money and 60 days of a made-up coin. The scenarios are a bull run, a crash, a pump and dump, sideways chop, a fake-out bottom and a slow bleed, plus a mystery mode. Every play is a new random market with that shape, and headlines pop up along the way. Trades cost a 0.5% fee, and there's an optional stop-loss. At the end you see your result against buy-and-hold and doing nothing, get up to 3 stars and a lesson for the scenario. Best scores are saved in the browser.
+
 ## Trench (big movers)
 
 The Trench tab is a live radar of coins making big moves: up 30%+ in 7 days or 20%+ in 24 hours, from the top 500 coins by trading volume (CoinGecko), with trending-search rank, whether it trades on Coinbase, StockTwits buzz and a chase-risk rating. Refreshes every 5 minutes (`/api/trench`).

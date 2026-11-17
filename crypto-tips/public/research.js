@@ -152,6 +152,118 @@
       <div class="rgrid">${col("for", "👍 Reasons for", "rfor")}${col("against", "👎 Reasons against", "ragainst")}${col("neutral", "🔎 Worth knowing", "rneutral")}</div>`;
   }
 
+  // ── why it's moving: is it doing well, badly or just mid, and what's behind it ──
+  // Splits the coin's week into the part the whole market explains (via Bitcoin and how closely the coin
+  // usually follows it) and the coin's own part, then lists the clues: volume, breakouts, trend, news, buzz.
+  const DAY = 86400;
+  function idxAt(c, t) { let i = c.length - 1; while (i > 0 && c[i].time > t) i--; return i; }
+  function changeOver(c, secs) {
+    const last = c[c.length - 1], i = idxAt(c, last.time - secs);
+    return last.time - c[i].time >= secs * 0.7 ? last.close / c[i].close - 1 : null;
+  }
+  // How strongly the coin has moved with Bitcoin (beta) over its last 90 shared candles.
+  function betaVsBtc(c, b) {
+    const bm = new Map(b.map((x) => [x.time, x.close])), xs = [], ys = [];
+    for (let i = Math.max(1, c.length - 90); i < c.length; i++) {
+      const b0 = bm.get(c[i - 1].time), b1 = bm.get(c[i].time);
+      if (b0 && b1) { xs.push(b1 / b0 - 1); ys.push(c[i].close / c[i - 1].close - 1); }
+    }
+    if (xs.length < 20) return null;
+    const mx = xs.reduce((a, v) => a + v, 0) / xs.length, my = ys.reduce((a, v) => a + v, 0) / ys.length;
+    let cov = 0, vx = 0, vy = 0;
+    xs.forEach((x, i) => { cov += (x - mx) * (ys[i] - my); vx += (x - mx) ** 2; vy += (ys[i] - my) ** 2; });
+    return vx ? { beta: cov / vx, corr: cov / Math.sqrt(vx * vy || 1) } : null;
+  }
+  // Dollar volume per second over [from, to) seconds ago.
+  function dollarVol(c, from, to) {
+    const now = c[c.length - 1].time; let sum = 0, t0 = Infinity, t1 = 0;
+    for (const x of c) if (x.time > now - from && x.time <= now - to) { sum += (x.volume || 0) * x.close; t0 = Math.min(t0, x.time); t1 = Math.max(t1, x.time); }
+    return t1 > t0 ? sum / (t1 - t0 + gran()) : null;
+  }
+
+  function moveInfo(sym) {
+    const r = results[sym];
+    if (!r || r.error) return null;
+    const c = history(sym) || r.candles, name = coinName(sym) || sym, btc = results.BTC;
+    const d1 = changeOver(c, DAY), w = changeOver(c, 7 * DAY), m = changeOver(c, 30 * DAY);
+    if (w == null) return null;
+    let verdict = "mid";
+    if (w >= 0.05 || (m != null && m >= 0.15 && w > -0.03)) verdict = "good";
+    if (w <= -0.05 || (m != null && m <= -0.15 && w < 0.03)) verdict = verdict === "good" ? (w > 0 ? "good" : "bad") : "bad";
+    const twist = verdict === "good" && m != null && m <= -0.1 ? "bouncing back after a rough month"
+      : verdict === "bad" && m != null && m >= 0.1 ? "pulling back after a strong month" : "";
+
+    const drivers = [], add = (dir, title, text) => drivers.push({ dir, title, text });
+    let cause = "";
+    // 1) The whole market (through Bitcoin)
+    if (sym !== "BTC" && btc && !btc.error) {
+      const bw = changeOver(btc.candles, 7 * DAY), bt = betaVsBtc(c, btc.candles);
+      if (bw != null && bt) {
+        const beta = Math.max(0, bt.beta), expected = beta * bw, own = w - expected;
+        const tight = bt.corr >= 0.6 ? "closely" : bt.corr >= 0.35 ? "loosely" : "barely";
+        add(bw >= 0.02 ? "up" : bw <= -0.02 ? "down" : "flat", `Bitcoin ${p1(bw)} this week`,
+          `${esc(name)} ${tight} follows Bitcoin, usually moving about ${beta.toFixed(1)}× as much. So the whole market alone would explain roughly <b>${p1(expected)}</b> of its <b>${p1(w)}</b>.`);
+        if (Math.abs(own) >= 0.03) add(own > 0 ? "up" : "down", `Its own story: ${p1(own)}`, own > 0
+          ? (w >= 0 ? `It did better than the market explains. Something specific to ${esc(name)} is pulling buyers in: look at the volume, news and buzz below.` : `It held up better than the market explains, so buyers are still supporting it. The clues below may show why.`)
+          : (w < 0 ? `It did worse than the market explains. Something specific to ${esc(name)} is pushing people to sell: look at the volume, news and buzz below.` : `It rose less than the market explains, so it's lagging. The clues below may show why.`));
+        cause = Math.abs(w) < 0.02 ? "" : Math.sign(expected) === Math.sign(w) && Math.abs(expected) >= 0.6 * Math.abs(w)
+          ? "Mostly the whole market: it's moving with Bitcoin." : Math.abs(own) > Math.abs(expected) ? `Mostly its own story, not the market.` : "A mix of the market and its own story.";
+      }
+    } else {
+      const g = research[""]?.data?.global;
+      if (g?.change24hPct != null && Math.abs(w) >= 0.02) cause = `Bitcoin leads the market, and all of crypto is ${g.change24hPct >= 0 ? "up" : "down"} ${Math.abs(g.change24hPct)}% today.`;
+      if (g?.change24hPct != null) add(g.change24hPct >= 1 ? "up" : g.change24hPct <= -1 ? "down" : "flat", `All of crypto ${g.change24hPct >= 0 ? "+" : ""}${g.change24hPct}% today`, "Bitcoin is the market leader, so its moves and the whole market's usually go together. Big swings often come from economic news (interest rates, inflation), ETF money flowing in or out, or large holders selling.");
+    }
+    // 2) Trading volume: are more people piling in or out?
+    const vNow = dollarVol(c, 7 * DAY, 0), vBefore = dollarVol(c, 37 * DAY, 7 * DAY);
+    if (vNow && vBefore) {
+      const ratio = vNow / vBefore;
+      if (ratio >= 1.5) add(w >= 0 ? "up" : "down", `Trading is ${ratio.toFixed(1)}× busier than usual`, w >= 0
+        ? "Lots more money is changing hands while the price rises: real demand is showing up. Moves backed by heavy volume tend to mean more."
+        : "Lots more money is changing hands while the price falls: that's heavy selling, not just a quiet drift.");
+      else if (ratio <= 0.6) add("flat", "Quiet trading", `Volume is about ${Math.round((1 - ratio) * 100)}% below normal. Moves on thin trading often fade, in either direction.`);
+      else add("flat", "Normal trading volume", "Nothing unusual about how much is being traded, so there's no sign of a rush in or out.");
+    }
+    // 3) Breakouts and breakdowns
+    const prev = c.filter((x) => x.time < c[c.length - 1].time - 2 * DAY && x.time >= c[c.length - 1].time - 32 * DAY);
+    if (prev.length > 5) {
+      const hi = Math.max(...prev.map((x) => x.close)), lo = Math.min(...prev.map((x) => x.close)), px = r.price;
+      if (px > hi) add("up", `Broke above its 30-day high (${fmt(hi)})`, "New highs get noticed: traders who were waiting for a breakout buy, and people who were short buy back. That can feed the move.");
+      else if (px < lo) add("down", `Fell below its 30-day low (${fmt(lo)})`, "New lows trigger stop-losses and scare holders into selling, which can feed the drop.");
+    }
+    // 4) The long-term trend
+    if (c.length >= 200) {
+      const avg = c.slice(-200).reduce((a, x) => a + x.close, 0) / 200;
+      add(r.price >= avg ? "up" : "down", r.price >= avg ? "Long-term trend is up" : "Long-term trend is down",
+        `The price is ${p0(r.price / avg - 1)} ${r.price >= avg ? "above" : "versus"} its 200-period average. ${r.price >= avg ? "Coins in an uptrend attract buyers on dips." : "In a downtrend, rallies often get sold by people waiting to get out."}`);
+    }
+    // 5) News
+    const news = (research[sym]?.data?.news?.coin || []).filter((n) => Date.now() - n.time < 4 * DAY * 1000).slice(0, 3);
+    if (news.length) add("news", `In the news (${news.length})`, news.map((n) => `<a href="${esc(n.url)}" target="_blank" rel="noopener">${esc(n.title)}</a> <span class="muted">${esc(n.source)} · ${ago(n.time)}</span>`).join("<br>"));
+    else if (research[sym]) add("flat", "No big news", "No headlines in our news sources mention it in the last 4 days, so news doesn't look like the driver.");
+    // 6) Social buzz and trending
+    const s = window.socialSnapshot?.().coins?.[sym], tr = window.trenchSnapshot?.()?.movers?.find((x) => x.sym === sym);
+    if (s && !s.error && s.hype) add(["high", "very high"].includes(s.hype) ? "news" : "flat", `Social buzz: ${s.hype}`,
+      `${s.bullishPct != null ? s.bullishPct + "% of tagged posts are bullish. " : ""}${["high", "very high"].includes(s.hype) ? "People are talking about it a lot, which brings in new buyers fast, and can leave just as fast." : "Not much chatter, so hype isn't the driver."}`);
+    if (tr?.trending) add("news", `Trending #${tr.trending} in searches`, "Lots of people are looking it up on CoinGecko right now. Attention like this often comes before or during a big move.");
+
+    return { sym, name, d1, w, m, verdict, twist, cause, drivers };
+  }
+
+  function moveHtml(sym) {
+    const i = moveInfo(sym);
+    if (!i) return "";
+    const V = { good: ["🟢", "Doing well", "up"], bad: ["🔴", "Doing badly", "down"], mid: ["🟡", "Just mid", ""] }[i.verdict];
+    const chip = (label, v) => v == null ? "" : `<span class="mchip"><span class="muted">${label}</span><b class="${v >= 0 ? "up" : "down"}">${p1(v)}</b></span>`;
+    const ICON = { up: "▲", down: "▼", flat: "•", news: "📰" };
+    return `<section class="move ${V[2] ? "move-" + V[2] : ""}"><h2 id="d-move">${V[0]} ${V[1]}${i.twist ? ` <span class="muted">· ${i.twist}</span>` : ""}</h2>
+      <p class="move-sum">${esc(i.name)} is <b class="${i.w >= 0 ? "up" : "down"}">${p1(i.w)}</b> this week${i.m != null ? ` and <b class="${i.m >= 0 ? "up" : "down"}">${p1(i.m)}</b> this month` : ""}. ${i.cause || (i.verdict === "mid" ? "Not much is happening either way." : "")}</p>
+      <div class="mchips">${chip("24 hours", i.d1)}${chip("7 days", i.w)}${chip("30 days", i.m)}</div>
+      <h3 class="subh">What's behind it</h3>
+      <ul class="drivers">${i.drivers.map((d) => `<li class="drv-${d.dir}"><span class="drv-ic">${ICON[d.dir]}</span><span><b>${d.title}</b><span>${d.text}</span></span></li>`).join("")}</ul>
+      <p class="muted small">This explains the recent move from price, volume, news and social data. It describes what happened, not what happens next.</p></section>`;
+  }
+
   // ── chart pattern: what it is, and what followed it in the past ──
   let patternStudy = null;
   if (location.protocol !== "file:") fetch("pattern-stats.json").then((r) => (r.ok ? r.json() : null)).then((d) => { patternStudy = d; if (selected) renderResearch(selected); }).catch(() => {});
@@ -280,6 +392,8 @@
     if (!el || !sym || !results[sym] || results[sym].error) return;
     // Beginners get the simpler view: reasons for/against and news, without the pattern history.
     const beginner = window.userLevel?.() === "beginner";
+    const mv = document.getElementById("detailMove");
+    if (mv) mv.innerHTML = moveHtml(sym);
     el.innerHTML = patternHtml(sym) + reasonsHtml(sym) + (beginner ? "" : historyHtml(sym)) + coinNewsHtml(sym);
     loadResearch(sym); loadDeep(sym);
     window.syncJump?.();
@@ -296,6 +410,7 @@
         aboveVsBelow200avg: sh && { now: sh.now, above: { medianNext30Pct: Math.round(sh.up.median * 100), upPct: Math.round(sh.up.pctUp * 100) }, below: { medianNext30Pct: Math.round(sh.down.median * 100), upPct: Math.round(sh.down.pctUp * 100) } },
         similarPastPatterns: sim && { note: "Tested: these matches predict direction no better than a coin flip. History, not a forecast.", after: Object.fromEntries(sim.horizons.map((hh) => [hh + " candles", { up: sim.summary[hh].up, of: sim.summary[hh].total, medianPct: Math.round(sim.summary[hh].median * 100) }])) },
         headlines: (research[sym]?.data?.news?.coin || []).map((n) => n.title),
+        whyItsMoving: (() => { const i = moveInfo(sym); return i && { verdict: i.verdict, change24hPct: i.d1 != null ? +(i.d1 * 100).toFixed(1) : null, change7dPct: +(i.w * 100).toFixed(1), change30dPct: i.m != null ? +(i.m * 100).toFixed(1) : null, mainCause: i.cause, drivers: i.drivers.map((d) => `${d.dir}: ${d.title}. ${d.text.replace(/<[^>]+>/g, "")}`) }; })(),
         chartPattern: (() => { const i = patternInfo(sym); return i && { pattern: i.pat.name, textbookBias: i.pat.bias, studyLean: i.lean, studyCases: i.p?.n || 0, studyPctHigher30d: i.p ? Math.round(i.p.up * 100) : null, ordinaryDayPctHigher30d: i.study ? Math.round(i.study.baseline.up * 100) : null, ownHistoryCases: i.own.n, ownPctHigher: i.own.n ? Math.round(i.own.up * 100) : null, note: "Measured over 10 coins, 2022-2026, daily charts. A lean only counts if it held in both halves of the period. Not a forecast." }; })(),
       };
     }
