@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 320" role="img" aria-label="A lesson book with a graduation cap">
+  <circle cx="300" cy="170" r="122" fill="#c9d8ff"/>
+  <path d="M96 96 q72 -24 144 0 v168 q-72 -24 -144 0 z" fill="#fff" stroke="#e4e7eb"/>
+  <path d="M240 96 q72 -24 144 0 v168 q-72 -24 -144 0 z" fill="#fff" stroke="#e4e7eb"/>
+  <path d="M240 96 v168" stroke="#c9cfd8" stroke-width="3"/>
+  <rect x="118" y="120" width="96" height="9" rx="4.5" fill="#0a0b0d"/><rect x="118" y="140" width="80" height="8" rx="4" fill="#c9cfd8"/><rect x="118" y="156" width="88" height="8" rx="4" fill="#c9cfd8"/>
+  <path d="M120 222 L142 206 L160 214 L184 190 L208 198" fill="none" stroke="#0052ff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="276" cy="132" r="14" fill="#e3f4ea"/><path d="M270 132 l5 5 l9 -10" stroke="#098551" stroke-width="3.5" fill="none" stroke-linecap="round"/>
+  <rect x="298" y="126" width="64" height="9" rx="4.5" fill="#0a0b0d"/>
+  <circle cx="276" cy="172" r="14" fill="#e3f4ea"/><path d="M270 172 l5 5 l9 -10" stroke="#098551" stroke-width="3.5" fill="none" stroke-linecap="round"/>
+  <rect x="298" y="166" width="56" height="9" rx="4.5" fill="#0a0b0d"/>
+  <circle cx="276" cy="212" r="14" fill="#eef0f3" stroke="#c9cfd8" stroke-width="2"/>
+  <rect x="298" y="206" width="60" height="9" rx="4.5" fill="#c9cfd8"/>
+  <g transform="translate(330 58)"><path d="M-62 0 L0 -28 L62 0 L0 28 z" fill="#0a0b0d"/><path d="M-34 12 v24 q34 20 68 0 v-24 L0 28 z" fill="#2a2d33"/><path d="M54 4 v34" stroke="#f5a623" stroke-width="4" stroke-linecap="round"/><circle cx="54" cy="42" r="6" fill="#f5a623"/></g>
+</svg>

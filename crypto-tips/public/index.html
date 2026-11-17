@@ -118,6 +118,37 @@
   .card .name { margin-left: 0; }
   .detailHead h2 { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
 
+  /* Beginner learning */
+  .startHere { display: flex; align-items: center; gap: 14px; width: 100%; max-width: 560px; margin-top: 28px; background: #fff; border-radius: 24px; padding: 14px 18px; text-align: left; font-weight: 400; min-height: 64px; box-shadow: 0 0 0 1px var(--border); }
+  .startHere:hover { background: #fff; box-shadow: 0 0 0 2px var(--accent); }
+  .startHere .sh-ico { font-size: 28px; } .startHere > span:nth-child(2) { flex: 1; display: flex; flex-direction: column; } .startHere b { font-size: 16px; }
+  .startHere .sh-go { color: var(--accent); font-weight: 700; white-space: nowrap; }
+  .tipbox { display: flex; flex-direction: column; gap: 4px; background: #eaf1ff; color: #10204a; border-radius: var(--r-md); padding: 14px 18px; margin-bottom: 16px; font-size: 15px; }
+  .learnProgress { display: flex; align-items: center; gap: 12px; margin-top: 20px; font-weight: 600; }
+  .prog { flex: 0 1 240px; height: 8px; background: #dee1e6; border-radius: 4px; overflow: hidden; } .prog i { display: block; height: 100%; background: var(--buy); border-radius: 4px; }
+  .lessons { display: flex; flex-direction: column; gap: 12px; }
+  .lesson { background: #fff; border-radius: var(--r-lg); overflow: hidden; scroll-margin-top: 130px; }
+  .lesson-head { display: flex; align-items: center; gap: 16px; width: 100%; background: none; border-radius: 0; padding: 18px 24px; text-align: left; min-height: 76px; font-weight: 400; }
+  .lesson-head:hover { background: var(--panel); }
+  .lesson-ico { width: 44px; height: 44px; flex: none; border-radius: 50%; background: var(--alt); display: flex; align-items: center; justify-content: center; font-size: 22px; }
+  .lesson.done .lesson-ico { background: #e3f4ea; color: var(--buy); font-weight: 800; }
+  .lesson-title { flex: 1; display: flex; flex-direction: column; } .lesson-title b { font-size: 18px; } .lesson-title .muted { font-size: 13px; }
+  .lesson-caret { color: var(--dim); }
+  .lesson-body { padding: 0 24px 24px 84px; font-size: 16px; line-height: 1.6; }
+  .lesson-body p { margin: 0 0 10px; } .lesson-body ul, .lesson-body ol { margin: 0 0 12px 20px; } .lesson-body li { margin: 6px 0; }
+  .lesson-try { margin: 16px 0; }
+  .lesson-try button, .lesson-body > button.primary { white-space: normal; height: auto; min-height: 44px; padding: 10px 20px; line-height: 1.35; text-align: left; }
+  .quiz { background: var(--panel); border-radius: var(--r-md); padding: 16px 18px; margin: 16px 0; display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
+  .quiz p { margin: 0; }
+  .quiz-opt { background: #fff; text-align: left; font-weight: 500; box-shadow: 0 0 0 1px var(--border); }
+  .quiz-opt.right { background: #e3f4ea; color: var(--buy); box-shadow: 0 0 0 2px var(--buy); }
+  .quiz-opt.wrong { background: #fbe7e9; color: var(--sell); box-shadow: 0 0 0 2px var(--sell); }
+  .quiz-out { font-weight: 500; }
+  .trackline { background: #fff; border-radius: var(--r-md); padding: 16px 18px; font-size: 16px; }
+  /* Beginner simplifications (experienced keeps everything) */
+  body[data-level="beginner"] #tf { display: none; }
+  body[data-level="beginner"] .rcol.rneutral { display: none; }
+
   /* Welcome cards */
   .welcome { position: relative; background: #fff; border-radius: var(--r-lg); padding: 24px; margin-bottom: 32px; box-shadow: 0 0 0 1px var(--border); }
   .welcome[hidden] { display: none; }
@@ -331,6 +362,8 @@
     .price, body[data-level="pro"] .card .price { font-size: 21px; line-height: 26px; }
     .card .name { display: block; margin-left: 0; }
     .card .coin-ic { --s: 28px !important; }
+    .lesson-head { padding: 14px 16px; gap: 12px; } .lesson-body { padding: 0 16px 20px; }
+    .startHere { margin-top: 20px; }
     #detail { padding: 20px 16px; }
     .detailHead h2 { font-size: 28px; line-height: 32px; }
     .chartBox canvas { height: 280px; }
@@ -352,6 +385,7 @@
       <button data-go="alerts"><span class="ico">🔔</span><span>Alerts</span><b class="count" id="alCount" hidden></b></button>
       <button data-go="ai"><span class="ico">🤖</span><span>Ask AI</span></button>
       <button data-go="coins"><span class="ico">💼</span><span>My coins</span></button>
+      <button data-go="learn" class="forBeginner"><span class="ico">🎓</span><span>Learn</span></button>
       <button data-go="me"><span class="ico">👤</span><span>Me</span></button>
     </nav>
     <div class="header-right">
@@ -408,6 +442,7 @@
             <button class="primary pill lg" data-go="ai">Ask AI about today</button>
             <button class="pill lg dark" data-go="alerts">Set an alert</button>
           </div>
+          <button class="startHere forBeginner" id="startHere"></button>
         </div>
         <div class="hero-card">
           <div class="hero-card-inner">
@@ -457,6 +492,7 @@
       <div class="wrap">
         <div class="section-head"><div><h2 class="display">Social buzz</h2>
         <p class="lead">What people are posting, so you can spot the hype.</p></div><div class="art-card"><img src="art/buzz.svg" alt="" width="480" height="320" /></div></div>
+        <div class="tipbox forBeginner"><b>💡 How to use this</b><span>Each row shows how people feel about a coin. <b>Hype</b> tells you how loud the talk is. The green bar is the share of posts that are bullish (expecting the price to rise). Tap a coin to read the posts. Very high hype is a reason to be careful, not to buy.</span></div>
         <div class="panel">
           <div class="disclaimer" style="margin-bottom:14px">📣 These are opinions from strangers, not facts. Hype often peaks right before a drop,
             and "pump and dump" groups use posts to push prices. Use this to see the mood, not as a reason to buy.</div>
@@ -476,6 +512,7 @@
       <div class="wrap">
         <div class="section-head"><div><h2 class="display">Price alerts</h2>
         <p class="lead">Get told when something happens, so you don't have to keep watching.</p></div><div class="art-card"><img src="art/alerts.svg" alt="" width="480" height="320" /></div></div>
+        <div class="tipbox forBeginner"><b>💡 How to use this</b><span>Pick a coin and what to watch for, for example "price drops below" your stop-loss price. The app checks every minute while this page is open and pops up a message when it happens. Tap "Turn on notifications" to get them on your phone or computer too.</span></div>
         <div class="panel">
           <form id="alForm" class="addh" style="margin-top:0">
             <span class="muted">Tell me when</span>
@@ -498,6 +535,7 @@
       <div class="wrap narrow">
         <div class="section-head"><div><h2 class="display" id="aiTitle">Ask AI</h2>
         <p class="lead">Ask anything about the signals, the hype or your coins. The AI sees the same live data you do.</p></div><div class="art-card"><img src="art/ai.svg" alt="" width="480" height="320" /></div></div>
+        <div class="tipbox forBeginner"><b>💡 How to use this</b><span>Type a question in your own words, or tap a suggestion. Good questions: "What does RSI mean?", "Is now a good time to buy ETH?", "How do I place my first trade?". The AI explains simply and can be wrong.</span></div>
         <div id="aiPanel" class="panel">
           <div id="proBox" hidden></div>
           <div class="chips" id="aiChips">
@@ -505,6 +543,7 @@
             <button class="forBeginner" data-q="Review my holdings: what looks risky and what would you consider doing?">Review my coins</button>
             <button class="forBeginner" data-q="Explain today's signals like I'm a beginner.">Explain like I'm new</button>
             <button class="forBeginner" data-q="Which coins are hyped right now, and is the hype a warning sign?">What's hyped?</button>
+            <button class="forBeginner" data-q="Walk me through placing my first small, low-risk practice trade step by step, using the coins in this app.">How do I make my first trade?</button>
             <button class="forPro" data-q="Rank my coins by trend strength and momentum. Give RSI, distance from the 200-period average and MACD state for each.">Rank by trend + momentum</button>
             <button class="forPro" data-q="For the open coin: key support and resistance, where the setup is invalidated, and the risk/reward to each level.">Levels + risk/reward</button>
             <button class="forPro" data-q="Where do the trend signal, social sentiment and the Fear &amp; Greed index disagree right now, and which matters most?">Where signals disagree</button>
@@ -528,6 +567,7 @@
       <div class="wrap">
         <div class="section-head"><div><h2 class="display">My coins</h2>
         <p class="lead">What you own, what it's worth, and the signal for each.</p></div><div class="art-card"><img src="art/coins.svg" alt="" width="480" height="320" /></div></div>
+        <div class="tipbox forBeginner"><b>💡 How to use this</b><span>Add each coin you own, or a pretend one for practice: the coin, how many, and the price you paid. The table shows what it’s worth now, whether you’re up or down, and the signal for it.</span></div>
         <div class="panel">
           <div class="row" style="margin-bottom:10px"><span class="muted" id="cbStatus"></span><button id="cbSync">Sync Coinbase</button></div>
           <div class="muted" id="cbCash" style="margin-bottom:10px"></div>
@@ -540,6 +580,20 @@
           </div>
           <p class="muted" style="margin-top:10px">🔒 Your coins, alerts and drawings are saved only in this browser. Nothing you enter is sent to us.</p>
         </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ───────── Learn (beginners) ───────── -->
+  <section class="tab" data-tab="learn" hidden>
+    <div class="band alt">
+      <div class="wrap narrow">
+        <div class="section-head"><div><h2 class="display">Learn to trade</h2>
+          <p class="lead">Seven short lessons, about 20 minutes in total. Each ends with one quick question.</p>
+          <div class="learnProgress" id="learnProgress"></div></div>
+          <div class="art-card"><img src="art/learn.svg" alt="" width="480" height="320" /></div></div>
+        <div id="learnList" class="lessons"></div>
+        <p class="muted" style="margin-top:16px">Lessons are general education, not financial advice. Your progress is saved in this browser.</p>
       </div>
     </div>
   </section>
@@ -558,6 +612,10 @@
           <h3 style="margin-bottom:10px">What changes</h3>
           <div class="tablewrap"><table class="levelTable">
             <tr><th></th><th>🌱 New to trading</th><th>📊 Experienced</th></tr>
+            <tr><td>Learn to trade</td><td>7 short lessons with quick checks, plus "How to use this" tips on every page</td><td>Hidden</td></tr>
+            <tr><td>Timeframe</td><td>Long-term only, the easiest to follow</td><td>Long, medium or short-term</td></tr>
+            <tr><td>Alerts</td><td>Price levels and BUY/SELL changes</td><td>Also 24h moves and social hype</td></tr>
+            <tr><td>Coin research</td><td>Reasons for and against, a one-line track record</td><td>Everything: patterns, history, full track record</td></tr>
             <tr><td>Coin cards</td><td>A plain-English sentence for each coin</td><td>RSI, score and trend distance, more coins per screen</td></tr>
             <tr><td>Technical details</td><td>Tucked away, with a "what it means" note on every number</td><td>Open by default, compact table</td></tr>
             <tr><td>Chart drawing tools</td><td>Hidden until you tap "Draw on the chart"</td><td>Always showing</td></tr>
@@ -592,7 +650,7 @@
         <li><button data-go="ai">Ask AI</button></li><li><button data-go="coins">My coins</button></li><li><button data-go="me">Beginner or experienced</button></li></ul></div>
       <div class="fgroup"><h4>Learn</h4><ul>
         <li><button data-open-help>What BUY, HOLD and SELL mean</button></li><li><button data-open-help>Glossary of terms</button></li>
-        <li><button data-go="ai">Ask the AI a question</button></li></ul></div>
+        <li><button data-go="ai">Ask the AI a question</button></li><li><button data-go="learn">Learn to trade (lessons)</button></li></ul></div>
       <div class="fgroup"><h4>Data sources</h4><ul>
         <li><a href="https://docs.cdp.coinbase.com/exchange/" target="_blank" rel="noopener">Coinbase market data</a></li>
         <li><a href="https://stocktwits.com/" target="_blank" rel="noopener">StockTwits</a></li>
@@ -615,6 +673,7 @@
 <script src="research.js"></script>
 <script src="pro.js"></script>
 <script src="ai-chat.js"></script>
+<script src="learn.js"></script>
 <div id="toasts" aria-live="polite"></div>
 </body>
 </html>

@@ -22,6 +22,15 @@ function trackRecord(sym, candles) {
 }
 function trackRecordHtml(bt) {
   if (!bt) return "";
+  if (level() === "beginner") {
+    // One plain sentence instead of the full statistics.
+    const d = bt.strategyReturn - bt.holdReturn, traded = bt.trades + (bt.openTrade != null ? 1 : 0) > 0;
+    const line = !traded ? "The signals haven't said BUY on this chart yet, so there's no track record to judge."
+      : Math.abs(d) < 0.02 ? "In the past, following these signals did about the same as simply holding this coin."
+      : d > 0 ? `In the past, following these signals did <b>better</b> than simply holding this coin (${(bt.strategyReturn * 100).toFixed(0)}% vs ${(bt.holdReturn * 100).toFixed(0)}%).`
+      : `In the past, following these signals did <b>worse</b> than simply holding this coin (${(bt.strategyReturn * 100).toFixed(0)}% vs ${(bt.holdReturn * 100).toFixed(0)}%), so trust them less here.`;
+    return `<h2>Has this worked before?</h2><p class="trackline">${line} Past results don't predict the future. ▲ and ▼ on the chart show the past buys and sells.</p>`;
+  }
   const p = (n) => (n >= 0 ? "+" : "") + (n * 100).toFixed(1) + "%";
   const cls = (n) => (n >= 0 ? "up" : "down");
   const diff = bt.strategyReturn - bt.holdReturn;
@@ -323,7 +332,7 @@ $("grid").addEventListener("keydown", (e) => { if ((e.key === "Enter" || e.key =
 $("detail").addEventListener("click", (e) => { if (e.target.id === "detailClose") { selected = null; render(); } });
 
 // ── Tabs ──
-const TABS = ["signals", "buzz", "alerts", "ai", "coins", "me"];
+const TABS = ["signals", "buzz", "alerts", "ai", "coins", "learn", "me"];
 function showTab(name) {
   if (!TABS.includes(name)) name = "signals";
   document.querySelectorAll("section.tab").forEach((s) => (s.hidden = s.dataset.tab !== name));
@@ -362,8 +371,16 @@ function applyLevel() {
   document.body.dataset.level = lv;
   document.querySelectorAll(".levelOpt").forEach((b) => { const on = b.dataset.level === lv && store.get("levelChosen", false); b.classList.toggle("on", on); b.setAttribute("aria-pressed", on); });
   document.querySelector(".help").open = lv === "beginner";
+  // Beginners use the long-term view only: it's the slowest-moving and easiest to follow.
+  if (lv === "beginner" && $("tf").value !== "86400") { $("tf").value = "86400"; $("tf").dispatchEvent(new Event("change")); }
+  window.renderAlertTypes?.();
   render();
 }
+// Open one coin's full view (used by the lessons' "Try it" buttons).
+window.openCoin = (sym) => {
+  showTab("signals"); selected = sym; render();
+  setTimeout(() => $("detail").scrollIntoView({ behavior: "smooth", block: "start" }), 60);
+};
 function chooseLevel(lv, fromWelcome) {
   store.set("level", lv); store.set("levelChosen", true); store.set("welcomed", true);
   $("welcome").hidden = true;

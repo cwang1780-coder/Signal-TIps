@@ -63,6 +63,10 @@ It changes presentation only; both see the same signals and data.
 
 | | 🌱 New to trading | 📊 Experienced |
 |---|---|---|
+| Learn to trade | 7 short lessons with quick checks, a "Start here" card, and "How to use this" tips on each page | Hidden |
+| Timeframe | Long-term only | Long, medium or short-term |
+| Alerts | Price levels and BUY/SELL changes | Also 24h moves and social hype |
+| Coin research | Reasons for and against, news, a one-line track record | Everything, including pattern history and full track record stats |
 | Coin cards | Plain-English sentence | RSI, score, distance from the 200 average; denser grid |
 | Technical details | Collapsed, with a "what it means" note per number | Open, compact |
 | Drawing tools | Behind a "Draw on the chart" button | Always showing |

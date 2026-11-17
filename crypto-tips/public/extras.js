@@ -15,10 +15,10 @@
   const TYPES = {
     above: { label: "price goes above", needsValue: "$", test: (a, r) => r.price >= a.value, text: (a) => `${a.sym} above ${fmt(a.value)}` },
     below: { label: "price drops below", needsValue: "$", test: (a, r) => r.price <= a.value, text: (a) => `${a.sym} below ${fmt(a.value)}` },
-    move: { label: "moves more than ±% in a day", needsValue: "%", test: (a, r) => Math.abs(r.change24 * 100) >= a.value, text: (a) => `${a.sym} moves ±${a.value}% in 24h` },
+    move: { adv: true, label: "moves more than ±% in a day", needsValue: "%", test: (a, r) => Math.abs(r.change24 * 100) >= a.value, text: (a) => `${a.sym} moves ±${a.value}% in 24h` },
     buy: { label: "signal turns BUY", test: (a, r) => r.action.includes("BUY"), text: (a) => `${a.sym} signal turns BUY` },
     sell: { label: "signal turns SELL", test: (a, r) => r.action.includes("SELL"), text: (a) => `${a.sym} signal turns SELL` },
-    hype: { label: "social hype gets high", test: (a, r, s) => s && ["high", "very high"].includes(s.hype), text: (a) => `${a.sym} social hype high` },
+    hype: { adv: true, label: "social hype gets high", test: (a, r, s) => s && ["high", "very high"].includes(s.hype), text: (a) => `${a.sym} social hype high` },
   };
 
   function describeHit(a, r, s) {
@@ -86,7 +86,13 @@
     return true;
   };
 
-  $("alType").innerHTML = Object.entries(TYPES).map(([k, t]) => `<option value="${k}">${t.label}</option>`).join("");
+  // Beginners see the basic alert types; experienced traders also get 24h moves and social hype.
+  window.renderAlertTypes = () => {
+    const pro = window.userLevel?.() === "pro", cur = $("alType").value;
+    $("alType").innerHTML = Object.entries(TYPES).filter(([, t]) => pro || !t.adv).map(([k, t]) => `<option value="${k}"${k === cur ? " selected" : ""}>${t.label}</option>`).join("");
+    renderAlerts();
+  };
+  window.renderAlertTypes();
   $("alType").onchange = renderAlerts;
   $("alForm").addEventListener("submit", (e) => {
     e.preventDefault();

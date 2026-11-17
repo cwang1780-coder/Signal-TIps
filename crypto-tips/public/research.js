@@ -219,8 +219,10 @@
   function renderResearch(sym) {
     const el = document.getElementById("detailResearch");
     if (!el || !sym || !results[sym] || results[sym].error) return;
-    el.innerHTML = reasonsHtml(sym) + historyHtml(sym) + coinNewsHtml(sym);
-    loadResearch(sym); loadDeep(sym);
+    // Beginners get the simpler view: reasons for/against and news, without the pattern history.
+    const beginner = window.userLevel?.() === "beginner";
+    el.innerHTML = reasonsHtml(sym) + (beginner ? "" : historyHtml(sym)) + coinNewsHtml(sym);
+    loadResearch(sym); if (!beginner) loadDeep(sym);
   }
 
   // Compact research data for the AI. Headlines are untrusted text; the server prompt says so.
