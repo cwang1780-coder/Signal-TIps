@@ -102,7 +102,15 @@ At the top of every coin view: is it **doing well, badly or just mid** (from its
 
 ## Trading simulator (Learn tab, beginners only)
 
-A mini game: $1,000 of pretend money and 60 days of a made-up coin. Every game is a mystery: one of six market types (a bull run, a crash, a pump and dump, sideways chop, a fake-out bottom, a slow bleed), revealed only when the game ends. Every play is a new random market, and headlines pop up along the way. Trades cost a 0.5% fee, and there's an optional stop-loss. At the end you see your result against buy-and-hold and doing nothing, get up to 3 stars and a lesson for the scenario. Best scores are saved in the browser.
+$1,000 of pretend money and 60 trading days, run like a real exchange:
+
+- **Real market:** real daily Coinbase prices for a random coin over a random past stretch. The coin and the dates are hidden until the end, which also shows what happened in the next 30 days.
+- **Practice scenario:** a made-up coin in one of six situations (bull run, crash, pump and dump, sideways chop, fake-out bottom, slow bleed), with headlines, revealed at the end.
+- **Live candles:** each day's candle builds live over 10 price ticks. You see the 25 days before you start.
+- **Prices and fees:** buyers pay the ask and sellers get the bid (spread: 0.1% real, 0.4% scenarios). Market orders slip a little and pay a 1.2% taker fee. Limit orders wait for your price and pay a 0.6% maker fee.
+- **Orders:** stop-loss and take-profit orders sell everything at your price. A stop in a fast drop can fill lower, as in real life.
+- **Panels:** your position (average entry, open and realised profit/loss, fees), open orders with cancel, and a trade history. The chart has volume bars, a 20-day average and order lines.
+- **End of game:** you see your result against buy-and-hold, up to 3 stars and a lesson. Best scores are saved in the browser.
 
 ## Trench (big movers)
 

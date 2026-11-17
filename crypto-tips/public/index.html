@@ -242,6 +242,31 @@
   .sim-result { background: #fff; border-radius: 16px; padding: 18px; margin-top: 10px; } .sim-result h3 { margin: 4px 0 12px; }
   .sim-result .sim-stats div { background: var(--panel); }
   .stars { font-size: 30px; color: #f0b90b; letter-spacing: 4px; }
+  .sim-intro ul { margin: 0 0 14px; padding-left: 20px; } .sim-intro li { margin: 4px 0; }
+  .sim-grid { display: grid; grid-template-columns: minmax(0, 1fr) 300px; grid-template-areas: "chart ticket" "info ticket"; gap: 14px; align-items: start; }
+  .sg-chart { grid-area: chart; min-width: 0; } .sg-ticket { grid-area: ticket; } .sg-info { grid-area: info; min-width: 0; }
+  .ticket { background: #fff; border-radius: 16px; padding: 14px; display: flex; flex-direction: column; gap: 10px; margin-bottom: 12px; }
+  .ticket label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; font-weight: 600; color: var(--dim); }
+  .ticket input { min-height: 42px; font-size: 16px; width: 100%; }
+  .ticket label[hidden] { display: none; }
+  .seg { display: grid; grid-template-columns: 1fr 1fr; background: var(--panel); border-radius: 999px; padding: 3px; }
+  .seg button { min-height: 38px; background: transparent; font-weight: 700; } .seg.small button { min-height: 32px; font-size: 14px; }
+  .seg button.on { background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.12); }
+  .seg[data-g="side"] button[data-side="buy"].on { background: var(--buy); color: #fff; } .seg[data-g="side"] button[data-side="sell"].on { background: var(--sell); color: #fff; }
+  .quote { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; } .quote > span { background: var(--panel); border-radius: 12px; padding: 6px 10px; display: flex; flex-direction: column; font-size: 12px; } .quote b { font-size: 16px; font-variant-numeric: tabular-nums; }
+  .chips { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; } .chips button { min-height: 32px; font-size: 13px; padding: 0; }
+  .tk-go { min-height: 46px; font-size: 16px; font-weight: 700; color: #fff; } .tk-go.buy { background: var(--buy); } .tk-go.sell { background: var(--sell); }
+  .tk-msg { min-height: 18px; color: var(--dim); }
+  .tk-row { display: flex; gap: 6px; } .tk-row button { min-height: 42px; flex: none; }
+  .protect b { font-size: 15px; color: var(--text); } .protect button:disabled { opacity: .45; }
+  .sim-panels { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .sim-box { background: #fff; border-radius: 16px; padding: 12px 14px; margin-bottom: 12px; } .sim-box h4 { margin: 0 0 8px; font-size: 15px; }
+  .kv { display: flex; justify-content: space-between; gap: 8px; font-size: 14px; padding: 3px 0; } .kv span { color: var(--dim); } .kv b { font-variant-numeric: tabular-nums; }
+  .olist { list-style: none; margin: 0; padding: 0; } .olist li { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 14px; padding: 4px 0; }
+  .tlog { width: 100%; font-size: 13px; border-collapse: collapse; } .tlog th, .tlog td { text-align: left; padding: 4px 6px; border-bottom: 1px solid var(--border); white-space: nowrap; } .tlog th { color: var(--dim); font-weight: 600; }
+  .sim-news.good { background: #e3f4ea; color: var(--buy); }
+  .sim-chart canvas { height: 300px; }
+  @media (max-width: 900px) { .sim-grid { grid-template-columns: minmax(0, 1fr); grid-template-areas: "chart" "ticket" "info"; } .sim-panels { grid-template-columns: 1fr; } }
   .sim-lesson { background: #eaf1ff; color: #002a80; border-radius: 14px; padding: 12px 14px; }
 
   /* Icons */
