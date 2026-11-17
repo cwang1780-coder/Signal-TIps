@@ -49,6 +49,7 @@
       }),
       cash: cb.cash,
       social: window.socialSnapshot ? window.socialSnapshot() : null,
+      research: window.researchSnapshot ? window.researchSnapshot() : null,
       trackRecordOfSelectedCoin: (() => {
         const r = results[selected];
         if (!r?.candles) return null;

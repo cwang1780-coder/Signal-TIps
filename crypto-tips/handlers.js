@@ -5,6 +5,7 @@ const { loadKey, getHoldings } = require("./coinbase.js");
 const ai = require("./ai.js");
 const { getSocial } = require("./social.js");
 const pro = require("./pro.js");
+const { getResearch } = require("./research.js");
 
 const ON_VERCEL = Boolean(process.env.VERCEL);
 let cache = { at: 0, data: null };
@@ -119,6 +120,20 @@ async function socialHandler(req, res) {
   }
 }
 
+// Public: market mood, whole-market numbers and news. GET /api/research?coin=BTC&name=Bitcoin
+async function researchHandler(req, res) {
+  const q = new URL(req.url, "http://x").searchParams;
+  const sym = /^[A-Za-z0-9]{1,15}$/.test(q.get("coin") || "") ? q.get("coin").toUpperCase() : null;
+  const name = /^[A-Za-z0-9 .-]{1,40}$/.test(q.get("name") || "") ? q.get("name") : null;
+  try {
+    const data = await getResearch(sym, name);
+    res.writeHead(200, { "Content-Type": "application/json", "Cache-Control": "public, max-age=120, s-maxage=600" });
+    res.end(JSON.stringify(data));
+  } catch (e) {
+    json(res, 502, { reason: "Research sources unavailable: " + e.message });
+  }
+}
+
 // Public site settings. COINBASE_REFERRAL_URL: your Coinbase affiliate link (must be an https coinbase.com link).
 async function configHandler(req, res) {
   let ref = null;
@@ -159,4 +174,4 @@ async function proHandler(req, res) {
   }
 }
 
-module.exports = { holdingsHandler, askHandler, socialHandler, configHandler, proHandler, authorize };
+module.exports = { holdingsHandler, askHandler, socialHandler, configHandler, proHandler, researchHandler, authorize };

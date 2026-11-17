@@ -218,6 +218,7 @@ function renderDetail() {
     <h2>Why? <span class="muted">each line adds or removes points; the total (${r.score.toFixed(1)}) decides the signal</span></h2>
     <ul class="reasons">${r.reasons.map((x) => `<li><span class="pts" style="color:${x.pts > 0 ? "var(--buy)" : x.pts < 0 ? "var(--sell)" : "var(--dim)"}">${x.pts > 0 ? "+" : ""}${x.pts}</span><span>${x.text}</span></li>`).join("")}</ul>
     ${techTableHtml(r)}
+    <div id="detailResearch"></div>
     ${trackRecordHtml(bt)}
     <div class="links">
       ${siteConfig.coinbaseRef
@@ -230,6 +231,7 @@ function renderDetail() {
     <div id="detailSocial"></div>`;
   Draw.mount($("chartWrap"), selected, r.candles, bt?.markers);
   window.renderDetailSocial?.(selected);
+  window.renderResearch?.(selected);
 }
 
 async function syncCoinbase(force) {

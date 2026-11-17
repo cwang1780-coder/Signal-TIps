@@ -116,6 +116,21 @@
   .proRestore { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 8px; font-size: 13px; }
   .proRestore input { flex: 1 1 180px; min-width: 0; font-size: 13px; padding: 5px 8px; } .proRestore button { font-size: 13px; padding: 5px 10px; }
   .proNote { margin-top: 8px; font-size: 13px; color: #f3d9a4; overflow-wrap: anywhere; }
+  /* ── research ── */
+  .marketBar { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 14px; color: var(--dim); margin: 6px 0; }
+  .marketBar[hidden] { display: none; } .marketBar b { color: var(--text); } .marketBar b.up { color: var(--buy); } .marketBar b.down { color: var(--sell); }
+  .rgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px; }
+  .rcol { background: var(--panel2); border-radius: 10px; padding: 10px 12px; border-top: 3px solid var(--border); }
+  .rcol.rfor { border-top-color: var(--buy); } .rcol.ragainst { border-top-color: var(--sell); } .rcol.rneutral { border-top-color: var(--accent); }
+  .rcol h3 { font-size: 15px; margin-bottom: 6px; }
+  .reason { padding: 7px 0; border-top: 1px solid var(--border); font-size: 14px; } .reason b { display: block; } .reason span { color: var(--dim); }
+  .stats.setup div b { font-size: 20px; } .stats .nowrow { outline: 1px solid var(--accent); }
+  .subh { font-size: 15px; margin: 4px 0 6px; }
+  .sims { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 8px; margin-top: 10px; }
+  .sim { background: var(--panel2); border-radius: 8px; padding: 8px; font-size: 13px; } .sim svg { display: block; width: 100%; height: 46px; }
+  .news { list-style: none; } .news li { padding: 7px 0; border-bottom: 1px solid var(--border); font-size: 14.5px; } .news a { color: var(--text); text-decoration: none; } .news a:hover { color: var(--accent); text-decoration: underline; }
+  .news .muted { white-space: nowrap; font-size: 12.5px; }
+  #topNews h2 { margin-top: 18px; }
   /* ── friendlier layout ── */
   .drawBar .swatch { min-height: 0; width: 28px; min-width: 28px; height: 28px; }
   .x { min-height: 0; }
@@ -212,6 +227,7 @@
     </div>
 
     <div class="summary" id="summary">Loading live prices…</div>
+    <div class="marketBar" id="marketBar" hidden></div>
     <div class="row sub"><span class="status" id="status">Loading…</span><span class="muted">Updates every minute</span></div>
 
     <div class="grid" id="grid"></div>
@@ -255,6 +271,7 @@
       <div id="socList"></div>
       <p class="muted" style="margin-top:8px">Tap a coin to read the latest posts. Sources: StockTwits (authors tag posts Bullish or Bearish) and CoinGecko trending searches.</p>
     </div>
+    <div id="topNews"></div>
   </section>
 
   <!-- ───────── Alerts ───────── -->
@@ -313,7 +330,8 @@
   <footer>
     <p><b>Not financial advice.</b> This site shows automated technical indicators and public social media posts for general information only.
     It does not know your situation and does not recommend any trade. Crypto is very risky and you can lose everything you put in.</p>
-    <p>Prices: Coinbase public market data · Social posts: StockTwits · Trending: Powered by <a href="https://www.coingecko.com/" target="_blank" rel="noopener">CoinGecko</a>.
+    <p>Prices: Coinbase public market data · Social posts: StockTwits · Trending and market totals: Powered by <a href="https://www.coingecko.com/" target="_blank" rel="noopener">CoinGecko</a> ·
+    Fear &amp; Greed index: <a href="https://alternative.me/crypto/fear-and-greed-index/" target="_blank" rel="noopener">alternative.me</a> · Headlines: Cointelegraph, Decrypt.
     This site is not affiliated with Coinbase, Exodus, StockTwits or CoinGecko.</p>
   </footer>
 </div>
@@ -322,6 +340,7 @@
 <script src="draw.js"></script>
 <script src="app.js"></script>
 <script src="extras.js"></script>
+<script src="research.js"></script>
 <script src="pro.js"></script>
 <script src="ai-chat.js"></script>
 <div id="toasts" aria-live="polite"></div>

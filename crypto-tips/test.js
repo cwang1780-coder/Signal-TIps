@@ -50,4 +50,27 @@ assert.deepStrictEqual(full.markers.filter((m) => m.time <= upTo), early.markers
 assert(I.backtest(mk(wave), { fee: 0.02 }).strategyReturn < I.backtest(mk(wave), { fee: 0 }).strategyReturn);
 assert.strictEqual(I.backtest(mk(wave.slice(0, 220))), null);
 
+// ── Research helpers ──
+// A repeating shape: the pattern finder should find the earlier repeats, and never use candles after "now"
+const cyc = Array.from({ length: 600 }, (_, i) => 100 + 20 * Math.sin((i / 60) * 2 * Math.PI) + i * 0.02);
+const sim = I.findSimilar(mk(cyc), { window: 30, horizons: [7, 30], k: 5 });
+assert.strictEqual(sim.matches.length, 5);
+assert(sim.matches[0].similarity > 0.95, "a repeating wave has near-identical past matches");
+assert(sim.matches.every((m) => m.time <= 600 - 30 - 1), "every match has a known 'what happened next'");
+assert(sim.matches.every((m, i, a) => a.every((o, j) => i === j || Math.abs(o.time - m.time) >= 30)), "matches come from different periods");
+assert.strictEqual(sim.matches[0].path.length, 60);
+assert.strictEqual(sim.summary[30].total, 5);
+assert.strictEqual(I.findSimilar(mk(cyc.slice(0, 100))), null, "not enough history");
+// The same phase of the wave always leads the same way, so all matches should agree on direction
+assert([0, 5].includes(sim.summary[7].up));
+
+const sh = I.setupHistory(mk(wave));
+assert(sh && sh.up.n + sh.down.n === 700 - 199 - 30 && ["up", "down"].includes(sh.now));
+assert.strictEqual(I.setupHistory(mk(wave.slice(0, 220))), null);
+
+const lv = I.levels(mk(cyc));
+assert(lv.support < cyc[599] && lv.resistance > cyc[599], "floor below and ceiling above the price");
+assert(Math.abs(I.typicalMove(mk([100, 101, 100, 101, 100])) - 0.0099) < 0.001);
+assert.strictEqual(I.median([3, 1, 2]), 2);
+
 console.log("all tests passed", { dip: a.action, down: d.action });

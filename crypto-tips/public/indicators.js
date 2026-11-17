@@ -185,7 +185,85 @@
     };
   }
 
-  const api = { sma, ema, rsi, macd, bollinger, analyze, backtest };
+  // ── Research helpers (context only: none of these feed the score) ──
+
+  const median = (xs) => { if (!xs.length) return null; const s = [...xs].sort((a, b) => a - b); return (s[Math.floor((s.length - 1) / 2)] + s[Math.ceil((s.length - 1) / 2)]) / 2; };
+
+  // Finds the moments in this coin's own past whose price shape most resembled the last `window` candles,
+  // and reports what happened next. Shapes are compared after normalising (so only the pattern matters, not the price level).
+  // Tested on ~3,200 cases across 10 coins: the matches called the next move's direction right about half the time,
+  // i.e. no better than chance. Shown as history, not as a forecast.
+  function findSimilar(candles, { window = 30, horizons = [7, 30], k = 8 } = {}) {
+    const maxH = Math.max(...horizons);
+    if (candles.length < window * 4 + maxH) return null;
+    const lp = candles.map((c) => Math.log(c.close));
+    const norm = (end) => {
+      const a = lp.slice(end - window, end);
+      const m = a.reduce((x, y) => x + y, 0) / window;
+      const sd = Math.sqrt(a.reduce((x, y) => x + (y - m) ** 2, 0) / window) || 1;
+      return a.map((v) => (v - m) / sd);
+    };
+    const n = candles.length, cur = norm(n);
+    const cand = [];
+    for (let end = window; end <= n - maxH - 1; end++) {   // must have a known "what happened next"
+      const w = norm(end);
+      let d = 0;
+      for (let j = 0; j < window; j++) d += (cur[j] - w[j]) ** 2;
+      cand.push([d, end]);
+    }
+    cand.sort((a, b) => a[0] - b[0]);
+    const picks = [];
+    for (const [d, end] of cand) {
+      if (picks.every((q) => Math.abs(q.end - end) >= window)) picks.push({ d, end }); // keep matches from different periods
+      if (picks.length === k) break;
+    }
+    const matches = picks.map(({ d, end }) => {
+      const base = candles[end - 1].close;
+      return {
+        time: candles[end - 1].time,
+        similarity: Math.max(0, 1 - d / (2 * window)),            // 1 = identical shape, 0 = unrelated
+        after: Object.fromEntries(horizons.map((h) => [h, candles[end - 1 + h].close / base - 1])),
+        path: candles.slice(end - window, end + maxH).map((c) => c.close / base), // pattern, then what followed
+      };
+    });
+    const summary = Object.fromEntries(horizons.map((h) => {
+      const r = matches.map((m) => m.after[h]);
+      return [h, { up: r.filter((x) => x > 0).length, total: r.length, median: median(r), best: Math.max(...r), worst: Math.min(...r) }];
+    }));
+    return { window, horizons, matches, summary, now: candles.slice(-window).map((c) => c.close / candles[n - 1].close), searched: cand.length };
+  }
+
+  // How this coin did over the next `horizon` candles, split by whether it was above or below its 200-period average.
+  // This is the evidence behind the trend rule, shown for the coin itself.
+  function setupHistory(candles, horizon = 30) {
+    const closes = candles.map((c) => c.close), s200 = sma(closes, 200);
+    const fw = { up: [], down: [] };
+    for (let i = 199; i < closes.length - horizon; i++) fw[closes[i] > s200[i] ? "up" : "down"].push(closes[i + horizon] / closes[i] - 1);
+    const stat = (r) => ({ n: r.length, median: median(r), pctUp: r.length ? r.filter((x) => x > 0).length / r.length : null });
+    const lastAvg = last(s200);
+    if (lastAvg == null || fw.up.length + fw.down.length < 60) return null;
+    return { horizon, now: last(closes) > lastAvg ? "up" : "down", up: stat(fw.up), down: stat(fw.down) };
+  }
+
+  // Price floors (support) and ceilings (resistance): turning points the price has reacted to before.
+  function levels(candles, { lookback = 250, span = 8 } = {}) {
+    const c = candles.slice(-lookback), price = last(c).close, pivots = [];
+    for (let i = span; i < c.length - span; i++) {
+      const win = c.slice(i - span, i + span + 1).map((x) => x.close);
+      if (c[i].close === Math.max(...win) || c[i].close === Math.min(...win)) pivots.push(c[i].close);
+    }
+    const below = pivots.filter((p) => p < price * 0.99), above = pivots.filter((p) => p > price * 1.01);
+    return { support: below.length ? Math.max(...below) : null, resistance: above.length ? Math.min(...above) : null };
+  }
+
+  // Typical size of one candle's move (median absolute % change) over the last `n` candles.
+  function typicalMove(candles, n = 30) {
+    const c = candles.slice(-n - 1), moves = [];
+    for (let i = 1; i < c.length; i++) moves.push(Math.abs(c[i].close / c[i - 1].close - 1));
+    return median(moves);
+  }
+
+  const api = { sma, ema, rsi, macd, bollinger, analyze, backtest, findSimilar, setupHistory, levels, typicalMove, median };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   else root.Indicators = api;
 })(typeof window !== "undefined" ? window : globalThis);
