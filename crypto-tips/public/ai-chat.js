@@ -107,10 +107,10 @@
         answer.content += dec.decode(value, { stream: true });
         render();
       }
-      if (!answer.content.trim()) answer.content = "⚠️ No answer came back. Try again.";
+      if (!answer.content.trim()) answer.content = "No answer came back. Try again.";
       window.refreshPro?.();
     } catch (e) {
-      answer.content = "⚠️ " + (e.message || "Request failed");
+      answer.content = "Error: " + (e.message || "Request failed");
     }
     busy = false; render();
   }

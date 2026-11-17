@@ -222,10 +222,10 @@
   .drv-up .drv-ic { background: #e3f4ea; color: var(--buy); } .drv-down .drv-ic { background: #fbe7e9; color: var(--sell); }
   .drivers a { color: var(--accent); }
   /* Trading simulator */
-  .sim { margin-bottom: 8px; } .sim-title { margin: 0 0 12px; }
+  .simgame { margin-bottom: 8px; } .sim-title { margin: 0 0 12px; }
   .sim-intro p { margin: 0 0 14px; }
   .sim-pick { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
-  .sim-pick button { min-height: 38px; font-size: 14px; background: #fff; } .sim-pick button.on { background: var(--text); color: #fff; } .sim-pick button.on .muted { color: #ccc; }
+  .sim-pick button { min-height: 38px; font-size: 14px; background: #fff; display: inline-flex; gap: 6px; align-items: center; } .sim-pick button.on { background: var(--text); color: #fff; } .sim-pick button.on .muted { color: #ccc; }
   .sim-head { display: flex; flex-direction: column; gap: 2px; margin-bottom: 10px; } .sim-head b { font-size: 18px; }
   .sim-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 8px; margin-bottom: 10px; }
   .sim-stats div { background: #fff; border-radius: 14px; padding: 8px 12px; display: flex; flex-direction: column; } .sim-stats b { font-size: 17px; font-variant-numeric: tabular-nums; } .sim-stats small { font-size: 13px; }
@@ -233,13 +233,23 @@
   .sim-news { margin: 10px 0; padding: 10px 14px; border-radius: 14px; background: #fdf6e7; color: #5c3d00; font-weight: 600; min-height: 44px; }
   .sim-news.stop { background: #fbe7e9; color: var(--sell); } .sim-news.empty { background: transparent; }
   .sim-ctl { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 6px 0; }
-  .sim-ctl button { min-height: 42px; font-size: 14px; } .sim-ctl button.buy { background: var(--buy); color: #fff; } .sim-ctl button.sell { background: var(--sell); color: #fff; }
+  .sim-ctl button { min-height: 42px; font-size: 14px; display: inline-flex; gap: 6px; align-items: center; } .sim-ctl button.buy { background: var(--buy); color: #fff; } .sim-ctl button.sell { background: var(--sell); color: #fff; }
   .sim-ctl button:disabled { opacity: .4; cursor: default; }
   .sim-speed { display: inline-flex; gap: 6px; margin-left: auto; }
   .sim-result { background: #fff; border-radius: 16px; padding: 18px; margin-top: 10px; } .sim-result h3 { margin: 4px 0 12px; }
   .sim-result .sim-stats div { background: var(--panel); }
   .stars { font-size: 30px; color: #f0b90b; letter-spacing: 4px; }
   .sim-lesson { background: #eaf1ff; color: #002a80; border-radius: 14px; padding: 12px 14px; }
+
+  /* Icons */
+  .i { width: 1.15em; height: 1.15em; vertical-align: -0.2em; flex: none; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+  .tabs .ico .i { width: 22px; height: 22px; }
+  .levelOpt .big .i, .startHere .sh-ico .i { width: 30px; height: 30px; color: var(--accent); }
+  .botnote .bot-ico .i { width: 36px; height: 36px; }
+  .lesson-ico .i { width: 22px; height: 22px; }
+  .vdot { display: inline-block; width: 12px; height: 12px; border-radius: 50%; background: #f0b90b; vertical-align: 2px; margin-right: 4px; }
+  .vdot.up { background: var(--buy); } .vdot.down { background: var(--sell); }
+  .tipbox b .i, .warn .i { color: #a26a00; }
 
   /* Welcome cards */
   .welcome { position: relative; background: #fff; border-radius: var(--r-lg); padding: 24px; margin-bottom: 32px; box-shadow: 0 0 0 1px var(--border); }
@@ -478,14 +488,14 @@
   <header class="header">
     <a class="brand" href="#" data-go="signals" aria-label="Signal Tips home"><img src="icon.svg" alt="" width="40" height="40" /><span>Signal Tips</span></a>
     <nav class="tabs" id="tabs" aria-label="Sections">
-      <button data-go="signals"><span class="ico">📈</span><span>Signals</span></button>
-      <button data-go="trench"><span class="ico">🔥</span><span>Trench</span></button>
-      <button data-go="buzz"><span class="ico">📣</span><span>Buzz</span></button>
-      <button data-go="alerts"><span class="ico">🔔</span><span>Alerts</span><b class="count" id="alCount" hidden></b></button>
-      <button data-go="ai"><span class="ico">🤖</span><span>Ask AI</span></button>
-      <button data-go="coins"><span class="ico">💼</span><span>My coins</span></button>
-      <button data-go="learn" class="forBeginner"><span class="ico">🎓</span><span>Learn</span></button>
-      <button data-go="me"><span class="ico">👤</span><span>Me</span></button>
+      <button data-go="signals"><span class="ico"><i data-i="chart"></i></span><span>Signals</span></button>
+      <button data-go="trench"><span class="ico"><i data-i="flame"></i></span><span>Trench</span></button>
+      <button data-go="buzz"><span class="ico"><i data-i="megaphone"></i></span><span>Buzz</span></button>
+      <button data-go="alerts"><span class="ico"><i data-i="bell"></i></span><span>Alerts</span><b class="count" id="alCount" hidden></b></button>
+      <button data-go="ai"><span class="ico"><i data-i="sparkle"></i></span><span>Ask AI</span></button>
+      <button data-go="coins"><span class="ico"><i data-i="wallet"></i></span><span>My coins</span></button>
+      <button data-go="learn" class="forBeginner"><span class="ico"><i data-i="cap"></i></span><span>Learn</span></button>
+      <button data-go="me"><span class="ico"><i data-i="user"></i></span><span>Me</span></button>
     </nav>
     <div class="header-right">
       <label class="sr-only" for="tf">Timeframe</label>
@@ -517,16 +527,16 @@
         <div>
           <div id="welcome" class="welcome" hidden>
             <button class="x" id="welcomeClose" aria-label="Close and keep the default (new to trading)">✕</button>
-            <h2>👋 Welcome! Which describes you best?</h2>
+            <h2>Welcome. Which describes you best?</h2>
             <p class="muted" style="margin-bottom:12px">We'll set the app up to match. You can change this any time under Me.</p>
             <div class="levelPick">
-              <button class="levelOpt" data-level="beginner"><span class="big">🌱</span><b>I'm new to trading</b><span class="muted">Plain-English tips, short explanations of every term, and the extra detail tucked away until you want it.</span></button>
-              <button class="levelOpt" data-level="pro"><span class="big">📊</span><b>I'm an experienced trader</b><span class="muted">Indicator values up front, a denser layout, the drawing tools ready, and shorter, more technical AI answers.</span></button>
+              <button class="levelOpt" data-level="beginner"><span class="big"><i data-i="sprout"></i></span><b>I'm new to trading</b><span class="muted">Plain-English tips, short explanations of every term, and the extra detail tucked away until you want it.</span></button>
+              <button class="levelOpt" data-level="pro"><span class="big"><i data-i="bars"></i></span><b>I'm an experienced trader</b><span class="muted">Indicator values up front, a denser layout, the drawing tools ready, and shorter, more technical AI answers.</span></button>
             </div>
           </div>
           <div id="beginnerTips" class="welcome" hidden>
             <button class="x" id="tipsClose" aria-label="Close tips">✕</button>
-            <h2>🌱 Here's how to use it</h2>
+            <h2>Here's how to use it</h2>
             <ol>
               <li><b>Tap a coin</b> to see whether its trend looks good, and why.</li>
               <li><b>Check the Buzz</b> to see what people are saying and how hyped it is.</li>
@@ -582,7 +592,7 @@
         </details>
         <div id="detailScrim" aria-hidden="true"></div>
         <div id="detail"></div>
-        <div class="botnote"><span class="bot-ico">🤖</span><div><b>Coming soon: the Signal Tips trading bot</b>
+        <div class="botnote"><span class="bot-ico"><i data-i="bot"></i></span><div><b>Coming soon: the Signal Tips trading bot</b>
           <span>We’re building a bot that can follow the signals you choose, with limits you set. It isn’t available yet, and nothing in this app trades for you today.</span></div></div>
       </div>
     </div>
@@ -595,7 +605,7 @@
         <div class="section-head"><div><h2 class="display">Trench</h2>
           <p class="lead">Coins making big moves right now: price, volume, trending searches and social buzz in one place, with how risky chasing each move has been.</p></div>
           <div class="art-card"><img src="art/trench.svg" alt="" width="480" height="320" /></div></div>
-        <div class="tipbox forBeginner"><b>💡 How to use this</b><span>This is a radar, not a shopping list. It shows what's moving fast. Most of these moves have already happened, and history says chasing them usually loses money. Use it to understand the hype, and tap "Look closer" to see a coin's full signal and risks before doing anything.</span></div>
+        <div class="tipbox forBeginner"><b><i data-i="bulb"></i> How to use this</b><span>This is a radar, not a shopping list. It shows what's moving fast. Most of these moves have already happened, and history says chasing them usually loses money. Use it to understand the hype, and tap "Look closer" to see a coin's full signal and risks before doing anything.</span></div>
         <div class="trench-study panel" id="trenchStudy"></div>
         <div class="row trench-bar"><span class="muted" id="trenchStatus">Open this page to scan the market.</span>
           <span class="trench-ctl"><label class="chk"><input type="checkbox" id="trenchCB" /> Only coins on Coinbase</label><button id="trenchRefresh">↻ Rescan</button></span></div>
@@ -611,9 +621,9 @@
       <div class="wrap">
         <div class="section-head"><div><h2 class="display">Social buzz</h2>
         <p class="lead">What people are posting, so you can spot the hype.</p></div><div class="art-card"><img src="art/buzz.svg" alt="" width="480" height="320" /></div></div>
-        <div class="tipbox forBeginner"><b>💡 How to use this</b><span>Each row shows how people feel about a coin. <b>Hype</b> tells you how loud the talk is. The green bar is the share of posts that are bullish (expecting the price to rise). Tap a coin to read the posts. Very high hype is a reason to be careful, not to buy.</span></div>
+        <div class="tipbox forBeginner"><b><i data-i="bulb"></i> How to use this</b><span>Each row shows how people feel about a coin. <b>Hype</b> tells you how loud the talk is. The green bar is the share of posts that are bullish (expecting the price to rise). Tap a coin to read the posts. Very high hype is a reason to be careful, not to buy.</span></div>
         <div class="panel">
-          <div class="disclaimer" style="margin-bottom:14px">📣 These are opinions from strangers, not facts. Hype often peaks right before a drop,
+          <div class="disclaimer" style="margin-bottom:14px">These are opinions from strangers, not facts. Hype often peaks right before a drop,
             and "pump and dump" groups use posts to push prices. Use this to see the mood, not as a reason to buy.</div>
           <div class="row" style="margin-bottom:10px"><span class="muted" id="socStatus">Loading…</span><button id="socRefresh">↻ Refresh</button></div>
           <div id="socTrending" class="chips"></div>
@@ -631,7 +641,7 @@
       <div class="wrap">
         <div class="section-head"><div><h2 class="display">Price alerts</h2>
         <p class="lead">Get told when something happens, so you don't have to keep watching.</p></div><div class="art-card"><img src="art/alerts.svg" alt="" width="480" height="320" /></div></div>
-        <div class="tipbox forBeginner"><b>💡 How to use this</b><span>Pick a coin and what to watch for, for example "price drops below" your stop-loss price. The app checks every minute while this page is open and pops up a message when it happens. Tap "Turn on notifications" to get them on your phone or computer too.</span></div>
+        <div class="tipbox forBeginner"><b><i data-i="bulb"></i> How to use this</b><span>Pick a coin and what to watch for, for example "price drops below" your stop-loss price. The app checks every minute while this page is open and pops up a message when it happens. Tap "Turn on notifications" to get them on your phone or computer too.</span></div>
         <div class="panel">
           <form id="alForm" class="addh" style="margin-top:0">
             <span class="muted">Tell me when</span>
@@ -639,7 +649,7 @@
             <select id="alType" aria-label="Alert type"></select>
             <input id="alValue" type="number" step="any" min="0" aria-label="Alert value" />
             <button class="primary" type="submit">Add alert</button>
-            <button id="alNotify" type="button" hidden>🔔 Turn on notifications</button>
+            <button id="alNotify" type="button" hidden><i data-i="bell"></i> Turn on notifications</button>
           </form>
           <ul id="alList" class="alerts"></ul>
           <p class="muted" id="alNote"></p>
@@ -654,7 +664,7 @@
       <div class="wrap narrow">
         <div class="section-head"><div><h2 class="display" id="aiTitle">Ask AI</h2>
         <p class="lead">Ask anything about the signals, the hype or your coins. The AI sees the same live data you do.</p></div><div class="art-card"><img src="art/ai.svg" alt="" width="480" height="320" /></div></div>
-        <div class="tipbox forBeginner"><b>💡 How to use this</b><span>Type a question in your own words, or tap a suggestion. Good questions: "What does RSI mean?", "Is now a good time to buy ETH?", "How do I place my first trade?". The AI explains simply and can be wrong.</span></div>
+        <div class="tipbox forBeginner"><b><i data-i="bulb"></i> How to use this</b><span>Type a question in your own words, or tap a suggestion. Good questions: "What does RSI mean?", "Is now a good time to buy ETH?", "How do I place my first trade?". The AI explains simply and can be wrong.</span></div>
         <div id="aiPanel" class="panel">
           <div id="proBox" hidden></div>
           <div class="chips" id="aiChips">
@@ -689,7 +699,7 @@
         <div class="panel wallet-panel">
           <h3>Connect a wallet <span class="badge b-BUY">Read-only</span></h3>
           <div class="privacy">
-            <b>🔒 We only need your public address. Nothing else.</b>
+            <b><i data-i="lock"></i> We only need your public address. Nothing else.</b>
             <ul>
               <li>We <b>never</b> ask for your username, password, email or recovery phrase, and we don’t keep any of them.</li>
               <li>A public address is the one you’d give someone to <b>receive</b> crypto. It’s already visible to anyone on the blockchain and <b>can’t be used to move your money</b>.</li>
@@ -697,19 +707,19 @@
               <li>Remove a wallet any time with ✕.</li>
             </ul>
           </div>
-          <div class="tipbox forBeginner"><b>💡 Where do I find my address?</b><span>In <b>Exodus</b>: open the coin, tap <b>Receive</b>, then copy the address. In <b>MetaMask</b> or <b>Coinbase Wallet</b>: tap your account name to copy it, or use the Connect button. Coins held inside the Coinbase exchange app don’t have their own address: add those manually below.</span></div>
+          <div class="tipbox forBeginner"><b><i data-i="bulb"></i> Where do I find my address?</b><span>In <b>Exodus</b>: open the coin, tap <b>Receive</b>, then copy the address. In <b>MetaMask</b> or <b>Coinbase Wallet</b>: tap your account name to copy it, or use the Connect button. Coins held inside the Coinbase exchange app don’t have their own address: add those manually below.</span></div>
           <form id="walletForm" class="addh">
             <select id="walletNet" aria-label="Network"></select>
             <input id="walletAddr" placeholder="Public address, e.g. bc1q… or 0x…" autocomplete="off" spellcheck="false" aria-label="Public wallet address" style="flex:1 1 260px" />
             <input id="walletLabel" placeholder="Nickname (optional)" aria-label="Nickname" />
             <button class="primary" type="submit">Connect</button>
-            <button type="button" id="walletBrowser" hidden>🦊 Connect browser wallet</button>
+            <button type="button" id="walletBrowser" hidden><i data-i="link"></i> Connect browser wallet</button>
           </form>
           <p class="muted" id="walletMsg" aria-live="polite"></p>
           <ul id="walletList" class="wallets"></ul>
           <p class="muted small">Supported: Bitcoin, Ethereum (with USDC, USDT, DAI, LINK, UNI, SHIB, PEPE, AAVE, WBTC, POL, ARB), Solana, Litecoin, Dogecoin and XRP. <span id="walletStatus"></span></p>
         </div>
-        <div class="tipbox forBeginner"><b>💡 How to use this</b><span>Add each coin you own, or a pretend one for practice: the coin, how many, and the price you paid. The table shows what it’s worth now, whether you’re up or down, and the signal for it.</span></div>
+        <div class="tipbox forBeginner"><b><i data-i="bulb"></i> How to use this</b><span>Add each coin you own, or a pretend one for practice: the coin, how many, and the price you paid. The table shows what it’s worth now, whether you’re up or down, and the signal for it.</span></div>
         <div class="panel">
           <div class="row" style="margin-bottom:10px"><span class="muted" id="cbStatus"></span><button id="cbSync">Sync Coinbase</button></div>
           <div class="muted" id="cbCash" style="margin-bottom:10px"></div>
@@ -720,8 +730,8 @@
             <input id="hCost" placeholder="Price you paid $ (optional)" type="number" step="any" aria-label="Average buy price" />
             <button id="hAdd" class="primary">+ Add</button>
           </div>
-          <p class="muted" style="margin-top:10px">🔒 Your coins, alerts, drawings and wallet addresses are saved only in this browser. To show a wallet’s balance, its public address is looked up on the public blockchain through our server and then forgotten; we never store it.</p>
-          <p class="muted" style="margin-top:6px">🤖 <b>Coming soon:</b> we’re building a trading bot. It isn’t available yet, and this app never trades for you.</p>
+          <p class="muted" style="margin-top:10px"><i data-i="lock"></i> Your coins, alerts, drawings and wallet addresses are saved only in this browser. To show a wallet’s balance, its public address is looked up on the public blockchain through our server and then forgotten; we never store it.</p>
+          <p class="muted" style="margin-top:6px"><i data-i="bot"></i> <b>Coming soon:</b> we’re building a trading bot. It isn’t available yet, and this app never trades for you.</p>
         </div>
       </div>
     </div>
@@ -735,7 +745,7 @@
           <p class="lead">Practise in the trading simulator with pretend money, then take seven short lessons (about 20 minutes). Each lesson ends with one quick question.</p>
           <div class="learnProgress" id="learnProgress"></div></div>
           <div class="art-card"><img src="art/learn.svg" alt="" width="480" height="320" /></div></div>
-        <div class="panel sim" id="simWrap"><h2 class="sim-title">🎮 Trading simulator <span class="muted">practise with pretend money</span></h2><div id="simGame"></div></div>
+        <div class="panel simgame" id="simWrap"><h2 class="sim-title"><i data-i="game"></i> Trading simulator <span class="muted">practise with pretend money</span></h2><div id="simGame"></div></div>
         <h2 class="subh" style="margin-top:28px">Lessons</h2>
         <div id="learnList" class="lessons"></div>
         <p class="muted" style="margin-top:16px">Lessons are general education, not financial advice. Your progress is saved in this browser.</p>
@@ -750,13 +760,13 @@
         <div class="section-head"><div><h2 class="display">Your experience</h2>
         <p class="lead">Pick the one that fits and the app adjusts.</p></div><div class="art-card"><img src="art/me.svg" alt="" width="480" height="320" /></div></div>
         <div class="levelPick" id="levelPickMe">
-          <button class="levelOpt" data-level="beginner"><span class="big">🌱</span><b>I'm new to trading</b><span class="muted">Plain-English tips, short explanations of every term, and the extra detail tucked away until you want it.</span></button>
-          <button class="levelOpt" data-level="pro"><span class="big">📊</span><b>I'm an experienced trader</b><span class="muted">Indicator values up front, a denser layout, the drawing tools ready, and shorter, more technical AI answers.</span></button>
+          <button class="levelOpt" data-level="beginner"><span class="big"><i data-i="sprout"></i></span><b>I'm new to trading</b><span class="muted">Plain-English tips, short explanations of every term, and the extra detail tucked away until you want it.</span></button>
+          <button class="levelOpt" data-level="pro"><span class="big"><i data-i="bars"></i></span><b>I'm an experienced trader</b><span class="muted">Indicator values up front, a denser layout, the drawing tools ready, and shorter, more technical AI answers.</span></button>
         </div>
         <div class="panel" style="margin-top:16px">
           <h3 style="margin-bottom:10px">What changes</h3>
           <div class="tablewrap"><table class="levelTable">
-            <tr><th></th><th>🌱 New to trading</th><th>📊 Experienced</th></tr>
+            <tr><th></th><th>New to trading</th><th>Experienced</th></tr>
             <tr><td>Learn to trade</td><td>7 short lessons with quick checks, plus "How to use this" tips on every page</td><td>Hidden</td></tr>
             <tr><td>Timeframe</td><td>Long-term only, the easiest to follow</td><td>Long, medium or short-term</td></tr>
             <tr><td>Alerts</td><td>Price levels and BUY/SELL changes</td><td>Also 24h moves and social hype</td></tr>
@@ -808,12 +818,13 @@
         <li><a href="https://www.coinbase.com/" target="_blank" rel="noopener">Coinbase</a></li>
         <li><a href="https://www.exodus.com/" target="_blank" rel="noopener">Exodus</a></li>
         <li><a href="https://www.tradingview.com/" target="_blank" rel="noopener">TradingView</a></li></ul>
-        <h4 style="margin-top:22px">Coming soon</h4><ul><li><span class="soon">🤖 Signal Tips trading bot</span></li></ul></div>
+        <h4 style="margin-top:22px">Coming soon</h4><ul><li><span class="soon">Signal Tips trading bot</span></li></ul></div>
     </div>
     <div class="legal"><span>© 2026 Signal Tips</span><span class="dot">•</span><span>Not financial advice</span><span class="dot">•</span><span>Your data stays in your browser</span></div>
   </div>
 </footer>
 
+<script src="icons.js"></script>
 <script src="coins/list.js"></script>
 <script src="indicators.js"></script>
 <script src="draw.js"></script>

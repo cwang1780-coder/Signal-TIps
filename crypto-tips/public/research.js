@@ -149,7 +149,7 @@
       return `<div class="rcol ${cls}"><h3>${title} <span class="muted">${items.length}</span></h3>${items.length ? items.map((x) => `<div class="reason"><b>${esc(x.title)}</b><span>${x.text}</span></div>`).join("") : `<div class="muted">Nothing stands out right now.</div>`}</div>`;
     };
     return `<h2 id="d-reasons">More to weigh <span class="muted">other reasons people buy or sell. These don't change the score above.</span></h2>
-      <div class="rgrid">${col("for", "👍 Reasons for", "rfor")}${col("against", "👎 Reasons against", "ragainst")}${col("neutral", "🔎 Worth knowing", "rneutral")}</div>`;
+      <div class="rgrid">${col("for", icon("up") + " Reasons for", "rfor")}${col("against", icon("down") + " Reasons against", "ragainst")}${col("neutral", icon("search") + " Worth knowing", "rneutral")}</div>`;
   }
 
   // ── why it's moving: is it doing well, badly or just mid, and what's behind it ──
@@ -253,9 +253,9 @@
   function moveHtml(sym) {
     const i = moveInfo(sym);
     if (!i) return "";
-    const V = { good: ["🟢", "Doing well", "up"], bad: ["🔴", "Doing badly", "down"], mid: ["🟡", "Just mid", ""] }[i.verdict];
+    const V = { good: ['<span class="vdot up"></span>', "Doing well", "up"], bad: ['<span class="vdot down"></span>', "Doing badly", "down"], mid: ['<span class="vdot"></span>', "Just mid", ""] }[i.verdict];
     const chip = (label, v) => v == null ? "" : `<span class="mchip"><span class="muted">${label}</span><b class="${v >= 0 ? "up" : "down"}">${p1(v)}</b></span>`;
-    const ICON = { up: "▲", down: "▼", flat: "•", news: "📰" };
+    const ICON = { up: "▲", down: "▼", flat: "•", news: icon("news") };
     return `<section class="move ${V[2] ? "move-" + V[2] : ""}"><h2 id="d-move">${V[0]} ${V[1]}${i.twist ? ` <span class="muted">· ${i.twist}</span>` : ""}</h2>
       <p class="move-sum">${esc(i.name)} is <b class="${i.w >= 0 ? "up" : "down"}">${p1(i.w)}</b> this week${i.m != null ? ` and <b class="${i.m >= 0 ? "up" : "down"}">${p1(i.m)}</b> this month` : ""}. ${i.cause || (i.verdict === "mid" ? "Not much is happening either way." : "")}</p>
       <div class="mchips">${chip("24 hours", i.d1)}${chip("7 days", i.w)}${chip("30 days", i.m)}</div>
@@ -306,7 +306,7 @@
         : lean === "down" ? `<b class="down">History leans down.</b> After this pattern, prices were lower 30 days later more often than on an ordinary day.`
         : `<b>No clear lean.</b> After this pattern, prices went up about as often as on any ordinary day, so it hasn't been a useful predictor.`;
       const contra = (pat.bias === "up" && lean === "down") || (pat.bias === "down" && lean === "up")
-        ? `<p class="warn">⚠️ Traders call this pattern ${pat.bias === "up" ? "bullish" : "bearish"}, but in our data the opposite happened more often.</p>` : "";
+        ? `<p class="warn">${icon("alert")} Traders call this pattern ${pat.bias === "up" ? "bullish" : "bearish"}, but in our data the opposite happened more often.</p>` : "";
       html += `<div class="verdict">${verdict}</div>${contra}
         <div class="stats setup">
           <div><span class="muted">Price higher 30 days later</span><b>${pc(p.up)}</b><span class="muted">of ${p.n} times this pattern appeared</span></div>

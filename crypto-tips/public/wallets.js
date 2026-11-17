@@ -54,7 +54,7 @@
     if (!address) { msg.textContent = "Paste a public address first."; return; }
     if (looksLikeSecret(address)) {
       $("walletAddr").value = "";
-      msg.innerHTML = "<b>⚠️ That looks like a recovery phrase or private key.</b> We cleared it and nothing was sent. Never share those with any app or person. Paste your <b>public receive address</b> instead.";
+      msg.innerHTML = icon("alert") + " <b>That looks like a recovery phrase or private key.</b> We cleared it and nothing was sent. Never share those with any app or person. Paste your <b>public receive address</b> instead.";
       return;
     }
     if (wallets.some((w) => w.address === address)) { msg.textContent = "That wallet is already connected."; return; }
@@ -63,7 +63,7 @@
     await lookup(w);
     if (balances[w.id]?.error) { msg.textContent = balances[w.id].error; delete balances[w.id]; return; }
     wallets.push(w); save();
-    msg.textContent = "✅ Connected (read-only).";
+    msg.textContent = "Connected (read-only).";
     $("walletAddr").value = ""; $("walletLabel").value = "";
     renderWallets(); render();
   }

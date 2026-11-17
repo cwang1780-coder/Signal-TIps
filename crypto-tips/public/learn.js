@@ -3,7 +3,7 @@
 (function () {
   const LESSONS = [
     {
-      id: "basics", icon: "🪙", title: "What trading crypto really means", time: "2 min",
+      id: "basics", icon: "coin", title: "What trading crypto really means", time: "2 min",
       body: `<p>Trading means buying a coin and later selling it, hoping the price went up in between. Crypto prices move 24 hours a day, 7 days a week, and they move a lot.</p>
         <ul><li><b>You can lose money.</b> Bitcoin has fallen more than 50% several times. Smaller coins have fallen 90% or disappeared.</li>
         <li><b>Nobody can predict prices,</b> not this app, not influencers, not the AI. Anyone who promises profits is guessing or lying.</li>
@@ -14,7 +14,7 @@
       explain: "It's worth $50. Not selling doesn't protect you: the value really is lower until the price recovers, if it ever does.",
     },
     {
-      id: "exchange", icon: "🏦", title: "How buying and selling works", time: "3 min",
+      id: "exchange", icon: "bank", title: "How buying and selling works", time: "3 min",
       body: `<p>You trade on an <b>exchange</b> such as Coinbase. You add money, then place an <b>order</b>.</p>
         <ul><li><b>Market order:</b> buys or sells right now at the current price. Simple, but the price can slip a little.</li>
         <li><b>Limit order:</b> only buys or sells at the price you choose or better. It may never fill if the price doesn't get there.</li>
@@ -26,7 +26,7 @@
       explain: "A limit order waits for your price. A market order is the one that fills immediately.",
     },
     {
-      id: "chart", icon: "📈", title: "Reading a price chart", time: "3 min",
+      id: "chart", icon: "chart", title: "Reading a price chart", time: "3 min",
       body: `<p>Open any coin to see its chart. The black line is the price over time.</p>
         <ul><li><b>Trend:</b> higher highs and higher lows means an uptrend. Lower highs and lower lows means a downtrend.</li>
         <li><b>The orange line</b> is the 200-period average: roughly the coin's long-term "normal" price. Price above it usually means a long-term uptrend; below it, a downtrend.</li>
@@ -38,7 +38,7 @@
       explain: "Above the long-term average usually means an uptrend. It's a description of the trend, not a promise about tomorrow.",
     },
     {
-      id: "signals", icon: "🚦", title: "Using this app's signals", time: "2 min",
+      id: "signals", icon: "gauge", title: "Using this app's signals", time: "2 min",
       body: `<p>Each coin gets <b>BUY</b>, <b>HOLD</b> or <b>SELL</b> from its trend and momentum.</p>
         <ul><li><b>BUY:</b> uptrend, conditions look good. <b>HOLD:</b> mixed. <b>SELL:</b> downtrend.</li>
         <li><b>SELL doesn't mean you must do anything.</b> If you don't own the coin, it just means "stay out for now".</li>
@@ -50,7 +50,7 @@
       explain: "SELL just means the trend is down. If you don't own it, you simply don't buy yet.",
     },
     {
-      id: "risk", icon: "🛟", title: "Managing risk", time: "3 min",
+      id: "risk", icon: "shield", title: "Managing risk", time: "3 min",
       body: `<p>Good traders focus on how much they could lose, not how much they could win.</p>
         <ul><li><b>Position size:</b> don't put too much into one coin. Many people cap each coin at a small slice (for example 5%) of what they invest.</li>
         <li><b>Have an exit plan before you buy:</b> a price where you'll take profit and a <b>stop-loss</b> price where you'll sell to limit a loss.</li>
@@ -62,7 +62,7 @@
       explain: "It's your own exit price for when a trade goes wrong. An alert here can remind you when the price gets there.",
     },
     {
-      id: "scams", icon: "🚨", title: "Hype, scams and emotions", time: "3 min",
+      id: "scams", icon: "alert", title: "Hype, scams and emotions", time: "3 min",
       body: `<p>Crypto attracts scammers, and hype makes people act fast without thinking.</p>
         <ul><li><b>FOMO</b> (fear of missing out) makes people buy at the top. If everyone is excited, be extra careful.</li>
         <li><b>Pump and dump:</b> groups hype a small coin, sell to the people who rush in, and the price collapses.</li>
@@ -74,7 +74,7 @@
       explain: "Always a scam. Nobody can double your money, and crypto you send can't be taken back.",
     },
     {
-      id: "plan", icon: "📝", title: "Your first practice trade", time: "4 min",
+      id: "plan", icon: "note", title: "Your first practice trade", time: "4 min",
       body: `<p>Practise before using real money. This is called <b>paper trading</b>.</p>
         <ol><li>Pick one coin and read its signal, reasons and track record.</li>
         <li>Write your plan: why you'd buy, your profit price and your stop-loss price.</li>
@@ -95,7 +95,7 @@
 
   function progressText() {
     const d = done().size;
-    return d === LESSONS.length ? "All 7 lessons done 🎉" : `${d} of ${LESSONS.length} lessons done`;
+    return d === LESSONS.length ? "All 7 lessons done" : `${d} of ${LESSONS.length} lessons done`;
   }
 
   function render() {
@@ -109,7 +109,7 @@
       const isOpen = openId === l.id, isDone = d.has(l.id);
       return `<article class="lesson ${isOpen ? "open" : ""} ${isDone ? "done" : ""}" id="lesson-${l.id}">
         <button class="lesson-head" data-lesson="${l.id}" aria-expanded="${isOpen}">
-          <span class="lesson-ico">${isDone ? "✓" : l.icon}</span>
+          <span class="lesson-ico">${icon(isDone ? "check" : l.icon)}</span>
           <span class="lesson-title"><span class="muted">Lesson ${i + 1} · ${l.time}</span><b>${l.title}</b></span>
           <span class="lesson-caret">${isOpen ? "▲" : "▼"}</span>
         </button>
@@ -117,14 +117,14 @@
           <div class="lesson-try"><button class="pill dark" data-try="${l.id}">Try it: ${l.tryIt.label} →</button></div>
           <div class="quiz" data-quiz="${l.id}"><p><b>Quick check:</b> ${l.q}</p>
             ${l.options.map((o, k) => `<button class="quiz-opt" data-q="${l.id}" data-k="${k}">${o}</button>`).join("")}
-            <p class="quiz-out" id="quiz-out-${l.id}" ${isDone ? "" : "hidden"}>${isDone ? "✅ " + l.explain : ""}</p></div>
+            <p class="quiz-out" id="quiz-out-${l.id}" ${isDone ? "" : "hidden"}>${isDone ? l.explain : ""}</p></div>
           ${isDone && LESSONS[i + 1] ? `<button class="primary" data-lesson="${LESSONS[i + 1].id}">Next lesson: ${LESSONS[i + 1].title} →</button>` : ""}
         </div>` : ""}
       </article>`;
     }).join("");
     // Home-screen "Start here" card
     const sh = document.getElementById("startHere");
-    if (sh) sh.innerHTML = `<span class="sh-ico">🎓</span><span><b>New to trading? Start here.</b><span class="muted">${progressText()}${next ? ` · Next: ${next.title}` : ""}</span></span><span class="sh-go">${next ? "Continue →" : "Review →"}</span>`;
+    if (sh) sh.innerHTML = `<span class="sh-ico">${icon("cap")}</span><span><b>New to trading? Start here.</b><span class="muted">${progressText()}${next ? ` · Next: ${next.title}` : ""}</span></span><span class="sh-go">${next ? "Continue →" : "Review →"}</span>`;
   }
 
   function open(id) {
@@ -143,7 +143,7 @@
       if (k === l.answer) {
         opt.classList.add("right");
         const d = done(); d.add(l.id); store.set("learnDone", [...d]);
-        out.hidden = false; out.textContent = "✅ Correct. " + l.explain;
+        out.hidden = false; out.textContent = "Correct. " + l.explain;
         setTimeout(render, 900);
       } else {
         opt.classList.add("wrong");

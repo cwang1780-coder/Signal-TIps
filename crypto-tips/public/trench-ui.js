@@ -53,7 +53,7 @@
           <div><span class="muted">24 hours</span><b class="${x.ch24 >= 0 ? "up" : "down"}">${sgn(x.ch24)}</b></div>
           <div><span class="muted">Price</span><b>${fmt(x.price)}</b></div></div>
         <div class="tc-tags"><span class="tag2 ${mc}">${mt}</span>
-          ${x.trendingRank ? `<span class="tag2">🔥 Trending #${x.trendingRank}</span>` : ""}
+          ${x.trendingRank ? `<span class="tag2">${icon("flame")} Trending #${x.trendingRank}</span>` : ""}
           <span class="tag2" title="24h trading volume compared with the coin's total value">Volume ${money(x.volume)} · ${Math.round(x.turnover * 100)}% of its value</span>
           ${x.social ? `<a class="tag2" href="${esc(x.social.url)}" target="_blank" rel="noopener">StockTwits: hype ${esc(x.social.hype)}${x.social.bullishPct != null ? `, ${x.social.bullishPct}% bullish` : ""}</a>` : ""}
           ${x.onCoinbase ? `<span class="tag2 cb">On Coinbase</span>` : `<span class="tag2">Not on Coinbase</span>`}</div>

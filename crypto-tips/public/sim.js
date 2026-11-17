@@ -8,29 +8,29 @@
 
   // Each scenario: segments of [days, drift per day, daily swing], and headlines on certain days.
   const SCENARIOS = {
-    bull: { name: "The bull run", icon: "🐂", hint: "A coin in a steady uptrend, with a scary dip along the way.",
+    bull: { name: "The bull run", icon: "up", hint: "A coin in a steady uptrend, with a scary dip along the way.",
       segs: [[20, 0.009, 0.022], [8, -0.018, 0.03], [32, 0.011, 0.024]],
-      news: { 21: "📉 Price drops sharply. Social posts: \"It's over, sell everything!\"", 35: "📈 New all-time high. Big funds are buying." },
+      news: { 21: "Price drops sharply. Social posts: \"It's over, sell everything!\"", 35: "New all-time high. Big funds are buying." },
       lesson: "Dips inside an uptrend are normal. Selling in a panic at the first dip often means missing the rest of the climb. A plan (for example \"I sell if it closes below X\") beats reacting to scary posts." },
-    crash: { name: "The crash", icon: "💥", hint: "Things look calm… until they don't.",
+    crash: { name: "The crash", icon: "zap", hint: "Things look calm… until they don't.",
       segs: [[24, 0.003, 0.018], [5, -0.08, 0.035], [31, -0.004, 0.035]],
-      news: { 24: "🚨 Breaking: a major exchange has been hacked. Withdrawals paused.", 32: "🙏 Influencer: \"Buy the dip, it always comes back!\"" },
+      news: { 24: "Breaking: a major exchange has been hacked. Withdrawals paused.", 32: "Influencer: \"Buy the dip, it always comes back!\"" },
       lesson: "Crashes happen fast. A stop-loss (an automatic sell if the price falls a set amount) limits the damage. \"Buy the dip\" only works if the dip ends, and after a real crash it often keeps sliding." },
-    pump: { name: "The pump and dump", icon: "🎢", hint: "A quiet coin suddenly gets very popular online.",
+    pump: { name: "The pump and dump", icon: "spike", hint: "A quiet coin suddenly gets very popular online.",
       segs: [[15, 0.001, 0.02], [7, 0.075, 0.05], [4, -0.02, 0.07], [34, -0.035, 0.05]],
-      news: { 15: "🔥 Trending! Influencer: \"This coin is going 100x, don't miss out!\"", 21: "🚀 Everyone you know is talking about it. Up 60% this week!", 26: "👀 Early buyers are quietly selling." },
+      news: { 15: "Trending! Influencer: \"This coin is going 100x, don't miss out!\"", 21: "Everyone you know is talking about it. Up 60% this week!", 26: "Early buyers are quietly selling." },
       lesson: "When everyone is shouting about a coin, the early buyers are usually selling to the late ones. Chasing hype after a big run-up is how most beginners lose money. If you do play it, take profits on the way up." },
-    chop: { name: "Sideways chop", icon: "〰️", hint: "A market that can't make up its mind.",
+    chop: { name: "Sideways chop", icon: "waves", hint: "A market that can't make up its mind.",
       segs: [[60, 0, 0.032]], revert: 0.15,
-      news: { 12: "📈 Up 3 days in a row! Breakout coming?", 30: "📉 Down 3 days in a row. Breakdown coming?", 45: "🤷 Analysts disagree on what's next." },
+      news: { 12: "Up 3 days in a row! Breakout coming?", 30: "Down 3 days in a row. Breakdown coming?", 45: "Analysts disagree on what's next." },
       lesson: "In a sideways market, buying every rise and selling every dip loses money, and every trade costs a fee. Sometimes the best move is to do nothing until there's a clear trend." },
-    vshape: { name: "The fake-out", icon: "🪃", hint: "Fear everywhere. Is this the bottom?",
+    vshape: { name: "The fake-out", icon: "vshape", hint: "Fear everywhere. Is this the bottom?",
       segs: [[18, -0.012, 0.028], [7, -0.03, 0.04], [35, 0.014, 0.028]],
-      news: { 24: "😱 Market mood: Extreme Fear. Headlines say crypto is dead.", 33: "🤔 Price is up 20% from the low. Too late to get in?" },
+      news: { 24: "Market mood: Extreme Fear. Headlines say crypto is dead.", 33: "Price is up 20% from the low. Too late to get in?" },
       lesson: "Selling at the moment of maximum fear often means selling at the bottom. Nobody can pick the exact bottom, but buying in small pieces over time (instead of all at once) reduces the risk of bad timing." },
-    bleed: { name: "The slow bleed", icon: "🩸", hint: "A coin that keeps getting cheaper.",
+    bleed: { name: "The slow bleed", icon: "drop", hint: "A coin that keeps getting cheaper.",
       segs: [[60, -0.009, 0.024]],
-      news: { 15: "💸 It's 20% cheaper than last month. Bargain?", 30: "📈 Bounce! Up 8% today.", 45: "🙃 Holders: \"I'll sell when it gets back to what I paid.\"" },
+      news: { 15: "It's 20% cheaper than last month. Bargain?", 30: "Bounce! Up 8% today.", 45: "Holders: \"I'll sell when it gets back to what I paid.\"" },
       lesson: "\"Cheap\" can always get cheaper. Buying more of a falling coin to lower your average (averaging down) can turn a small loss into a big one. A falling trend is a reason to wait, not a discount." },
   };
 
@@ -90,7 +90,7 @@
       const px = Math.min(g.stop, c.open), got = g.coins * px, fee = got * FEE;
       g.cash += got - fee; g.fees += fee; g.coins = 0;
       g.trades.push({ day: g.day, kind: "sell", px, stop: true });
-      g.news.unshift({ day: g.day, text: `🛑 Your stop-loss sold everything at ${fmt$(px)}.` });
+      g.news.unshift({ day: g.day, text: `Your stop-loss sold everything at ${fmt$(px)}.` });
       g.stop = null;
     }
     if (sc.news[g.day]) g.news.unshift({ day: g.day, text: sc.news[g.day], headline: true });
@@ -137,8 +137,8 @@
 
   function render() {
     const b = best(), sc = g && SCENARIOS[g.id];
-    const picker = `<div class="sim-pick">${[["random", "🎲", "Mystery market"], ...Object.entries(SCENARIOS).map(([k, s]) => [k, s.icon, s.name])]
-      .map(([k, ic, n]) => `<button data-sim-new="${k}" class="${g && !g.mystery && g.id === k ? "on" : ""}">${ic} ${n}${b[k] != null ? ` <span class="muted">best ${pct(b[k])}</span>` : ""}</button>`).join("")}</div>`;
+    const picker = `<div class="sim-pick">${[["random", "dice", "Mystery market"], ...Object.entries(SCENARIOS).map(([k, s]) => [k, s.icon, s.name])]
+      .map(([k, ic, n]) => `<button data-sim-new="${k}" class="${g && !g.mystery && g.id === k ? "on" : ""}">${icon(ic)} ${n}${b[k] != null ? ` <span class="muted">best ${pct(b[k])}</span>` : ""}</button>`).join("")}</div>`;
     if (!g) {
       root.innerHTML = `<div class="sim-intro"><p>Start with <b>$1,000 of pretend money</b> and trade a made-up coin for 60 days. Every market is new and random, but shaped like something that really happens. Headlines pop up along the way, just like real life. Try to beat simply buying and holding.</p>${picker}</div>`;
       return;
@@ -146,7 +146,7 @@
     const total = worth(), chg = total / START - 1, invested = g.coins * price();
     const res = g.result;
     root.innerHTML = `${picker}
-      <div class="sim-head"><b>${g.mystery && !g.over ? "🎲 Mystery market" : sc.icon + " " + sc.name}</b><span class="muted">${g.mystery && !g.over ? "What kind of market is this? You'll find out at the end." : sc.hint}</span></div>
+      <div class="sim-head"><b>${g.mystery && !g.over ? icon("dice") + " Mystery market" : icon(sc.icon) + " " + sc.name}</b><span class="muted">${g.mystery && !g.over ? "What kind of market is this? You'll find out at the end." : sc.hint}</span></div>
       <div class="sim-stats">
         <div><span class="muted">Day</span><b>${g.day - 4} / ${DAYS - 5}</b></div>
         <div><span class="muted">Coin price</span><b>${fmt$(price())}</b></div>
@@ -158,24 +158,24 @@
       ${g.news[0] && g.day - g.news[0].day < 6 ? `<div class="sim-news ${g.news[0].headline ? "" : "stop"}">${g.news[0].text}</div>` : `<div class="sim-news empty"></div>`}
       ${g.over ? `<div class="sim-result">
           <div class="stars" aria-label="${res.stars} of 3 stars">${"★".repeat(res.stars)}${"☆".repeat(3 - res.stars)}</div>
-          <h3>${g.mystery ? `It was: ${sc.icon} ${sc.name}. ` : ""}You ended with ${fmt$(res.final)} (<span class="${res.you >= 0 ? "up" : "down"}">${pct(res.you)}</span>)</h3>
+          <h3>${g.mystery ? `It was: ${icon(sc.icon)} ${sc.name}. ` : ""}You ended with ${fmt$(res.final)} (<span class="${res.you >= 0 ? "up" : "down"}">${pct(res.you)}</span>)</h3>
           <div class="sim-stats">
             <div><span class="muted">You</span><b class="${res.you >= 0 ? "up" : "down"}">${pct(res.you)}</b></div>
             <div><span class="muted">Buy on day 1 and hold</span><b class="${res.hold >= 0 ? "up" : "down"}">${pct(res.hold)}</b></div>
             <div><span class="muted">Do nothing</span><b>+0.0%</b></div>
             <div><span class="muted">Trades · fees paid</span><b>${g.trades.length} · ${fmt$(g.fees)}</b></div>
           </div>
-          <p class="sim-lesson"><b>💡 The lesson:</b> ${sc.lesson}</p>
+          <p class="sim-lesson"><b>${icon("bulb")} The lesson:</b> ${sc.lesson}</p>
           <p class="muted small">Stars: one for making money, one for beating buy-and-hold, one for doing it in 6 trades or fewer.</p>
-          <div class="sim-ctl"><button class="primary" data-sim-new="${g.mystery ? "random" : g.id}">Play again (new market)</button><button data-sim-new="random">🎲 Try a mystery market</button></div>
+          <div class="sim-ctl"><button class="primary" data-sim-new="${g.mystery ? "random" : g.id}">Play again (new market)</button><button data-sim-new="random">${icon("dice")} Try a mystery market</button></div>
         </div>`
       : `<div class="sim-ctl">
           <button class="buy" data-sim="buy" data-f="0.25" ${g.cash < 1 ? "disabled" : ""}>Buy 25%</button>
           <button class="buy" data-sim="buy" data-f="1" ${g.cash < 1 ? "disabled" : ""}>Buy with all cash</button>
           <button class="sell" data-sim="sell" data-f="0.5" ${!g.coins ? "disabled" : ""}>Sell half</button>
           <button class="sell" data-sim="sell" data-f="1" ${!g.coins ? "disabled" : ""}>Sell all</button>
-          <button data-sim="stop" ${!g.coins ? "disabled" : ""} title="Automatically sell everything if the price falls 10% below today's">${g.stop ? "🛑 Stop-loss at " + fmt$(g.stop) + " (remove)" : "🛑 Set stop-loss −10%"}</button>
-          <span class="sim-speed"><button data-sim="${g.paused ? "play" : "pause"}">${g.paused ? "▶ Play" : "⏸ Pause"}</button><button data-sim="next" title="Next day">⏭</button>
+          <button data-sim="stop" ${!g.coins ? "disabled" : ""} title="Automatically sell everything if the price falls 10% below today's">${g.stop ? icon("stop") + " Stop-loss at " + fmt$(g.stop) + " (remove)" : icon("stop") + " Set stop-loss −10%"}</button>
+          <span class="sim-speed"><button data-sim="${g.paused ? "play" : "pause"}">${g.paused ? "Play" : "Pause"}</button><button data-sim="next" title="Next day">⏭</button>
 <button data-sim="speed" title="Change speed">Speed: ${{ 1400: "slow", 900: "normal", 400: "fast" }[g.speed]}</button></span>
         </div>
         <p class="muted small">Each trade costs a 0.5% fee, like a real exchange. The game pauses when you leave this tab.</p>`}`;

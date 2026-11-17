@@ -36,14 +36,14 @@
     const msg = note ? `<div class="proNote">${esc(note)}</div>` : "";
     if (key() && status?.pro) {
       const end = status.periodEnd ? new Date(status.periodEnd * 1000).toLocaleDateString(undefined, { month: "short", day: "numeric" }) : null;
-      box.innerHTML = `<div class="proRow"><span><b>⭐ Pro is active.</b> ${status.used} of ${status.limit} AI questions used this month.
+      box.innerHTML = `<div class="proRow"><span><b>${icon("star")} Pro is active.</b> ${status.used} of ${status.limit} AI questions used this month.
           ${end ? `<span class="muted">${status.cancelAtPeriodEnd ? "Ends" : "Renews"} ${end}.</span>` : ""}</span>
         <span class="proBtns"><button data-act="portal">Manage subscription</button><button data-act="copy" title="Use this key to unlock Pro on another phone or computer">Copy my Pro key</button></span></div>${msg}`;
     } else if (key() && status) {
       box.innerHTML = `<div class="proRow"><span><b>Pro is not active.</b> ${esc(status.reason || "")}</span>
         <span class="proBtns">${status.status ? `<button data-act="portal">Manage subscription</button>` : ""}<button data-act="forget">Remove key</button></span></div>${msg}`;
     } else {
-      box.innerHTML = `<div class="proRow"><span><b>⭐ Go Pro: ${esc(priceText())}</b><br>
+      box.innerHTML = `<div class="proRow"><span><b>${icon("star")} Go Pro: ${esc(priceText())}</b><br>
           <span class="muted">Ask AI about any coin, your holdings and the social hype. ${cfg.monthlyLimit} questions a month. Cancel anytime.</span></span>
         <span class="proBtns"><button class="primary" data-act="buy" ${busy ? "disabled" : ""}>${busy ? "Opening checkout…" : "Go Pro"}</button></span></div>
         <form class="proRestore"><span class="muted">Already subscribed?</span><input name="k" placeholder="Paste your Pro key" autocomplete="off" /><button type="submit">Unlock</button></form>${msg}`;

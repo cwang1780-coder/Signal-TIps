@@ -301,7 +301,7 @@ async function syncCoinbase(force) {
     if (!res.ok) throw new Error(d.reason || "server not reachable (HTTP " + res.status + ")");
     $("lockBar").hidden = true; $("cbSync").hidden = false;
     if (!d.connected) { cb = { holdings: [], cash: [], status: "Coinbase not connected: " + d.reason }; return renderHoldings(); }
-    cb = { holdings: d.holdings, cash: d.cash, status: "✅ Coinbase connected · synced " + new Date(d.updated).toLocaleTimeString() };
+    cb = { holdings: d.holdings, cash: d.cash, status: "Coinbase connected · synced " + new Date(d.updated).toLocaleTimeString() };
     const missing = d.holdings.map((h) => h.sym).filter((s) => !results[s]);
     await Promise.all(missing.map(async (s) => { try { results[s] = await analyzeCoin(s); } catch (e) { results[s] = { error: e.message }; } }));
   } catch (e) {

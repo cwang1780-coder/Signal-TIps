@@ -4,13 +4,13 @@
 (function () {
   const COLORS = ["#0052ff", "#f5a623", "#d6336c", "#098551", "#cf202f", "#0a0b0d"];
   const TOOLS = [
-    ["view", "👆", "Look (no drawing)"],
-    ["pen", "✏️", "Pen: draw freely"],
+    ["view", icon("cursor"), "Look (no drawing)"],
+    ["pen", icon("pencil"), "Pen: draw freely"],
     ["line", "╱", "Trend line: drag from one point to another"],
     ["level", "―", "Price level: tap to mark support or resistance"],
     ["arrow", "➚", "Arrow: drag to point at something"],
     ["note", "T", "Note: tap where you want to write"],
-    ["erase", "🧽", "Eraser: tap a drawing to delete it"],
+    ["erase", icon("eraser"), "Eraser: tap a drawing to delete it"],
   ];
   const PAD = { l: 8, r: 72, t: 12, b: 22 };
 
@@ -229,7 +229,7 @@
       ? `<span class="muted">Your levels:</span> ` + levels.map((d) => {
           const p = d.pts[0].p, above = p > last;
           return `<span class="lvl"><i style="background:${d.color}"></i>${fmtP(p)} <span class="muted">(${above ? "+" : ""}${(((p - last) / last) * 100).toFixed(1)}%)</span>
-            ${window.hasAlert?.(sym, +p.toPrecision(6)) ? `<button disabled>✅ Alert set</button>` : `<button data-alert="${d.id}" title="Get an alert when the price ${above ? "rises to" : "falls to"} this level">🔔 Alert</button>`}</span>`;
+            ${window.hasAlert?.(sym, +p.toPrecision(6)) ? `<button disabled>${icon("check")} Alert set</button>` : `<button data-alert="${d.id}" title="Get an alert when the price ${above ? "rises to" : "falls to"} this level">${icon("bell")} Alert</button>`}</span>`;
         }).join("")
       : drawings.length ? "" : `<span class="muted">Tip: pick ― and tap the chart to mark a price level. You can turn any level into an alert.</span>`;
   }
@@ -246,7 +246,7 @@
     if (symbol !== sym) { drawings = load(symbol); history = []; }
     sym = symbol; candles = data; wrap = container; markers = signalMarkers || [];
     container.innerHTML = `
-      <button class="drawToggle" type="button">✏️ Draw on the chart</button>
+      <button class="drawToggle" type="button">${icon("pencil")} Draw on the chart</button>
       <div class="drawBar${barShown ? " show" : ""}">
         ${TOOLS.map(([id, icon, title]) => `<button data-tool="${id}" title="${title}" aria-label="${title}">${icon}</button>`).join("")}
         <span class="sep"></span>
@@ -261,7 +261,7 @@
     container.querySelector(".drawToggle").onclick = (e) => {
       barShown = !barShown;
       container.querySelector(".drawBar").classList.toggle("show", barShown);
-      e.target.textContent = barShown ? "✕ Hide drawing tools" : "✏️ Draw on the chart";
+      e.target.innerHTML = barShown ? "✕ Hide drawing tools" : icon("pencil") + " Draw on the chart";
       if (!barShown) setTool("view");
     };
     if (barShown) container.querySelector(".drawToggle").textContent = "✕ Hide drawing tools";
@@ -284,7 +284,7 @@
       const id = e.target.dataset.alert; if (!id) return;
       const d = drawings.find((x) => x.id === id); if (!d) return;
       const p = +d.pts[0].p.toPrecision(6), above = p > candles[candles.length - 1].close;
-      if (window.addAlert?.(sym, above ? "above" : "below", p)) { e.target.textContent = "✅ Alert set"; e.target.disabled = true; }
+      if (window.addAlert?.(sym, above ? "above" : "below", p)) { e.target.innerHTML = icon("check") + " Alert set"; e.target.disabled = true; }
     });
     container.querySelectorAll(".swatch").forEach((x) => x.classList.toggle("on", x.dataset.color === color));
     setTool(tool);

@@ -1,0 +1,46 @@
+// Line icons drawn for Signal Tips: 24×24, 1.8px stroke, round ends, coloured by the surrounding text.
+// icon("bell") returns an inline SVG. In the HTML, <i data-i="bell"></i> is swapped for the icon on load.
+(function () {
+  const P = {
+    chart: '<path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 5-6"/>',
+    flame: '<path d="M12 3c.8 3.2 4.5 5 4.5 9.5a4.5 4.5 0 0 1-9 0c0-2.2 1-3.6 2.2-4.6.1 1.8.9 2.9 2 3.2-.3-3 .2-5.6.3-8.1z"/>',
+    megaphone: '<path d="M3 10v4h3l8 4.5V5.5L6 10H3z"/><path d="M18 9a4 4 0 0 1 0 6"/>',
+    bell: '<path d="M6 16v-5a6 6 0 0 1 12 0v5l2 2H4l2-2z"/><path d="M10 20.5a2 2 0 0 0 4 0"/>',
+    sparkle: '<path d="M11 3l1.9 5.1L18 10l-5.1 1.9L11 17l-1.9-5.1L4 10l5.1-1.9z"/><path d="M18.5 15l.8 1.9 1.9.8-1.9.8-.8 1.9-.8-1.9-1.9-.8 1.9-.8z"/>',
+    wallet: '<rect x="3" y="6" width="18" height="14" rx="2.5"/><path d="M3 10h18"/><path d="M16 15h2"/><path d="M6 6V5.5A1.5 1.5 0 0 1 7.5 4H17"/>',
+    cap: '<path d="M2 9l10-5 10 5-10 5z"/><path d="M6 11v4.5c2.5 2.5 9.5 2.5 12 0V11"/><path d="M22 9v5"/>',
+    user: '<circle cx="12" cy="8" r="4"/><path d="M4 21c.9-4 4-6 8-6s7.1 2 8 6"/>',
+    sprout: '<path d="M12 21v-9"/><path d="M12 12c0-4-3-6-7-6 0 4 3 6 7 6z"/><path d="M12 10c0-3.2 2.2-5 6-5 0 3.2-2.2 5-6 5z"/>',
+    bars: '<path d="M3 21h18"/><path d="M6 17v-5M10.5 17V6M15 17V9M19.5 17v-3"/>',
+    bot: '<rect x="4" y="8" width="16" height="12" rx="3"/><path d="M12 4v4"/><circle cx="12" cy="3.5" r=".8"/><path d="M9 13v1M15 13v1M9.5 17h5"/>',
+    bulb: '<path d="M9.5 18h5M10.5 21h3"/><path d="M12 3a6 6 0 0 0-3.8 10.6c.6.6.8 1.4.8 2.4h6c0-1 .2-1.8.8-2.4A6 6 0 0 0 12 3z"/>',
+    lock: '<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7.5a4 4 0 0 1 8 0V11"/>',
+    link: '<path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/>',
+    game: '<rect x="2.5" y="7" width="19" height="11" rx="4"/><path d="M7.5 10.5v4M5.5 12.5h4"/><path d="M15.5 11.5h.01M18 14h.01"/>',
+    check: '<path d="M5 12.5l4.5 4.5L19 7"/>',
+    alert: '<path d="M12 3.5l9.5 16.5h-19z"/><path d="M12 10v4.5M12 17.2v.3"/>',
+    up: '<path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/>',
+    down: '<path d="M3 7l6 6 4-4 8 8"/><path d="M15 17h6v-6"/>',
+    search: '<circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/>',
+    news: '<rect x="3" y="5" width="15" height="15" rx="2"/><path d="M18 9h3v9a2 2 0 0 1-2 2"/><path d="M7 9h7M7 13h7M7 17h4"/>',
+    star: '<path d="M12 3.5l2.6 5.4 5.9.8-4.3 4.1 1 5.8L12 16.8l-5.2 2.8 1-5.8-4.3-4.1 5.9-.8z"/>',
+    coin: '<circle cx="12" cy="12" r="9"/><path d="M14.6 9.2c-.4-.8-1.4-1.2-2.6-1.2-1.6 0-2.6.8-2.6 1.9 0 2.8 5.4 1.4 5.4 4.2 0 1.1-1.1 1.9-2.8 1.9-1.3 0-2.3-.5-2.7-1.3M12 6v2M12 16v2"/>',
+    bank: '<path d="M3 10l9-6 9 6"/><path d="M5 10v8M9.5 10v8M14.5 10v8M19 10v8M3 21h18"/>',
+    gauge: '<path d="M4 18a8 8 0 1 1 16 0"/><path d="M12 18l4-5"/>',
+    shield: '<path d="M12 3l8 3v6c0 4.8-3.4 8-8 9-4.6-1-8-4.2-8-9V6z"/>',
+    note: '<rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 8h6M9 12h6M9 16h3"/>',
+    pencil: '<path d="M4 20l1-4L16 5l3 3L8 19z"/><path d="M14 7l3 3"/>',
+    cursor: '<path d="M5 3l14 7-6.2 1.8L11 18z"/>',
+    eraser: '<path d="M8.5 20L4 15.5 15 4.5l5 5L9.5 20z"/><path d="M9 20h11M10 10l5 5"/>',
+    dice: '<rect x="4" y="4" width="16" height="16" rx="3"/><path d="M9 9h.01M15 9h.01M9 15h.01M15 15h.01M12 12h.01"/>',
+    zap: '<path d="M13 2.5L4.5 14H11l-1 7.5L18.5 10H12z"/>',
+    spike: '<path d="M3 18h4l3-12 4 14 3-8h4"/>',
+    waves: '<path d="M2 12c2-3 4-3 6 0s4 3 6 0 4-3 6 0"/>',
+    vshape: '<path d="M3 5l6.5 12 4.5-6.5 7 7.5"/>',
+    drop: '<path d="M12 3c3 4 6 7 6 11a6 6 0 0 1-12 0c0-4 3-7 6-11z"/>',
+    stop: '<path d="M8 3h8l5 5v8l-5 5H8l-5-5V8z"/><path d="M8.5 12h7"/>',
+    clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+  };
+  window.icon = (name, cls = "") => `<svg class="i ${cls}" viewBox="0 0 24 24" aria-hidden="true" focusable="false">${P[name] || ""}</svg>`;
+  document.querySelectorAll("i[data-i]").forEach((el) => { el.outerHTML = window.icon(el.dataset.i, el.className); });
+})();

@@ -29,12 +29,12 @@
   function notify(title, body) {
     const t = document.createElement("div");
     t.className = "toast";
-    t.innerHTML = `<b>🔔 ${esc(title)}</b><div>${esc(body)}</div>`;
+    t.innerHTML = `<b>${icon("bell")} ${esc(title)}</b><div>${esc(body)}</div>`;
     t.onclick = () => t.remove();
     $("toasts").appendChild(t);
     setTimeout(() => t.remove(), 20000);
     try {
-      if ("Notification" in window && Notification.permission === "granted") new Notification("🔔 " + title, { body, tag: title });
+      if ("Notification" in window && Notification.permission === "granted") new Notification(title, { body, tag: title });
     } catch {}
   }
 
@@ -63,7 +63,7 @@
     $("alSym").innerHTML = syms.map((s) => `<option${s === cur ? " selected" : ""}>${s}</option>`).join("");
     $("alList").innerHTML = alerts.length
       ? alerts.map((a) => `<li class="${a.triggeredAt ? "hit" : ""}">
-          <span>${a.triggeredAt ? "✅" : "⏳"} <b>${esc(TYPES[a.type].text(a))}</b>
+          <span>${icon(a.triggeredAt ? "check" : "clock")} <b>${esc(TYPES[a.type].text(a))}</b>
           ${a.triggeredAt ? `<span class="muted">— triggered ${ago(new Date(a.triggeredAt).toISOString())}: ${esc(a.hit || "")}</span>` : results[a.sym]?.price ? `<span class="muted">— now ${fmt(results[a.sym].price)}</span>` : ""}</span>
           <span>${a.triggeredAt ? `<button data-rearm="${a.id}">Re-arm</button>` : ""}<button class="x" data-del="${a.id}" title="Delete">✕</button></span>
         </li>`).join("")
@@ -139,9 +139,9 @@
 
   function crowdVsChart(s, r) {
     if (!s || s.error || !r || r.error || s.bullishPct == null || s.tagged < 5) return "";
-    if (s.bullishPct >= 75 && r.action.includes("SELL")) return `<div class="warn">⚠️ Crowd is ${s.bullishPct}% bullish but the chart signal says ${r.action}. Hype and price are disagreeing.</div>`;
+    if (s.bullishPct >= 75 && r.action.includes("SELL")) return `<div class="warn">${icon("alert")} Crowd is ${s.bullishPct}% bullish but the chart signal says ${r.action}. Hype and price are disagreeing.</div>`;
     if (s.bullishPct <= 35 && r.action.includes("BUY")) return `<div class="note">The crowd is gloomy (${s.bullishPct}% bullish) while the chart says ${r.action}. Some traders see that as a contrarian opportunity.</div>`;
-    if (s.bullishPct >= 85 && s.hype !== "low") return `<div class="warn">⚠️ Almost everyone is bullish. Extreme one-sided hype often comes before a pullback. Be careful chasing it.</div>`;
+    if (s.bullishPct >= 85 && s.hype !== "low") return `<div class="warn">${icon("alert")} Almost everyone is bullish. Extreme one-sided hype often comes before a pullback. Be careful chasing it.</div>`;
     return "";
   }
 
@@ -177,7 +177,7 @@
           <b class="sym">${window.coinIcon ? window.coinIcon(sym, 24) : ""} ${sym}</b>
           <span class="badge ${HYPE_CLASS[s.hype]}">Hype: ${s.hype}</span>
           ${s.error ? `<span class="muted">${esc(s.error)}</span>` : `${moodBar(s)}<span class="muted">${s.postsPerHour ?? "?"} posts/hr</span>`}
-          ${s.trendingRank ? `<span class="badge h-high">🔥 Trending #${s.trendingRank}</span>` : ""}
+          ${s.trendingRank ? `<span class="badge h-high">${icon("flame")} Trending #${s.trendingRank}</span>` : ""}
           ${r?.action ? `<span class="${actionClass(r.action)}">Chart: ${r.action}</span>` : ""}
           <span class="muted caret">${open ? "▲" : "▼ posts"}</span>
         </div>
@@ -195,7 +195,7 @@
     if (!s) { el.innerHTML = `<h2>What people are saying</h2><div class="muted">Loading social posts…</div>`; return; }
     if (s.error) { el.innerHTML = `<h2>What people are saying</h2><div class="muted">${esc(s.error)}</div>`; return; }
     el.innerHTML = `<h2>What people are saying <span class="badge ${HYPE_CLASS[s.hype]}">Hype: ${s.hype}</span></h2>
-      <div class="socrow">${moodBar(s)}<span class="muted">${s.postsPerHour ?? "?"} posts/hr</span>${s.trendingRank ? `<span class="badge h-high">🔥 Trending #${s.trendingRank}</span>` : ""}</div>
+      <div class="socrow">${moodBar(s)}<span class="muted">${s.postsPerHour ?? "?"} posts/hr</span>${s.trendingRank ? `<span class="badge h-high">${icon("flame")} Trending #${s.trendingRank}</span>` : ""}</div>
       ${crowdVsChart(s, results[sym])}${postsHtml({ ...s, posts: s.posts.slice(0, 4) })}`;
   }
 
