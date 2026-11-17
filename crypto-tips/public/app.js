@@ -170,14 +170,31 @@ function renderSummary() {
   const rs = allSyms().map((s) => results[s]).filter((r) => r && !r.error);
   if (!rs.length) return;
   const good = rs.filter((r) => r.action.includes("BUY")).length, bad = rs.filter((r) => r.action.includes("SELL")).length, mixed = rs.length - good - bad;
-  const mood = good > bad && good >= rs.length / 2 ? "🟢 Most coins are in an uptrend right now."
-    : bad > good && bad >= rs.length / 2 ? "🔴 Most coins are in a downtrend right now."
-    : "🟡 The market is mixed right now.";
-  $("summary").innerHTML = `${mood}<small>${good} look${good === 1 ? "s" : ""} good · ${mixed} mixed · ${bad} in a downtrend. Tap a coin to see why.</small>`;
+  const mood = good > bad && good >= rs.length / 2 ? ["g", "Most coins are in an uptrend right now."]
+    : bad > good && bad >= rs.length / 2 ? ["r", "Most coins are in a downtrend right now."]
+    : ["y", "The market is mixed right now."];
+  $("summary").innerHTML = `<span class="dot ${mood[0]}" aria-hidden="true"></span>${mood[1]}<small>${good} look${good === 1 ? "s" : ""} good · ${mixed} mixed · ${bad} in a downtrend. Tap a coin to see why.</small>`;
+}
+
+// Hero card: a live price list, newest signals first in your own coin order.
+const COIN_COLORS = { BTC: "#f7931a", ETH: "#627eea", SOL: "#9945ff", XRP: "#23292f", DOGE: "#c2a633", ADA: "#0033ad", AVAX: "#e84142", LINK: "#2a5ada", LTC: "#345d9d", DOT: "#e6007a" };
+function renderHeroList() {
+  const el = $("heroList");
+  if (!el) return;
+  const rows = allSyms().filter((s) => results[s] && !results[s].error).slice(0, 6);
+  el.innerHTML = rows.length ? rows.map((sym) => {
+    const r = results[sym];
+    return `<button class="hrow" data-hero="${sym}" aria-label="Open ${sym}">
+      <span class="coin-dot" style="background:${COIN_COLORS[sym] || "#5b616e"}">${sym.slice(0, 3)}</span>
+      <span class="nm"><b>${coinName(sym) || sym}</b><span>${sym} · <span class="${actionClass(r.action)}" style="padding:1px 8px">${r.action}</span></span></span>
+      <span class="px">${fmt(r.price)}<span class="${r.change24 >= 0 ? "up" : "down"}">${r.change24 >= 0 ? "↗" : "↘"} ${pct(r.change24)}</span></span>
+    </button>`;
+  }).join("") : `<p class="muted" style="padding:12px 6px">Loading live prices…</p>`;
 }
 
 function render() {
   renderSummary();
+  renderHeroList();
   // Keep your own order (no reshuffling on every refresh), so coins stay where you expect them.
   $("grid").innerHTML = allSyms().map((sym) => {
     const r = results[sym];
@@ -215,7 +232,7 @@ function renderDetail() {
       <span><span class="${actionClass(r.action)}">${r.action}</span> <button class="x" id="detailClose" title="Close" aria-label="Close ${selected} details">✕</button></span></div>
     <p style="margin-top:6px">${PLAIN[r.action]}</p>
     <div id="chartWrap"></div>
-    <div class="muted">Price (white) · 50-period avg (blue) · 200-period avg (orange) · Pick a tool above the chart to draw. Drawings are saved for this coin.</div>
+    <div class="muted">Price (black) · 50-period avg (blue) · 200-period avg (orange) · Pick a tool above the chart to draw. Drawings are saved for this coin.</div>
     <h2>Why? <span class="muted">each line adds or removes points; the total (${r.score.toFixed(1)}) decides the signal</span></h2>
     <ul class="reasons">${r.reasons.map((x) => `<li><span class="pts" style="color:${x.pts > 0 ? "var(--buy)" : x.pts < 0 ? "var(--sell)" : "var(--dim)"}">${x.pts > 0 ? "+" : ""}${x.pts}</span><span>${x.text}</span></li>`).join("")}</ul>
     ${techTableHtml(r)}
@@ -309,7 +326,26 @@ function showTab(name) {
   window.scrollTo(0, 0);
 }
 window.showTab = showTab;
-$("tabs").addEventListener("click", (e) => { const b = e.target.closest("[data-go]"); if (b) showTab(b.dataset.go); });
+// Any [data-go] button switches section: header nav, hero buttons, footer links.
+document.addEventListener("click", (e) => {
+  const go = e.target.closest("[data-go]");
+  if (go) { e.preventDefault(); document.body.classList.remove("navOpen"); $("menuToggle").setAttribute("aria-expanded", "false"); showTab(go.dataset.go); return; }
+  if (e.target.closest("[data-open-help]")) {
+    showTab("signals");
+    const h = $("help"); h.open = true;
+    setTimeout(() => h.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
+    return;
+  }
+  const hero = e.target.closest("[data-hero]");
+  if (hero) { selected = hero.dataset.hero; render(); $("detail").scrollIntoView({ behavior: "smooth", block: "start" }); }
+});
+// Phone/tablet menu: the section list opens full-screen under the header.
+$("menuToggle").addEventListener("click", () => {
+  document.documentElement.style.setProperty("--top-h", $("top").getBoundingClientRect().bottom + "px");
+  const open = document.body.classList.toggle("navOpen");
+  $("menuToggle").setAttribute("aria-expanded", open);
+});
+document.addEventListener("keydown", (e) => { if (e.key === "Escape") document.body.classList.remove("navOpen"); });
 
 // ── Experience level: "beginner" (default) or "pro". Changes presentation only, never the signals. ──
 function level() { return store.get("level", "beginner") === "pro" ? "pro" : "beginner"; }

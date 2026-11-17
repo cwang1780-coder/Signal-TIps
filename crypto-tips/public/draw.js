@@ -2,7 +2,7 @@
 // Drawings are anchored to (time, price), so they stay put when prices update or the timeframe changes.
 // Saved per coin in this browser.
 (function () {
-  const COLORS = ["#facc15", "#22d3ee", "#f472b6", "#16c784", "#ea3943", "#ffffff"];
+  const COLORS = ["#0052ff", "#f5a623", "#d6336c", "#098551", "#cf202f", "#0a0b0d"];
   const TOOLS = [
     ["view", "👆", "Look (no drawing)"],
     ["pen", "✏️", "Pen: draw freely"],
@@ -60,9 +60,9 @@
     ctx.font = "11px system-ui, sans-serif"; ctx.textBaseline = "middle";
     for (let i = 0; i <= 4; i++) {
       const p = s.min + ((s.max - s.min) * i) / 4, y = s.y(p);
-      ctx.strokeStyle = "#24304a"; ctx.lineWidth = 1;
+      ctx.strokeStyle = "#e4e7eb"; ctx.lineWidth = 1;
       ctx.beginPath(); ctx.moveTo(PAD.l, y); ctx.lineTo(s.W - PAD.r, y); ctx.stroke();
-      ctx.fillStyle = "#8a98b3"; ctx.fillText(fmtP(p), s.W - PAD.r + 6, y);
+      ctx.fillStyle = "#5b616e"; ctx.fillText(fmtP(p), s.W - PAD.r + 6, y);
     }
     // date labels
     ctx.textBaseline = "alphabetic";
@@ -70,7 +70,7 @@
       const t = s.t0 + ((s.t1 - s.t0) * i) / 3;
       const longRange = s.t1 - s.t0 > 300 * 86400; // show the year when the chart covers about a year or more
       const label = new Date(t * 1000).toLocaleDateString(undefined, longRange ? { month: "short", year: "2-digit" } : { month: "short", day: "numeric" });
-      ctx.fillStyle = "#8a98b3";
+      ctx.fillStyle = "#5b616e";
       ctx.textAlign = i === 0 ? "left" : i === 3 ? "right" : "center";
       ctx.fillText(label, s.x(t), s.H - 6);
     }
@@ -82,16 +82,16 @@
       arr.forEach((v, i) => { if (v == null) return; const X = s.x(candles[i].time), Y = s.y(v); started ? ctx.lineTo(X, Y) : ctx.moveTo(X, Y); started = true; });
       ctx.stroke();
     };
-    series(s.s200, "#f59e0b", 1.5); series(s.s50, "#3b82f6", 1.5); series(s.closes, "#e6ecf5", 2);
+    series(s.s200, "#f59e0b", 1.5); series(s.s50, "#0052ff", 1.5); series(s.closes, "#0a0b0d", 2);
 
     // last price tag
     const last = s.closes[s.closes.length - 1];
-    tag(ctx, s, last, "#3b82f6");
+    tag(ctx, s, last, "#0052ff");
 
     // past buy/sell signals (from the track record)
     for (const m of markers) {
       const X = s.x(m.time), Y = s.y(m.price), up = m.side === "buy", o = up ? 14 : -14;
-      ctx.fillStyle = up ? "#16c784" : "#ea3943";
+      ctx.fillStyle = up ? "#098551" : "#cf202f";
       ctx.beginPath(); ctx.moveTo(X, Y + (up ? 5 : -5)); ctx.lineTo(X - 6, Y + o); ctx.lineTo(X + 6, Y + o); ctx.closePath(); ctx.fill();
     }
 
@@ -100,7 +100,7 @@
 
     // crosshair while a drawing tool is selected
     if (hover && tool !== "view") {
-      ctx.setLineDash([4, 4]); ctx.strokeStyle = "#8a98b388"; ctx.lineWidth = 1;
+      ctx.setLineDash([4, 4]); ctx.strokeStyle = "#5b616e88"; ctx.lineWidth = 1;
       ctx.beginPath(); ctx.moveTo(PAD.l, hover.y); ctx.lineTo(s.W - PAD.r, hover.y); ctx.moveTo(hover.x, PAD.t); ctx.lineTo(hover.x, s.H - PAD.b); ctx.stroke();
       ctx.setLineDash([]);
       tag(ctx, s, s.p(hover.y), "#4b5563");
@@ -131,11 +131,11 @@
       ctx.beginPath(); ctx.moveTo(PAD.l, P[0].y); ctx.lineTo(s.W - PAD.r, P[0].y); ctx.stroke();
       ctx.setLineDash([]);
       ctx.fillRect(s.W - PAD.r + 2, P[0].y - 9, PAD.r - 4, 18);
-      ctx.fillStyle = "#000"; ctx.textBaseline = "middle"; ctx.fillText(fmtP(d.pts[0].p), s.W - PAD.r + 6, P[0].y);
+      ctx.fillStyle = "#fff"; ctx.textBaseline = "middle"; ctx.fillText(fmtP(d.pts[0].p), s.W - PAD.r + 6, P[0].y);
     } else if (d.type === "note") {
       ctx.font = "600 13px system-ui, sans-serif"; ctx.textBaseline = "middle";
       const w = ctx.measureText(d.text).width + 12;
-      ctx.globalAlpha = 0.9; ctx.fillStyle = "#0b0f17"; ctx.fillRect(P[0].x - 2, P[0].y - 11, w, 22); ctx.globalAlpha = 1;
+      ctx.globalAlpha = 0.9; ctx.fillStyle = "#ffffff"; ctx.fillRect(P[0].x - 2, P[0].y - 11, w, 22); ctx.globalAlpha = 1;
       ctx.strokeStyle = d.color; ctx.lineWidth = 1; ctx.strokeRect(P[0].x - 2, P[0].y - 11, w, 22);
       ctx.fillStyle = d.color; ctx.fillText(d.text, P[0].x + 4, P[0].y);
       ctx.font = "11px system-ui, sans-serif";

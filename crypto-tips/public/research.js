@@ -159,9 +159,9 @@
     const pts = (a, off) => a.map((v, i) => `${X(i + off).toFixed(1)},${Y(v).toFixed(1)}`).join(" ");
     const up = path[path.length - 1] >= path[split - 1];
     return `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="Price pattern and what followed">
-      <polyline points="${pts(path.slice(0, split), 0)}" fill="none" stroke="#8a98b3" stroke-width="1.5"/>
-      <polyline points="${pts(path.slice(split - 1), split - 1)}" fill="none" stroke="${up ? "#16c784" : "#ea3943"}" stroke-width="2"/>
-      <circle cx="${X(split - 1).toFixed(1)}" cy="${Y(path[split - 1]).toFixed(1)}" r="2.5" fill="#fff"/></svg>`;
+      <polyline points="${pts(path.slice(0, split), 0)}" fill="none" stroke="#9aa1ad" stroke-width="1.5"/>
+      <polyline points="${pts(path.slice(split - 1), split - 1)}" fill="none" stroke="${up ? "#098551" : "#cf202f"}" stroke-width="2"/>
+      <circle cx="${X(split - 1).toFixed(1)}" cy="${Y(path[split - 1]).toFixed(1)}" r="2.5" fill="#0a0b0d"/></svg>`;
   }
 
   // Say what this coin's own history shows, whichever way it points.
