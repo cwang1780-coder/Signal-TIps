@@ -282,22 +282,17 @@ function renderDetail() {
   const bt = trackRecord(selected, r.candles);
   el.innerHTML = `
     <div class="row detailHead"><h2 style="margin:0">${coinIcon(selected, 44)}<span>${coinName(selected) || selected} <span class="muted">${selected}</span> · ${fmt(r.price)}</span></h2>
-      <span><span class="${actionClass(r.action)}">${r.action}</span> <button class="x" id="detailClose" title="Close" aria-label="Close ${selected} details">✕</button></span></div>
+      <span class="${actionClass(r.action)}">${r.action}</span></div>
     <p style="margin-top:6px">${PLAIN[r.action]}</p>
-    <nav class="dnav" aria-label="Jump to">
-      ${[["d-move", "Why it's moving"], ["d-chart", "Chart"], ["d-why", "Score"], ["d-pattern", "Pattern"], ["d-reasons", "Reasons"], ["d-history", "History"], ["d-track", "Track record"], ["techDetails", "Details"], ["d-news", "News"]]
-        .map(([id, t]) => `<button data-jump="${id}">${t}</button>`).join("")}
-      <button class="dnav-close" data-close aria-label="Close ${selected} details">✕ Close</button>
+    <nav class="dnav" role="tablist" aria-label="Sections">
+      <div class="dtabs">${DSECS.map(([id, t]) => `<button role="tab" data-dtab="${id}">${t}</button>`).join("")}</div>
+      <button class="dnav-close" data-close aria-label="Close ${selected} details">✕<span> Close</span></button>
     </nav>
+    <section class="dsec" data-sec="overview">
     <div id="detailMove"></div>
     <div id="d-chart"></div>
     <div id="chartWrap"></div>
     <div class="muted">Price (black) · 50-period avg (blue) · 200-period avg (orange) · Pick a tool above the chart to draw. Drawings are saved for this coin.</div>
-    <h2 id="d-why">Why? <span class="muted">each line adds or removes points; the total (${r.score.toFixed(1)}) decides the signal</span></h2>
-    <ul class="reasons">${r.reasons.map((x) => `<li><span class="pts" style="color:${x.pts > 0 ? "var(--buy)" : x.pts < 0 ? "var(--sell)" : "var(--dim)"}">${x.pts > 0 ? "+" : ""}${x.pts}</span><span>${x.text}</span></li>`).join("")}</ul>
-    ${techTableHtml(r)}
-    <div id="detailResearch"></div>
-    ${trackRecordHtml(bt)}
     <div class="links">
       ${siteConfig.coinbaseRef
         ? `<a href="${siteConfig.coinbaseRef}" target="_blank" rel="noopener sponsored">Sign up for Coinbase ↗ <small>(referral link: we may earn a commission)</small></a>`
@@ -306,11 +301,31 @@ function renderDetail() {
       <a href="https://www.tradingview.com/symbols/${selected}USD/" target="_blank" rel="noopener">Chart on TradingView ↗</a>
       <button class="primary" onclick="askAI('Should I buy, sell or hold ${selected} right now? Walk me through the signals and what people are saying.')">Ask AI about ${selected}</button>
     </div>
-    <div id="detailSocial"></div>`;
+    </section>
+    <section class="dsec" data-sec="score">
+    <h2 id="d-why">Why ${r.action}? <span class="muted">each line adds or removes points; the total (${r.score.toFixed(1)}) decides the signal</span></h2>
+    <ul class="reasons">${r.reasons.map((x) => `<li><span class="pts" style="color:${x.pts > 0 ? "var(--buy)" : x.pts < 0 ? "var(--sell)" : "var(--dim)"}">${x.pts > 0 ? "+" : ""}${x.pts}</span><span>${x.text}</span></li>`).join("")}</ul>
+    ${techTableHtml(r)}
+    </section>
+    <section class="dsec" data-sec="pattern" id="dr-pattern"></section>
+    <section class="dsec" data-sec="reasons" id="dr-reasons"></section>
+    <section class="dsec" data-sec="history" id="dr-history"></section>
+    <section class="dsec" data-sec="track">${trackRecordHtml(bt)}</section>
+    <section class="dsec" data-sec="news"><div id="dr-news"></div><div id="detailSocial"></div></section>`;
   Draw.mount($("chartWrap"), selected, r.candles, bt?.markers);
   window.renderDetailSocial?.(selected);
   window.renderResearch?.(selected);
   syncJump();
+}
+// The coin view's sections, shown one at a time so there's no long scroll.
+const DSECS = [["overview", "Overview"], ["score", "Score"], ["pattern", "Pattern"], ["reasons", "Reasons"], ["history", "History"], ["track", "Track record"], ["news", "News & buzz"]];
+let dTab = "overview", dTabSym = null;
+function showDTab(name) {
+  dTab = name;
+  $("detail").scrollTop = 0;
+  syncJump();
+  // A chart drawn while its tab was hidden has no size: redraw it now that it's visible.
+  if (name === "overview" && $("chartWrap")?.querySelector("canvas")?.width === 0) renderDetail();
 }
 
 async function syncCoinbase(force) {
@@ -377,16 +392,28 @@ $("grid").addEventListener("click", (e) => {
 $("grid").addEventListener("keydown", (e) => { if ((e.key === "Enter" || e.key === " ") && e.target.dataset.sym) { e.preventDefault(); e.target.click(); } });
 $("detail").addEventListener("click", (e) => {
   if (e.target.id === "detailClose" || e.target.closest("[data-close]")) return closeDetail();
-  const j = e.target.closest("[data-jump]");
-  if (j) document.getElementById(j.dataset.jump)?.scrollIntoView({ behavior: "smooth", block: "start" });
+  const t = e.target.closest("[data-dtab]");
+  if (t) showDTab(t.dataset.dtab);
 });
 $("detailScrim").addEventListener("click", closeDetail);
 document.addEventListener("keydown", (e) => { if (e.key === "Escape" && selected && document.body.classList.contains("detailOpen")) closeDetail(); });
 
 // ── Tabs ──
 const TABS = ["signals", "trench", "buzz", "alerts", "ai", "coins", "learn", "me"];
-// Jump buttons in the coin view: hide the ones whose section isn't on screen (depends on mode and loaded data).
-function syncJump() { document.querySelectorAll(".dnav [data-jump]").forEach((b) => (b.hidden = !document.getElementById(b.dataset.jump))); }
+// Show the chosen section; hide tabs whose section is empty (depends on mode and loaded data).
+function syncJump() {
+  if (selected !== dTabSym) { dTab = "overview"; dTabSym = selected; } // a new coin starts on Overview
+  const secs = [...document.querySelectorAll("#detail .dsec")];
+  const empty = (s) => !s.textContent.trim();
+  if (secs.some((s) => s.dataset.sec === dTab && empty(s)) && dTab !== "overview") dTab = "overview";
+  secs.forEach((s) => (s.hidden = s.dataset.sec !== dTab));
+  document.querySelectorAll(".dnav [data-dtab]").forEach((b) => {
+    const s = secs.find((x) => x.dataset.sec === b.dataset.dtab);
+    b.hidden = !s || empty(s);
+    b.classList.toggle("on", b.dataset.dtab === dTab);
+    b.setAttribute("aria-selected", b.dataset.dtab === dTab);
+  });
+}
 window.syncJump = syncJump;
 function closeDetail() {
   if (history.state?.coin) return history.back(); // the popstate handler below closes it

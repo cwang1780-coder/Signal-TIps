@@ -148,7 +148,7 @@
       const items = all.filter((x) => x.side === side);
       return `<div class="rcol ${cls}"><h3>${title} <span class="muted">${items.length}</span></h3>${items.length ? items.map((x) => `<div class="reason"><b>${esc(x.title)}</b><span>${x.text}</span></div>`).join("") : `<div class="muted">Nothing stands out right now.</div>`}</div>`;
     };
-    return `<h2 id="d-reasons">More to weigh <span class="muted">other reasons people buy or sell. These don't change the score above.</span></h2>
+    return `<h2 id="d-reasons">More to weigh <span class="muted">other reasons people buy or sell. These don't change the signal score.</span></h2>
       <div class="rgrid">${col("for", icon("up") + " Reasons for", "rfor")}${col("against", icon("down") + " Reasons against", "ragainst")}${col("neutral", icon("search") + " Worth knowing", "rneutral")}</div>`;
   }
 
@@ -388,13 +388,15 @@
   }
 
   function renderResearch(sym) {
-    const el = document.getElementById("detailResearch");
+    const el = document.getElementById("dr-pattern");
     if (!el || !sym || !results[sym] || results[sym].error) return;
     // Beginners get the simpler view: reasons for/against and news, without the pattern history.
     const beginner = window.userLevel?.() === "beginner";
     const mv = document.getElementById("detailMove");
     if (mv) mv.innerHTML = moveHtml(sym);
-    el.innerHTML = patternHtml(sym) + reasonsHtml(sym) + (beginner ? "" : historyHtml(sym)) + coinNewsHtml(sym);
+    const put = (id, html) => { const x = document.getElementById(id); if (x) x.innerHTML = html; };
+    put("dr-pattern", patternHtml(sym)); put("dr-reasons", reasonsHtml(sym));
+    put("dr-history", beginner ? "" : historyHtml(sym)); put("dr-news", coinNewsHtml(sym));
     loadResearch(sym); loadDeep(sym);
     window.syncJump?.();
   }

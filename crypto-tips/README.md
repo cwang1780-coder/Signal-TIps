@@ -112,7 +112,7 @@ It does not pick sure winners. `node tools/trench-study.js` measured what happen
 
 ## Coin view
 
-Tapping a coin opens it full screen with jump links: Chart, Why, Pattern, Reasons, History, Track record, Details, News. Close it with ✕ Close, Esc, or the phone's Back button.
+Tapping a coin opens it full screen with a section bar: Overview (why it's moving, chart, trade links), Score, Pattern, Reasons, History (experienced), Track record, News & buzz. One section shows at a time, so there's little scrolling. Close it with ✕, Esc, or the phone's Back button.
 
 ## Chart patterns
 Each coin's view names the classic chart pattern its last 90 candles fit: head and shoulders (and inverse), double top/bottom,

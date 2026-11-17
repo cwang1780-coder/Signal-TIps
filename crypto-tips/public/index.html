@@ -183,13 +183,16 @@
   #detail .detailHead { padding-top: 24px; }
   #detailScrim { display: none; }
   body.detailOpen { overflow: hidden; }
-  .dnav { position: sticky; top: 0; z-index: 3; display: flex; gap: 6px; overflow-x: auto; margin: 0 calc(-1 * var(--dp)) 8px; padding: 12px var(--dp) 10px; background: var(--panel); border-bottom: 1px solid var(--border); scrollbar-width: none; }
+  .dnav { position: sticky; top: 0; z-index: 3; display: flex; gap: 6px; align-items: center; margin: 0 calc(-1 * var(--dp)) 8px; padding: 12px var(--dp) 10px; background: var(--panel); border-bottom: 1px solid var(--border); scrollbar-width: none; }
   .dnav::-webkit-scrollbar { display: none; }
   .dnav button { min-height: 34px; padding: 0 14px; font-size: 14px; background: #fff; white-space: nowrap; }
   .dnav button:hover { background: var(--alt); }
   .dnav button[hidden] { display: none; }
-  .dnav .dnav-close { margin-left: auto; background: var(--text); color: #fff; position: sticky; right: 0; }
-  .dnav .dnav-close:hover { background: #32353d; }
+  .dnav button.on { background: var(--text); color: #fff; }
+  .dnav .dnav-close { background: #fff; color: var(--text); border: 1px solid var(--border); }
+  .dsec { padding-top: 6px; min-height: 50vh; } .dsec > h2:first-child, .dsec > :first-child > h2:first-child { margin-top: 12px; }
+  .dtabs { display: flex; gap: 6px; overflow-x: auto; flex: 1; min-width: 0; scrollbar-width: none; } .dtabs::-webkit-scrollbar { display: none; }
+  .dnav .dnav-close { flex: none; margin-left: 6px; }
   #detail h2[id], #detail [id^="d-"], #techDetails { scroll-margin-top: 64px; }
   /* Trench */
   .trench-study { margin-bottom: 20px; }
@@ -465,6 +468,7 @@
     .card .name { display: block; margin-left: 0; }
     .card .coin-ic { --s: 28px !important; }
     #detail { --dp: 16px; padding-bottom: 40px; }
+    .dnav .dnav-close span { display: none; } .dnav .dnav-close { width: 36px; padding: 0; justify-content: center; }
     .summary { font-size: 40px; line-height: 44px; }
     .hero { padding: 24px 0 32px; }
     .band { padding: 36px 0; }
