@@ -69,10 +69,24 @@ const pct = (n) => (n >= 0 ? "+" : "") + (n * 100).toFixed(2) + "%";
 const actionClass = (a) => "badge b-" + a.replace(" ", ".");
 
 // One page = up to 300 candles. `end` (unix seconds) fetches an older page; without it, the newest.
+// Goes through our own server first (shared cache, works on networks that block Coinbase), then straight to Coinbase.
+let viaServer = location.protocol !== "file:";
+const timed = (url, ms) => fetch(url, { signal: AbortSignal.timeout ? AbortSignal.timeout(ms) : undefined });
 async function fetchPage(sym, gran, end) {
-  const range = end ? `&start=${new Date((end - 299 * gran) * 1000).toISOString()}&end=${new Date(end * 1000).toISOString()}` : "";
-  let res = await fetch(`${API}/products/${sym}-USD/candles?granularity=${gran}${range}`);
-  if (res.status === 429) { await new Promise((r) => setTimeout(r, 1200)); res = await fetch(`${API}/products/${sym}-USD/candles?granularity=${gran}${range}`); }
+  let res = null;
+  if (viaServer) {
+    try {
+      res = await timed(`/api/candles?sym=${encodeURIComponent(sym)}&gran=${gran}${end ? "&end=" + end : ""}`, 12000);
+      if (res.status === 404 && !(res.headers.get("content-type") || "").includes("json")) { viaServer = false; res = null; } // no server (static hosting)
+      else if (res.status >= 500) res = null;
+    } catch { res = null; }
+  }
+  if (!res) {
+    const range = end ? `&start=${new Date((end - 299 * gran) * 1000).toISOString()}&end=${new Date(end * 1000).toISOString()}` : "";
+    const url = `${API}/products/${sym}-USD/candles?granularity=${gran}${range}`;
+    try { res = await timed(url, 12000); } catch { throw new Error("couldn't reach Coinbase"); }
+    if (res.status === 429) { await new Promise((r) => setTimeout(r, 1200)); res = await timed(url, 12000); }
+  }
   if (!res.ok) throw new Error(res.status === 404 ? "not on Coinbase" : "HTTP " + res.status);
   const raw = await res.json(); // [time, low, high, open, close, volume], newest first
   return raw.reverse().map(([time, low, high, open, close, volume]) => ({ time, low, high, open, close, volume }));
@@ -113,16 +127,27 @@ async function analyzeCoin(sym) {
   return a;
 }
 
+let again = false;
 async function refresh() {
+  if (refreshing) { again = true; return; } // run once more when this one finishes (e.g. the view changed mid-load)
+  refreshing = true;
+  try { do { again = false; await refreshInner(); } while (again); } finally { refreshing = false; render(); }
+}
+async function refreshInner() {
   $("status").textContent = "Fetching live data from Coinbase…";
   // small batches to stay under public rate limits
   const syms = allSyms();
+  // Show each coin as soon as it's ready instead of waiting for all of them.
+  let pending = null;
+  const soon = () => { if (!pending) pending = setTimeout(() => { pending = null; render(); }, 250); };
   for (let i = 0; i < syms.length; i += 4) {
     await Promise.all(syms.slice(i, i + 4).map(async (sym) => {
       try { results[sym] = await analyzeCoin(sym); }
       catch (e) { results[sym] = { error: e.message }; }
+      soon();
     }));
   }
+  clearTimeout(pending);
   $("status").textContent = "Updated " + new Date().toLocaleTimeString();
   render();
   document.dispatchEvent(new Event("prices-updated"));
@@ -183,9 +208,16 @@ function techTableHtml(r) {
     ${rows.map(([a, b, c]) => `<tr><td>${a}</td><td>${b}</td><td class="muted">${c}</td></tr>`).join("")}</table></div></details>`;
 }
 
+// Every coin came back with an error (none still loading): show a retry instead of "Loading…" forever.
+const pricesFailed = () => { const s = allSyms(); return s.length > 0 && s.every((x) => results[x]?.error) && !refreshing; };
+let refreshing = false;
+document.addEventListener("click", (e) => { if (e.target.closest(".retryPrices")) { $("summary").textContent = "Loading live prices…"; results = {}; render(); refresh(); } });
 function renderSummary() {
   const rs = allSyms().map((s) => results[s]).filter((r) => r && !r.error);
-  if (!rs.length) return;
+  if (!rs.length) {
+    if (pricesFailed()) $("summary").innerHTML = `<span class="dot y" aria-hidden="true"></span>Live prices didn't load.<small>Coinbase didn't answer. Check your connection, or open the site in your phone's normal browser (not inside an app). <button class="pill retryPrices">Try again</button></small>`;
+    return;
+  }
   const good = rs.filter((r) => r.action.includes("BUY")).length, bad = rs.filter((r) => r.action.includes("SELL")).length, mixed = rs.length - good - bad;
   const mood = good > bad && good >= rs.length / 2 ? ["g", "Most coins are in an uptrend right now."]
     : bad > good && bad >= rs.length / 2 ? ["r", "Most coins are in a downtrend right now."]
@@ -206,7 +238,7 @@ function renderHeroList() {
       <span class="nm"><b>${coinName(sym) || sym}</b><span>${sym} · <span class="${actionClass(r.action)}" style="padding:1px 8px">${r.action}</span></span></span>
       <span class="px">${fmt(r.price)}<span class="${r.change24 >= 0 ? "up" : "down"}">${r.change24 >= 0 ? "↗" : "↘"} ${pct(r.change24)}</span></span>
     </button>`;
-  }).join("") : `<p class="muted" style="padding:12px 6px">Loading live prices…</p>`;
+  }).join("") : pricesFailed() ? `<p class="muted" style="padding:12px 6px">Couldn't load live prices. <button class="pill retryPrices">Try again</button></p>` : `<p class="muted" style="padding:12px 6px">Loading live prices…</p>`;
 }
 
 function render() {
@@ -288,7 +320,7 @@ async function syncCoinbase(force) {
   }
   cb.status = "Syncing Coinbase…"; renderHoldings();
   try {
-    const res = await fetch("/api/coinbase/holdings" + (force ? "?force=1" : ""), { headers: authHeaders() });
+    const res = await fetch("/api/coinbase/holdings" + (force ? "?force=1" : ""), { headers: authHeaders(), signal: AbortSignal.timeout ? AbortSignal.timeout(20000) : undefined });
     const d = await res.json().catch(() => ({}));
     // Public visitors: Coinbase sync and Ask AI belong to the site owner. Keep the page clean for everyone else.
     if (res.status === 401 || res.status === 503) {
@@ -466,6 +498,7 @@ if (location.protocol !== "file:") {
 }
 showTab(new URLSearchParams(location.search).has("pro_session") ? "ai" : store.get("tab", "signals"));
 applyLevel();
-syncCoinbase().then(refresh);
+refresh(); // prices don't wait for the owner-only Coinbase check
+syncCoinbase();
 setInterval(refresh, 60000);
 setInterval(() => location.protocol !== "file:" && syncCoinbase(), 120000);

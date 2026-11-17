@@ -169,6 +169,33 @@ async function trenchHandler(req, res) {
   }
 }
 
+// Public: price candles from Coinbase, passed through so every visitor shares one cache (and isn't
+// rate-limited or blocked talking to Coinbase directly). GET /api/candles?sym=BTC&gran=86400[&end=unix]
+const GRANS = new Set([60, 300, 900, 3600, 21600, 86400]);
+async function candlesHandler(req, res) {
+  const q = new URL(req.url, "http://x").searchParams;
+  const sym = String(q.get("sym") || "").toUpperCase(), gran = +q.get("gran"), end = q.get("end") ? +q.get("end") : null;
+  if (!/^[A-Z0-9]{1,15}$/.test(sym) || !GRANS.has(gran) || (end != null && !(end > 1e9 && end < 4e9))) return json(res, 400, { reason: "Bad request" });
+  const range = end ? `&start=${new Date((end - 299 * gran) * 1000).toISOString()}&end=${new Date(end * 1000).toISOString()}` : "";
+  try {
+    let r;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      r = await fetch(`https://api.exchange.coinbase.com/products/${sym}-USD/candles?granularity=${gran}${range}`, { headers: { "User-Agent": "signal-tips/1.0" }, signal: AbortSignal.timeout(8000) });
+      if (r.status !== 429) break;
+      await new Promise((ok) => setTimeout(ok, 700 * (attempt + 1)));
+    }
+    if (r.status === 404 || r.status === 400) return json(res, 404, { reason: "not on Coinbase" });
+    if (!r.ok) return json(res, 502, { reason: "Coinbase returned " + r.status });
+    const body = await r.text();
+    // Older pages never change: cache them for a day. The newest page: 30 seconds at the edge.
+    const ttl = end && end < Date.now() / 1000 - 2 * gran ? 86400 : 30;
+    res.writeHead(200, { "Content-Type": "application/json", "Cache-Control": `public, max-age=${Math.min(ttl, 60)}, s-maxage=${ttl}, stale-while-revalidate=${ttl * 2}` });
+    res.end(body);
+  } catch (e) {
+    json(res, 504, { reason: "Coinbase didn't answer in time" });
+  }
+}
+
 // Public site settings. COINBASE_REFERRAL_URL: your Coinbase affiliate link (must be an https coinbase.com link).
 async function configHandler(req, res) {
   let ref = null;
@@ -209,4 +236,4 @@ async function proHandler(req, res) {
   }
 }
 
-module.exports = { holdingsHandler, askHandler, socialHandler, configHandler, proHandler, researchHandler, walletHandler, trenchHandler, authorize };
+module.exports = { holdingsHandler, askHandler, socialHandler, configHandler, proHandler, researchHandler, walletHandler, trenchHandler, candlesHandler, authorize };
