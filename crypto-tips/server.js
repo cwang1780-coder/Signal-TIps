@@ -23,7 +23,7 @@ const server = http.createServer(async (req, res) => {
   if (url.pathname === "/api/research") return researchHandler(req, res);
 
   const file = url.pathname === "/" ? "index.html" : url.pathname.slice(1);
-  if (!/^[\w-]+\.(html|js|svg|webmanifest)$/.test(file) || !fs.existsSync(path.join(PUBLIC, file))) { res.writeHead(404); return res.end("Not found"); }
+  if (!/^((coins|art)\/)?[\w-]+\.(html|js|svg|webmanifest)$/.test(file) || !fs.existsSync(path.join(PUBLIC, file))) { res.writeHead(404); return res.end("Not found"); }
   res.writeHead(200, { "Content-Type": TYPES[path.extname(file)] });
   fs.createReadStream(path.join(PUBLIC, file)).pipe(res);
 });

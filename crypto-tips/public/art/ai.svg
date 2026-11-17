@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 320" role="img" aria-label="A chat between you and the AI">
+  <circle cx="320" cy="160" r="124" fill="#0052ff"/>
+  <rect x="200" y="58" width="220" height="56" rx="28" fill="#fff"/>
+  <rect x="224" y="76" width="140" height="10" rx="5" fill="#0a0b0d"/><rect x="224" y="94" width="96" height="8" rx="4" fill="#c9cfd8"/>
+  <rect x="60" y="138" width="270" height="126" rx="28" fill="#0a0b0d"/>
+  <rect x="88" y="164" width="190" height="10" rx="5" fill="#fff"/><rect x="88" y="184" width="214" height="10" rx="5" fill="#fff" opacity=".75"/>
+  <rect x="88" y="204" width="160" height="10" rx="5" fill="#fff" opacity=".75"/>
+  <rect x="88" y="228" width="58" height="18" rx="9" fill="#fbe7e9"/><text x="117" y="241" text-anchor="middle" font-family="Inter,Arial,sans-serif" font-size="10" font-weight="700" fill="#cf202f">SELL</text>
+  <rect x="152" y="228" width="72" height="18" rx="9" fill="#2a2d33"/><text x="188" y="241" text-anchor="middle" font-family="Inter,Arial,sans-serif" font-size="10" fill="#c9cfd8">RSI 26</text>
+  <path d="M60 104 l8 -20 l8 20 l20 8 l-20 8 l-8 20 l-8 -20 l-20 -8 z" fill="#f5a623"/>
+  <path d="M120 70 l4 -10 l4 10 l10 4 l-10 4 l-4 10 l-4 -10 l-10 -4 z" fill="#0052ff"/>
+</svg>

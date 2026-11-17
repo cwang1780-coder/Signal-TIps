@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 320" role="img" aria-label="Speech bubbles with a hype meter">
+  <circle cx="150" cy="170" r="118" fill="#c9d8ff"/>
+  <path d="M60 70 h170 a24 24 0 0 1 24 24 v52 a24 24 0 0 1 -24 24 h-120 l-26 22 v-22 h-24 a24 24 0 0 1 -24 -24 v-52 a24 24 0 0 1 24 -24z" fill="#0052ff"/>
+  <rect x="84" y="96" width="120" height="10" rx="5" fill="#fff"/><rect x="84" y="116" width="84" height="10" rx="5" fill="#fff" opacity=".7"/>
+  <rect x="84" y="136" width="46" height="18" rx="9" fill="#fff"/><text x="107" y="149" text-anchor="middle" font-family="Inter,Arial,sans-serif" font-size="10" font-weight="700" fill="#098551">Bullish</text>
+  <path d="M190 182 h170 a24 24 0 0 1 24 24 v44 a24 24 0 0 1 -24 24 h-24 v22 l-26 -22 h-120 a24 24 0 0 1 -24 -24 v-44 a24 24 0 0 1 24 -24z" fill="#0a0b0d"/>
+  <rect x="212" y="206" width="130" height="10" rx="5" fill="#fff"/><rect x="212" y="226" width="96" height="10" rx="5" fill="#fff" opacity=".6"/>
+  <rect x="212" y="244" width="48" height="18" rx="9" fill="#fff"/><text x="236" y="257" text-anchor="middle" font-family="Inter,Arial,sans-serif" font-size="10" font-weight="700" fill="#cf202f">Bearish</text>
+  <g transform="translate(372 108)">
+    <path d="M-62 0 a62 62 0 0 1 124 0" fill="none" stroke="#e4e7eb" stroke-width="16" stroke-linecap="round"/>
+    <path d="M-62 0 a62 62 0 0 1 106 -44" fill="none" stroke="#f5a623" stroke-width="16" stroke-linecap="round"/>
+    <path d="M0 0 L36 -40" stroke="#0a0b0d" stroke-width="6" stroke-linecap="round"/><circle r="9" fill="#0a0b0d"/>
+    <text y="30" text-anchor="middle" font-family="Inter,Arial,sans-serif" font-size="13" font-weight="700" fill="#0a0b0d">HYPE</text>
+  </g>
+</svg>

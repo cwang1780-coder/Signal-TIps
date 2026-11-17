@@ -168,7 +168,7 @@
       const open = openSym === sym;
       return `<div class="soc ${open ? "open" : ""}" data-soc="${sym}">
         <div class="socrow">
-          <b class="sym">${sym}</b>
+          <b class="sym">${window.coinIcon ? window.coinIcon(sym, 24) : ""} ${sym}</b>
           <span class="badge ${HYPE_CLASS[s.hype]}">Hype: ${s.hype}</span>
           ${s.error ? `<span class="muted">${esc(s.error)}</span>` : `${moodBar(s)}<span class="muted">${s.postsPerHour ?? "?"} posts/hr</span>`}
           ${s.trendingRank ? `<span class="badge h-high">🔥 Trending #${s.trendingRank}</span>` : ""}

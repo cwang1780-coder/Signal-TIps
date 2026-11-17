@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 320" role="img" aria-label="A wallet with coins and a portfolio chart">
+  <circle cx="340" cy="150" r="110" fill="#c9d8ff"/>
+  <g transform="translate(340 150)">
+    <circle r="78" fill="#0052ff"/>
+    <path d="M0 0 L0 -78 A78 78 0 0 1 74 24 z" fill="#0a0b0d"/>
+    <path d="M0 0 L74 24 A78 78 0 0 1 22 75 z" fill="#f5a623"/>
+    <circle r="38" fill="#fff"/>
+    <text y="6" text-anchor="middle" font-family="Inter,Arial,sans-serif" font-size="16" font-weight="700" fill="#0a0b0d">+12%</text>
+  </g>
+  <rect x="52" y="120" width="230" height="150" rx="30" fill="#0a0b0d"/>
+  <rect x="52" y="120" width="230" height="44" rx="22" fill="#2a2d33"/>
+  <rect x="196" y="176" width="98" height="52" rx="26" fill="#0052ff"/>
+  <circle cx="222" cy="202" r="10" fill="#fff"/>
+  <rect x="76" y="196" width="90" height="10" rx="5" fill="#fff" opacity=".8"/><rect x="76" y="216" width="60" height="10" rx="5" fill="#fff" opacity=".5"/>
+  <g transform="translate(130 92)"><ellipse cx="0" cy="20" rx="34" ry="11" fill="#9a5b00"/><rect x="-34" y="4" width="68" height="16" fill="#f5a623"/><ellipse cx="0" cy="4" rx="34" ry="11" fill="#ffc94d"/></g>
+  <g transform="translate(130 70)"><ellipse cx="0" cy="20" rx="34" ry="11" fill="#9a5b00"/><rect x="-34" y="4" width="68" height="16" fill="#f5a623"/><ellipse cx="0" cy="4" rx="34" ry="11" fill="#ffc94d"/></g>
+</svg>

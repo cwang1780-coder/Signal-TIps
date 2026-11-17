@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 320" role="img" aria-label="A bell ringing as the price crosses a level">
+  <rect x="40" y="40" width="400" height="240" rx="32" fill="#fff" stroke="#e4e7eb"/>
+  <path d="M64 120 h352" stroke="#0052ff" stroke-width="3" stroke-dasharray="10 8"/>
+  <rect x="356" y="106" width="68" height="28" rx="14" fill="#0052ff"/><text x="390" y="125" text-anchor="middle" font-family="Inter,Arial,sans-serif" font-size="12" font-weight="700" fill="#fff">$70K</text>
+  <path d="M64 236 L100 220 L132 228 L168 196 L200 206 L236 170 L268 178 L300 132 L326 114 L350 96" fill="none" stroke="#0a0b0d" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="318" cy="120" r="10" fill="#0052ff" stroke="#fff" stroke-width="4"/>
+  <g transform="translate(160 64)">
+    <circle cx="0" cy="58" r="64" fill="#c9d8ff"/>
+    <path d="M-34 78 c6 -8 8 -18 8 -34 a26 26 0 0 1 52 0 c0 16 2 26 8 34 z" fill="#0052ff"/>
+    <rect x="-40" y="76" width="80" height="12" rx="6" fill="#0a0b0d"/>
+    <circle cx="0" cy="98" r="9" fill="#0a0b0d"/>
+    <path d="M-52 22 q-12 14 -10 34 M52 22 q12 14 10 34" stroke="#0a0b0d" stroke-width="5" fill="none" stroke-linecap="round"/>
+  </g>
+</svg>

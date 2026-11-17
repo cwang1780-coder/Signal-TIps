@@ -125,6 +125,13 @@ const COIN_NAMES = {
   NEAR: "NEAR", APT: "Aptos", ARB: "Arbitrum", OP: "Optimism", SUI: "Sui", HBAR: "Hedera", AAVE: "Aave", ETC: "Ethereum Classic",
   ALGO: "Algorand", FIL: "Filecoin", ICP: "Internet Computer", POL: "Polygon", BONK: "Bonk", WIF: "dogwifhat", TRUMP: "Official Trump",
 };
+// Coin logo from public/coins (CC0). If there is no logo for a coin, show its initials on a coloured circle instead.
+const COIN_COLORS_FB = { BTC: "#f7931a", ETH: "#627eea", SOL: "#9945ff", XRP: "#23292f", DOGE: "#c2a633", ADA: "#0033ad", AVAX: "#e84142", LINK: "#2a5ada", LTC: "#345d9d", DOT: "#e6007a", PEPE: "#3d9b41", SHIB: "#e2761b", SUI: "#4da2ff", NEAR: "#00c08b", ARB: "#28a0f0", OP: "#ff0420", APT: "#06b6a4", BONK: "#f7a600", HBAR: "#222222" };
+function coinIcon(sym, size = 36) {
+  const s = String(sym).replace(/[^A-Z0-9]/gi, "").toUpperCase();
+  return `<span class="coin-ic" style="--s:${size}px;--c:${COIN_COLORS_FB[s] || "#5b616e"}"><img src="coins/${s.toLowerCase()}.svg" alt="" loading="lazy" onerror="this.parentNode.classList.add('fb');this.remove()" /><b>${s.slice(0, 4)}</b></span>`;
+}
+window.coinIcon = coinIcon;
 const coinName = (sym) => (COIN_NAMES[sym] && COIN_NAMES[sym] !== sym ? COIN_NAMES[sym] : "");
 // What each signal means in everyday words
 const PLAIN = {
@@ -185,7 +192,7 @@ function renderHeroList() {
   el.innerHTML = rows.length ? rows.map((sym) => {
     const r = results[sym];
     return `<button class="hrow" data-hero="${sym}" aria-label="Open ${sym}">
-      <span class="coin-dot" style="background:${COIN_COLORS[sym] || "#5b616e"}">${sym.slice(0, 3)}</span>
+      ${coinIcon(sym, 36)}
       <span class="nm"><b>${coinName(sym) || sym}</b><span>${sym} · <span class="${actionClass(r.action)}" style="padding:1px 8px">${r.action}</span></span></span>
       <span class="px">${fmt(r.price)}<span class="${r.change24 >= 0 ? "up" : "down"}">${r.change24 >= 0 ? "↗" : "↘"} ${pct(r.change24)}</span></span>
     </button>`;
@@ -198,7 +205,7 @@ function render() {
   // Keep your own order (no reshuffling on every refresh), so coins stay where you expect them.
   $("grid").innerHTML = allSyms().map((sym) => {
     const r = results[sym];
-    const title = `<span class="sym">${sym}<span class="name">${coinName(sym)}</span></span>`;
+    const title = `<span class="sym">${coinIcon(sym, 32)}<span class="nm2"><span>${sym}</span>${coinName(sym) ? `<span class="name">${coinName(sym)}</span>` : ""}</span></span>`;
     if (!r) return `<div class="card">${title}<div class="muted">Loading…</div></div>`;
     if (r.error) return `<div class="card"><div class="row">${title}<button class="x" data-rm="${sym}" title="Remove ${sym}" aria-label="Remove ${sym}">✕</button></div><div class="muted">${r.error === "not on Coinbase" ? "Couldn't find this coin on Coinbase." : "Couldn't load this coin (" + r.error + ")."}</div></div>`;
     const w = Math.min(Math.abs(r.score) / 6, 1) * 50;
@@ -228,7 +235,7 @@ function renderDetail() {
   el.style.display = "block";
   const bt = trackRecord(selected, r.candles);
   el.innerHTML = `
-    <div class="row detailHead"><h2 style="margin:0">${coinName(selected) || selected} <span class="muted">${selected}</span> · ${fmt(r.price)}</h2>
+    <div class="row detailHead"><h2 style="margin:0">${coinIcon(selected, 44)}<span>${coinName(selected) || selected} <span class="muted">${selected}</span> · ${fmt(r.price)}</span></h2>
       <span><span class="${actionClass(r.action)}">${r.action}</span> <button class="x" id="detailClose" title="Close" aria-label="Close ${selected} details">✕</button></span></div>
     <p style="margin-top:6px">${PLAIN[r.action]}</p>
     <div id="chartWrap"></div>
@@ -297,7 +304,7 @@ function renderHoldings() {
     let tip = r?.action ? `<span class="${actionClass(r.action)}">${r.action}</span>` : `<span class="muted">${r?.error || "loading"}</span>`;
     if (r?.action?.includes("SELL") && pl > 0) tip += ` <span class="muted">— consider taking some profit</span>`;
     if (r?.action?.includes("BUY") && pl < 0) tip += ` <span class="muted">— could average down</span>`;
-    return `<tr><td><b>${h.sym}</b> <span class="muted">${h.src}</span></td><td>${+h.amt.toPrecision(8)}</td><td>${fmt(value)}</td>
+    return `<tr><td style="white-space:nowrap">${coinIcon(h.sym, 24)} <b>${h.sym}</b> <span class="muted">${h.src}</span></td><td>${+h.amt.toPrecision(8)}</td><td>${fmt(value)}</td>
       <td class="chg ${pl >= 0 ? "up" : "down"}">${pl == null ? "—" : (pl >= 0 ? "+" : "-") + fmt(Math.abs(pl))}</td>
       <td>${tip}</td><td>${h.idx != null ? `<button class="x" data-hrm="${h.idx}" title="Remove">✕</button>` : ""}</td></tr>`;
   }).join("");

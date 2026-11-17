@@ -100,6 +100,24 @@
   .hrow .px { text-align: right; font-variant-numeric: tabular-nums; font-size: 15px; font-weight: 600; }
   .hrow .px span { display: block; font-size: 13px; font-weight: 500; }
 
+  /* Section heads with a picture card, like a feature row */
+  .section-head { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 480px); gap: 48px; align-items: center; margin-bottom: 40px; }
+  .section-head .lead { margin-bottom: 0; }
+  .art-card { background: #fff; border-radius: var(--r-xl); overflow: hidden; aspect-ratio: 3 / 2; display: flex; align-items: center; justify-content: center; }
+  .band:not(.alt) .art-card { background: var(--alt); }
+  .art-card img { width: 100%; height: 100%; object-fit: contain; display: block; }
+  .wrap.narrow .section-head { grid-template-columns: minmax(0, 1fr) minmax(0, 380px); }
+
+  /* Coin logos (CC0 cryptocurrency-icons); coloured initials when a coin has no logo */
+  .coin-ic { width: var(--s, 36px); height: var(--s, 36px); flex: none; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; vertical-align: middle; overflow: hidden; }
+  .coin-ic img { width: 100%; height: 100%; display: block; }
+  .coin-ic b { display: none; color: #fff; font-size: calc(var(--s, 36px) * .34); font-weight: 700; letter-spacing: -.02em; }
+  .coin-ic.fb { background: var(--c, #5b616e); } .coin-ic.fb b { display: inline; }
+  .card .row > .sym { display: inline-flex; align-items: center; gap: 10px; }
+  .card .sym .nm2 { display: flex; flex-direction: column; line-height: 1.2; }
+  .card .name { margin-left: 0; }
+  .detailHead h2 { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+
   /* Welcome cards */
   .welcome { position: relative; background: #fff; border-radius: var(--r-lg); padding: 24px; margin-bottom: 32px; box-shadow: 0 0 0 1px var(--border); }
   .welcome[hidden] { display: none; }
@@ -286,6 +304,7 @@
     .hero-grid { grid-template-columns: 1fr; gap: 40px; }
     .summary { font-size: 60px; line-height: 64px; }
     .footer-grid { grid-template-columns: 1fr 1fr; gap: 32px 24px; }
+    .section-head, .wrap.narrow .section-head { grid-template-columns: minmax(0, 1fr) minmax(0, 340px); gap: 32px; }
     .footer-logo { grid-column: 1 / -1; }
   }
   /* ── Phone ── */
@@ -304,11 +323,14 @@
     .hero-card { padding: 20px; }
     h2.display { font-size: 36px; line-height: 40px; }
     .lead { font-size: 16px; line-height: 24px; margin-bottom: 24px; }
+    .section-head, .wrap.narrow .section-head { grid-template-columns: 1fr; gap: 20px; margin-bottom: 28px; }
+    .section-head .art-card { order: -1; aspect-ratio: 16 / 9; }
     .grid { grid-template-columns: 1fr 1fr; gap: 10px; }
     body[data-level="pro"] .grid { grid-template-columns: 1fr 1fr; }
     .card, body[data-level="pro"] .card { padding: 14px; border-radius: 20px; }
     .price, body[data-level="pro"] .card .price { font-size: 21px; line-height: 26px; }
     .card .name { display: block; margin-left: 0; }
+    .card .coin-ic { --s: 28px !important; }
     #detail { padding: 20px 16px; }
     .detailHead h2 { font-size: 28px; line-height: 32px; }
     .chartBox canvas { height: 280px; }
@@ -399,8 +421,8 @@
 
     <div class="band">
       <div class="wrap">
-        <h2 class="display">Today's signals</h2>
-        <p class="lead">Every coin you follow, rated from its trend, momentum and price history. Tap one to see why.</p>
+        <div class="section-head"><div><h2 class="display">Today's signals</h2>
+        <p class="lead">Every coin you follow, rated from its trend, momentum and price history. Tap one to see why.</p></div><div class="art-card"><img src="art/signals.svg" alt="" width="480" height="320" /></div></div>
         <div class="grid" id="grid"></div>
         <div class="addrow">
           <input id="newSym" placeholder="Add a coin, e.g. PEPE" size="14" aria-label="Coin symbol to add" />
@@ -433,8 +455,8 @@
   <section class="tab" data-tab="buzz" hidden>
     <div class="band alt">
       <div class="wrap">
-        <h2 class="display">Social buzz</h2>
-        <p class="lead">What people are posting, so you can spot the hype.</p>
+        <div class="section-head"><div><h2 class="display">Social buzz</h2>
+        <p class="lead">What people are posting, so you can spot the hype.</p></div><div class="art-card"><img src="art/buzz.svg" alt="" width="480" height="320" /></div></div>
         <div class="panel">
           <div class="disclaimer" style="margin-bottom:14px">📣 These are opinions from strangers, not facts. Hype often peaks right before a drop,
             and "pump and dump" groups use posts to push prices. Use this to see the mood, not as a reason to buy.</div>
@@ -452,8 +474,8 @@
   <section class="tab" data-tab="alerts" hidden>
     <div class="band alt">
       <div class="wrap">
-        <h2 class="display">Price alerts</h2>
-        <p class="lead">Get told when something happens, so you don't have to keep watching.</p>
+        <div class="section-head"><div><h2 class="display">Price alerts</h2>
+        <p class="lead">Get told when something happens, so you don't have to keep watching.</p></div><div class="art-card"><img src="art/alerts.svg" alt="" width="480" height="320" /></div></div>
         <div class="panel">
           <form id="alForm" class="addh" style="margin-top:0">
             <span class="muted">Tell me when</span>
@@ -474,8 +496,8 @@
   <section class="tab" data-tab="ai" hidden>
     <div class="band alt">
       <div class="wrap narrow">
-        <h2 class="display" id="aiTitle">Ask AI</h2>
-        <p class="lead">Ask anything about the signals, the hype or your coins. The AI sees the same live data you do.</p>
+        <div class="section-head"><div><h2 class="display" id="aiTitle">Ask AI</h2>
+        <p class="lead">Ask anything about the signals, the hype or your coins. The AI sees the same live data you do.</p></div><div class="art-card"><img src="art/ai.svg" alt="" width="480" height="320" /></div></div>
         <div id="aiPanel" class="panel">
           <div id="proBox" hidden></div>
           <div class="chips" id="aiChips">
@@ -504,8 +526,8 @@
   <section class="tab" data-tab="coins" hidden>
     <div class="band alt">
       <div class="wrap">
-        <h2 class="display">My coins</h2>
-        <p class="lead">What you own, what it's worth, and the signal for each.</p>
+        <div class="section-head"><div><h2 class="display">My coins</h2>
+        <p class="lead">What you own, what it's worth, and the signal for each.</p></div><div class="art-card"><img src="art/coins.svg" alt="" width="480" height="320" /></div></div>
         <div class="panel">
           <div class="row" style="margin-bottom:10px"><span class="muted" id="cbStatus"></span><button id="cbSync">Sync Coinbase</button></div>
           <div class="muted" id="cbCash" style="margin-bottom:10px"></div>
@@ -526,8 +548,8 @@
   <section class="tab" data-tab="me" hidden>
     <div class="band alt">
       <div class="wrap">
-        <h2 class="display">Your experience</h2>
-        <p class="lead">Pick the one that fits and the app adjusts.</p>
+        <div class="section-head"><div><h2 class="display">Your experience</h2>
+        <p class="lead">Pick the one that fits and the app adjusts.</p></div><div class="art-card"><img src="art/me.svg" alt="" width="480" height="320" /></div></div>
         <div class="levelPick" id="levelPickMe">
           <button class="levelOpt" data-level="beginner"><span class="big">🌱</span><b>I'm new to trading</b><span class="muted">Plain-English tips, short explanations of every term, and the extra detail tucked away until you want it.</span></button>
           <button class="levelOpt" data-level="pro"><span class="big">📊</span><b>I'm an experienced trader</b><span class="muted">Indicator values up front, a denser layout, the drawing tools ready, and shorter, more technical AI answers.</span></button>

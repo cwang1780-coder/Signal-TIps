@@ -53,6 +53,10 @@ Notes:
 - If Claude declines a question for safety reasons, the request is automatically retried on a fallback model.
 - To use a different model, set `AI_MODEL` (for example `AI_MODEL=claude-sonnet-5-5`, which is cheaper).
 
+## Images
+- **Coin logos:** `public/coins/` holds the [cryptocurrency-icons](https://github.com/spothq/cryptocurrency-icons) set (v0.18.1, CC0 public domain, 483 coins). A coin with no logo there shows its initials on a coloured circle instead.
+- **Section pictures:** `public/art/` holds original illustrations made for this app (signals, buzz, alerts, AI, coins, experience).
+
 ## Beginner or experienced
 On a first visit the app asks whether you're new to trading or an experienced trader, and you can switch any time in the **👤 Me** tab.
 It changes presentation only; both see the same signals and data.
