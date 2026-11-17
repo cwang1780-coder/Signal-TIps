@@ -56,9 +56,11 @@
   let g = null, timer = null;
   const best = () => { try { return store.get("simBest", {}); } catch { return {}; } };
 
-  function newGame(choice) {
-    const ids = Object.keys(SCENARIOS), id = choice === "random" ? ids[Math.floor(Math.random() * ids.length)] : choice;
-    g = { id, mystery: choice === "random", seed: (Math.random() * 1e9) | 0, day: 5, cash: START, coins: 0, stop: null, trades: [], fees: 0, news: [], over: false, speed: 900 };
+  // Every game is a surprise: the market type is picked at random (never the same twice in a row)
+  // and only revealed when the game ends.
+  function newGame() {
+    const ids = Object.keys(SCENARIOS).filter((k) => k !== g?.id), id = ids[Math.floor(Math.random() * ids.length)];
+    g = { id, seed: (Math.random() * 1e9) | 0, day: 5, cash: START, coins: 0, stop: null, trades: [], fees: 0, news: [], over: false, speed: 900 };
     g.market = makeMarket(id, g.seed);
     render(); play();
   }
@@ -137,16 +139,15 @@
 
   function render() {
     const b = best(), sc = g && SCENARIOS[g.id];
-    const picker = `<div class="sim-pick">${[["random", "dice", "Mystery market"], ...Object.entries(SCENARIOS).map(([k, s]) => [k, s.icon, s.name])]
-      .map(([k, ic, n]) => `<button data-sim-new="${k}" class="${g && !g.mystery && g.id === k ? "on" : ""}">${icon(ic)} ${n}${b[k] != null ? ` <span class="muted">best ${pct(b[k])}</span>` : ""}</button>`).join("")}</div>`;
+    const seen = Object.keys(SCENARIOS).filter((k) => b[k] != null);
+    const picker = `<div class="sim-pick"><button class="primary" data-sim-new>${icon("dice")} ${g ? "Start a new market" : "Start a game"}</button>${seen.length ? `<span class="muted">Market types you've found: ${seen.length} of ${Object.keys(SCENARIOS).length}</span>` : ""}</div>`;
     if (!g) {
-      root.innerHTML = `<div class="sim-intro"><p>Start with <b>$1,000 of pretend money</b> and trade a made-up coin for 60 days. Every market is new and random, but shaped like something that really happens. Headlines pop up along the way, just like real life. Try to beat simply buying and holding.</p>${picker}</div>`;
+      root.innerHTML = `<div class="sim-intro"><p>Start with <b>$1,000 of pretend money</b> and trade a made-up coin for 60 days. Every market is new and random, and shaped like something that really happens, but you won't know which until the end. Headlines pop up along the way, just like real life. Try to beat simply buying and holding.</p>${picker}</div>`;
       return;
     }
     const total = worth(), chg = total / START - 1, invested = g.coins * price();
     const res = g.result;
-    root.innerHTML = `${picker}
-      <div class="sim-head"><b>${g.mystery && !g.over ? icon("dice") + " Mystery market" : icon(sc.icon) + " " + sc.name}</b><span class="muted">${g.mystery && !g.over ? "What kind of market is this? You'll find out at the end." : sc.hint}</span></div>
+    root.innerHTML = `${g.over ? "" : `${picker}<div class="sim-head"><b>${icon("dice")} Mystery market</b><span class="muted">What kind of market is this? You'll find out at the end.</span></div>`}
       <div class="sim-stats">
         <div><span class="muted">Day</span><b>${g.day - 4} / ${DAYS - 5}</b></div>
         <div><span class="muted">Coin price</span><b>${fmt$(price())}</b></div>
@@ -158,16 +159,17 @@
       ${g.news[0] && g.day - g.news[0].day < 6 ? `<div class="sim-news ${g.news[0].headline ? "" : "stop"}">${g.news[0].text}</div>` : `<div class="sim-news empty"></div>`}
       ${g.over ? `<div class="sim-result">
           <div class="stars" aria-label="${res.stars} of 3 stars">${"★".repeat(res.stars)}${"☆".repeat(3 - res.stars)}</div>
-          <h3>${g.mystery ? `It was: ${icon(sc.icon)} ${sc.name}. ` : ""}You ended with ${fmt$(res.final)} (<span class="${res.you >= 0 ? "up" : "down"}">${pct(res.you)}</span>)</h3>
+          <h3>It was: ${icon(sc.icon)} ${sc.name}. You ended with ${fmt$(res.final)} (<span class="${res.you >= 0 ? "up" : "down"}">${pct(res.you)}</span>)</h3>
           <div class="sim-stats">
             <div><span class="muted">You</span><b class="${res.you >= 0 ? "up" : "down"}">${pct(res.you)}</b></div>
             <div><span class="muted">Buy on day 1 and hold</span><b class="${res.hold >= 0 ? "up" : "down"}">${pct(res.hold)}</b></div>
             <div><span class="muted">Do nothing</span><b>+0.0%</b></div>
             <div><span class="muted">Trades · fees paid</span><b>${g.trades.length} · ${fmt$(g.fees)}</b></div>
           </div>
+          <p class="muted" style="margin:0 0 10px">${sc.hint} Your best on this type: ${pct(b[g.id])}.</p>
           <p class="sim-lesson"><b>${icon("bulb")} The lesson:</b> ${sc.lesson}</p>
           <p class="muted small">Stars: one for making money, one for beating buy-and-hold, one for doing it in 6 trades or fewer.</p>
-          <div class="sim-ctl"><button class="primary" data-sim-new="${g.mystery ? "random" : g.id}">Play again (new market)</button><button data-sim-new="random">${icon("dice")} Try a mystery market</button></div>
+          <div class="sim-ctl"><button class="primary" data-sim-new>${icon("dice")} Play again (new market)</button></div>
         </div>`
       : `<div class="sim-ctl">
           <button class="buy" data-sim="buy" data-f="0.25" ${g.cash < 1 ? "disabled" : ""}>Buy 25%</button>
@@ -184,7 +186,7 @@
 
   root.addEventListener("click", (e) => {
     const n = e.target.closest("[data-sim-new]");
-    if (n) return newGame(n.dataset.simNew);
+    if (n) return newGame();
     const a = e.target.closest("button[data-sim]");
     if (!a || !g) return;
     const k = a.dataset.sim;

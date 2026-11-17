@@ -102,7 +102,7 @@ At the top of every coin view: is it **doing well, badly or just mid** (from its
 
 ## Trading simulator (Learn tab, beginners only)
 
-A mini game: $1,000 of pretend money and 60 days of a made-up coin. The scenarios are a bull run, a crash, a pump and dump, sideways chop, a fake-out bottom and a slow bleed, plus a mystery mode. Every play is a new random market with that shape, and headlines pop up along the way. Trades cost a 0.5% fee, and there's an optional stop-loss. At the end you see your result against buy-and-hold and doing nothing, get up to 3 stars and a lesson for the scenario. Best scores are saved in the browser.
+A mini game: $1,000 of pretend money and 60 days of a made-up coin. Every game is a mystery: one of six market types (a bull run, a crash, a pump and dump, sideways chop, a fake-out bottom, a slow bleed), revealed only when the game ends. Every play is a new random market, and headlines pop up along the way. Trades cost a 0.5% fee, and there's an optional stop-loss. At the end you see your result against buy-and-hold and doing nothing, get up to 3 stars and a lesson for the scenario. Best scores are saved in the browser.
 
 ## Trench (big movers)
 
