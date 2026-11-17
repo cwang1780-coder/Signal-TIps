@@ -152,6 +152,65 @@
       <div class="rgrid">${col("for", "👍 Reasons for", "rfor")}${col("against", "👎 Reasons against", "ragainst")}${col("neutral", "🔎 Worth knowing", "rneutral")}</div>`;
   }
 
+  // ── chart pattern: what it is, and what followed it in the past ──
+  let patternStudy = null;
+  if (location.protocol !== "file:") fetch("pattern-stats.json").then((r) => (r.ok ? r.json() : null)).then((d) => { patternStudy = d; if (selected) renderResearch(selected); }).catch(() => {});
+
+  // A lean only counts if it's clearly away from an ordinary day AND points the same way in both halves of the study.
+  function leanOf(p, base) {
+    if (!p || !base || p.n < 30) return "none";
+    const d = p.up - base.up, d1 = p.halves[0].up - base.halves[0].up, d2 = p.halves[1].up - base.halves[1].up;
+    if (d >= 0.06 && d1 >= 0.03 && d2 >= 0.03) return "up";
+    if (d <= -0.06 && d1 <= -0.03 && d2 <= -0.03) return "down";
+    return "none";
+  }
+
+  function patternInfo(sym) {
+    const h = history(sym);
+    if (!h || h.length < 120) return null;
+    const pat = Indicators.detectPattern(h);
+    const horizon = 30;
+    const own = Indicators.patternStats(Indicators.patternHistory(h, { horizon }), pat.id);
+    const study = patternStudy && gran() === 86400 ? patternStudy : null;
+    const p = study?.patterns[pat.id] || null;
+    return { pat, own, horizon, study, p, lean: leanOf(p, study?.baseline), years: ((h[h.length - 1].time - h[0].time) / (365 * 86400)).toFixed(1) };
+  }
+
+  function patternHtml(sym) {
+    const info = patternInfo(sym);
+    if (!info) return "";
+    const { pat, own, horizon, study, p, lean } = info, name = esc(coinName(sym) || sym);
+    const pro = window.userLevel?.() === "pro";
+    const biasTxt = { up: "Traders usually read it as bullish (up)", down: "Traders usually read it as bearish (down)", neutral: "Traders don't expect a direction from it" }[pat.bias];
+    const pc = (x) => Math.round(x * 100) + "%";
+    let html = `<h2>Chart pattern <span class="muted">what shape the price is in, and what happened after it before</span></h2>
+      <div class="pattern"><div class="pattern-head"><span class="pattern-name">${esc(pat.name)}</span>
+      <span class="badge ${pat.bias === "up" ? "b-BUY" : pat.bias === "down" ? "b-SELL" : "b-HOLD"}">${biasTxt}</span></div>
+      <p>${esc(pat.text)}</p>`;
+    if (pat.id === "none") return html + `<p class="muted">Without a recognisable pattern there's nothing to compare with history right now.</p></div>`;
+
+    if (study && p) {
+      const verdict = lean === "up" ? `<b class="up">History leans up.</b> After this pattern, prices were higher 30 days later more often than on an ordinary day.`
+        : lean === "down" ? `<b class="down">History leans down.</b> After this pattern, prices were lower 30 days later more often than on an ordinary day.`
+        : `<b>No clear lean.</b> After this pattern, prices went up about as often as on any ordinary day, so it hasn't been a useful predictor.`;
+      const contra = (pat.bias === "up" && lean === "down") || (pat.bias === "down" && lean === "up")
+        ? `<p class="warn">⚠️ Traders call this pattern ${pat.bias === "up" ? "bullish" : "bearish"}, but in our data the opposite happened more often.</p>` : "";
+      html += `<div class="verdict">${verdict}</div>${contra}
+        <div class="stats setup">
+          <div><span class="muted">Price higher 30 days later</span><b>${pc(p.up)}</b><span class="muted">of ${p.n} times this pattern appeared</span></div>
+          <div><span class="muted">On an ordinary day</span><b>${pc(study.baseline.up)}</b><span class="muted">for comparison</span></div>
+          <div><span class="muted">Typical 30-day move after it</span><b class="${p.median >= 0 ? "up" : "down"}">${p.median >= 0 ? "+" : ""}${(p.median * 100).toFixed(1)}%</b><span class="muted">middle result</span></div>
+        </div>
+        <p class="muted" style="margin-top:8px">We studied ${study.coins.length} major coins on daily charts from ${study.from} to ${study.to}${pro ? `. First half of that period: higher ${pc(p.halves[0].up)} of the time (ordinary day ${pc(study.baseline.halves[0].up)}); second half: ${pc(p.halves[1].up)} (ordinary day ${pc(study.baseline.halves[1].up)})` : ""}.</p>`;
+    } else if (gran() !== 86400) {
+      html += `<p class="muted">The 10-coin study uses daily charts. Switch the view to long-term to see it.</p>`;
+    }
+    html += own.n
+      ? `<p><b>In ${name}'s own history</b> (${info.years} years on this chart): seen ${own.n} time${own.n === 1 ? "" : "s"}, and the price was higher ${horizon} candles later ${pc(own.up)} of the time${own.n < 10 ? ". That's too few cases to rely on" : ""}.</p>`
+      : `<p class="muted">${name} hasn't shown this pattern before on this chart.</p>`;
+    return html + `<p class="muted small">Chart patterns are spotted automatically and traders often disagree on them. Past results don't predict the future.</p></div>`;
+  }
+
   // ── what history says ──
   function spark(path, split) {
     const W = 150, H = 46, min = Math.min(...path), max = Math.max(...path);
@@ -221,8 +280,8 @@
     if (!el || !sym || !results[sym] || results[sym].error) return;
     // Beginners get the simpler view: reasons for/against and news, without the pattern history.
     const beginner = window.userLevel?.() === "beginner";
-    el.innerHTML = reasonsHtml(sym) + (beginner ? "" : historyHtml(sym)) + coinNewsHtml(sym);
-    loadResearch(sym); if (!beginner) loadDeep(sym);
+    el.innerHTML = patternHtml(sym) + reasonsHtml(sym) + (beginner ? "" : historyHtml(sym)) + coinNewsHtml(sym);
+    loadResearch(sym); loadDeep(sym);
   }
 
   // Compact research data for the AI. Headlines are untrusted text; the server prompt says so.
@@ -236,6 +295,7 @@
         aboveVsBelow200avg: sh && { now: sh.now, above: { medianNext30Pct: Math.round(sh.up.median * 100), upPct: Math.round(sh.up.pctUp * 100) }, below: { medianNext30Pct: Math.round(sh.down.median * 100), upPct: Math.round(sh.down.pctUp * 100) } },
         similarPastPatterns: sim && { note: "Tested: these matches predict direction no better than a coin flip. History, not a forecast.", after: Object.fromEntries(sim.horizons.map((hh) => [hh + " candles", { up: sim.summary[hh].up, of: sim.summary[hh].total, medianPct: Math.round(sim.summary[hh].median * 100) }])) },
         headlines: (research[sym]?.data?.news?.coin || []).map((n) => n.title),
+        chartPattern: (() => { const i = patternInfo(sym); return i && { pattern: i.pat.name, textbookBias: i.pat.bias, studyLean: i.lean, studyCases: i.p?.n || 0, studyPctHigher30d: i.p ? Math.round(i.p.up * 100) : null, ordinaryDayPctHigher30d: i.study ? Math.round(i.study.baseline.up * 100) : null, ownHistoryCases: i.own.n, ownPctHigher: i.own.n ? Math.round(i.own.up * 100) : null, note: "Measured over 10 coins, 2022-2026, daily charts. A lean only counts if it held in both halves of the period. Not a forecast." }; })(),
       };
     }
     return out;

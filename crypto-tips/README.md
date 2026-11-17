@@ -82,6 +82,22 @@ Each coin's detail view adds context that does **not** change the score:
 What testing showed: similar-pattern matches called the next move's direction right about half the time (no better than chance), and
 "buy on extreme fear" was barely better than any ordinary day for Bitcoin from 2018 to 2026. The app says this next to those sections.
 
+## Chart patterns
+Each coin's view names the classic chart pattern its last 90 candles fit: head and shoulders (and inverse), double top/bottom,
+bull/bear flag, ascending/descending/symmetrical triangle, rising/falling wedge, rising/falling channel, sideways range, or
+breakout/breakdown. It then shows what followed that pattern in the past:
+
+- **10-coin study:** `tools/pattern-study.js` replays the detector over about 4 years of daily candles for 10 major coins and
+  records how often the price was higher 30 days later. Results are in `public/pattern-stats.json` (re-run the script to refresh).
+- **The coin's own history** on the chart's timeframe, computed live in the browser.
+- **A verdict:** "history leans up", "leans down" or "no clear lean". A lean only counts when the pattern's result is at least
+  6 points away from an ordinary day **and** points the same way in both halves of the study period.
+
+What the study found (daily, Oct 2022 to Nov 2026; an ordinary day was followed by a higher price 30 days later 47% of the time):
+rising wedges (33%) and head and shoulders (39%) leaned down, falling wedges (55%) leaned up, and bull flags (41%) did worse than
+an ordinary day despite their bullish reputation. Most other patterns were close to an ordinary day. Patterns are context, not
+forecasts, and they don't change the BUY/SELL score.
+
 ## Track record
 Each coin's detail view replays the app's own signals over the chart's history: buy when the signal turns BUY,
 sell when it turns SELL, with a 0.5% fee per trade, over roughly the last 700 candles of the chart. It shows the result next to simply holding the coin,

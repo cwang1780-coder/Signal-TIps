@@ -4,3 +4,4 @@ coinbase-key.json
 node_modules
 test*.js
 server.js
+tools

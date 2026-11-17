@@ -263,7 +263,123 @@
     return median(moves);
   }
 
-  const api = { sma, ema, rsi, macd, bollinger, analyze, backtest, findSimilar, setupHistory, levels, typicalMove, median };
+  // ── Classic chart patterns ──
+  // Looks only at the last `win` candles (never ahead), so it can be replayed over history.
+  // `bias` is what traders traditionally expect from the pattern, not a measured result.
+  const PATTERNS = {
+    "head-shoulders": { name: "Head and shoulders", bias: "down", text: "Three peaks with the middle one highest. Traders read it as an uptrend running out of steam." },
+    "inv-head-shoulders": { name: "Inverse head and shoulders", bias: "up", text: "Three dips with the middle one lowest. Traders read it as a downtrend running out of steam." },
+    "double-top": { name: "Double top", bias: "down", text: "The price hit about the same high twice and turned down both times." },
+    "double-bottom": { name: "Double bottom", bias: "up", text: "The price hit about the same low twice and bounced both times." },
+    "bull-flag": { name: "Bull flag", bias: "up", text: "A sharp rise followed by a short, gentle pause, like a flag on a pole." },
+    "bear-flag": { name: "Bear flag", bias: "down", text: "A sharp fall followed by a short, gentle bounce or pause." },
+    "asc-triangle": { name: "Ascending triangle", bias: "up", text: "A flat ceiling with rising lows: buyers keep stepping in higher." },
+    "desc-triangle": { name: "Descending triangle", bias: "down", text: "A flat floor with falling highs: sellers keep stepping in lower." },
+    "sym-triangle": { name: "Symmetrical triangle", bias: "neutral", text: "Highs falling and lows rising, squeezing toward a point. It can break either way." },
+    "rising-wedge": { name: "Rising wedge", bias: "down", text: "Prices climbing but the range narrowing, with lows rising faster than highs." },
+    "falling-wedge": { name: "Falling wedge", bias: "up", text: "Prices sliding but the range narrowing, with highs falling faster than lows." },
+    "rising-channel": { name: "Rising channel", bias: "up", text: "Higher highs and higher lows moving up together: a steady uptrend." },
+    "falling-channel": { name: "Falling channel", bias: "down", text: "Lower highs and lower lows moving down together: a steady downtrend." },
+    "breakout": { name: "Breakout above a range", bias: "up", text: "After moving sideways, the price just pushed above the top of its range." },
+    "breakdown": { name: "Breakdown below a range", bias: "down", text: "After moving sideways, the price just dropped below the bottom of its range." },
+    "range": { name: "Sideways range", bias: "neutral", text: "The price has been bouncing between a floor and a ceiling without a clear trend." },
+    "none": { name: "No clear pattern", bias: "neutral", text: "The recent price moves don't fit a standard chart pattern." },
+  };
+
+  function pivots(vals, k, isHigh) {
+    const out = [];
+    for (let i = k; i < vals.length - k; i++) {
+      let ok = true;
+      for (let j = i - k; j <= i + k && ok; j++) if (j !== i && (isHigh ? vals[j] > vals[i] : vals[j] < vals[i])) ok = false;
+      if (ok && (!out.length || i - out[out.length - 1].i > k)) out.push({ i, v: vals[i] });
+    }
+    return out;
+  }
+  // Slope of log-price per candle from a least-squares fit through the pivot points, in % per candle.
+  function slopePct(pts) {
+    if (pts.length < 2) return null;
+    const n = pts.length, xs = pts.map((p) => p.i), ys = pts.map((p) => Math.log(p.v));
+    const mx = xs.reduce((a, b) => a + b, 0) / n, my = ys.reduce((a, b) => a + b, 0) / n;
+    let num = 0, den = 0;
+    for (let k = 0; k < n; k++) { num += (xs[k] - mx) * (ys[k] - my); den += (xs[k] - mx) ** 2; }
+    return den ? (num / den) * 100 : null;
+  }
+
+  function detectPattern(candles, { win = 90 } = {}) {
+    if (candles.length < win) return { id: "none", ...PATTERNS.none };
+    const c = candles.slice(-win);
+    const hi = c.map((x) => x.high ?? x.close), lo = c.map((x) => x.low ?? x.close), cl = c.map((x) => x.close);
+    const price = cl[cl.length - 1], n = c.length;
+    const ph = pivots(hi, 4, true), pl = pivots(lo, 4, false);
+    const near = (a, b, tol) => Math.abs(a / b - 1) <= tol;
+    const out = (id) => ({ id, ...PATTERNS[id] });
+
+    // Head and shoulders (and inverse): last three swing points
+    if (ph.length >= 3) {
+      const [a, b, d] = ph.slice(-3);
+      const trough = Math.min(...lo.slice(a.i, d.i + 1));
+      if (b.v > a.v * 1.03 && b.v > d.v * 1.03 && near(a.v, d.v, 0.06) && d.i >= n - 25 && price < d.v && price < trough * 1.04) return out("head-shoulders");
+    }
+    if (pl.length >= 3) {
+      const [a, b, d] = pl.slice(-3);
+      const peak = Math.max(...hi.slice(a.i, d.i + 1));
+      if (b.v < a.v * 0.97 && b.v < d.v * 0.97 && near(a.v, d.v, 0.06) && d.i >= n - 25 && price > d.v && price > peak * 0.96) return out("inv-head-shoulders");
+    }
+    // Double top / bottom: last two swing points about equal, a clear dip/peak between, price has turned away
+    if (ph.length >= 2) {
+      const [a, b] = ph.slice(-2);
+      const dip = Math.min(...lo.slice(a.i, b.i + 1));
+      if (b.i - a.i >= 10 && b.i >= n - 25 && near(a.v, b.v, 0.03) && dip < Math.min(a.v, b.v) * 0.93 && price < Math.min(a.v, b.v) * 0.97) return out("double-top");
+    }
+    if (pl.length >= 2) {
+      const [a, b] = pl.slice(-2);
+      const peak = Math.max(...hi.slice(a.i, b.i + 1));
+      if (b.i - a.i >= 10 && b.i >= n - 25 && near(a.v, b.v, 0.03) && peak > Math.max(a.v, b.v) * 1.07 && price > Math.max(a.v, b.v) * 1.03) return out("double-bottom");
+    }
+    // Flags: a strong move, then a short, tight pause against it
+    const pole = cl[n - 9] / cl[n - 31] - 1;
+    const flag = cl.slice(-8), fRange = Math.max(...flag) / Math.min(...flag) - 1, fDrift = flag[7] / flag[0] - 1;
+    if (pole >= 0.15 && fRange < pole / 2 && fDrift <= 0.01) return out("bull-flag");
+    if (pole <= -0.15 && fRange < -pole / 2 && fDrift >= -0.01) return out("bear-flag");
+
+    // Trend lines through the swing points of the last 60 candles
+    const recentH = ph.filter((p) => p.i >= n - 60), recentL = pl.filter((p) => p.i >= n - 60);
+    const sH = slopePct(recentH), sL = slopePct(recentL);
+    const rangeHi = Math.max(...hi.slice(-60, -3)), rangeLo = Math.min(...lo.slice(-60, -3));
+    if (sH == null || sL == null) return out("none");
+    const flat = 0.08, up = (s) => s > flat, dn = (s) => s < -flat, fl = (s) => Math.abs(s) <= flat;
+    if (fl(sH) && fl(sL)) {
+      if (price > rangeHi * 1.02) return out("breakout");
+      if (price < rangeLo * 0.98) return out("breakdown");
+      return out("range");
+    }
+    if (dn(sH) && up(sL)) return out("sym-triangle");
+    if (fl(sH) && up(sL)) return out("asc-triangle");
+    if (dn(sH) && fl(sL)) return out("desc-triangle");
+    if (up(sH) && up(sL)) return sL > sH * 1.5 ? out("rising-wedge") : out("rising-channel");
+    if (dn(sH) && dn(sL)) return sH < sL * 1.5 ? out("falling-wedge") : out("falling-channel");
+    return out("none");
+  }
+
+  // Replays detectPattern over a coin's history and records what happened next each time.
+  // Consecutive days showing the same pattern count once (the first day), so one long pattern isn't counted many times.
+  function patternHistory(candles, { win = 90, horizon = 30, step = 1 } = {}) {
+    const events = [];
+    let prev = null;
+    for (let t = win; t <= candles.length - 1 - horizon; t += step) {
+      const p = detectPattern(candles.slice(t - win + 1, t + 1), { win }).id;
+      if (p !== prev && p !== "none") events.push({ id: p, t, ret: candles[t + horizon].close / candles[t].close - 1 });
+      prev = p;
+    }
+    return events;
+  }
+  function patternStats(events, id) {
+    const r = events.filter((e) => e.id === id).map((e) => e.ret);
+    if (!r.length) return { n: 0 };
+    return { n: r.length, up: r.filter((x) => x > 0).length / r.length, median: median(r) };
+  }
+
+  const api = { sma, ema, rsi, macd, bollinger, analyze, backtest, findSimilar, setupHistory, levels, typicalMove, median, detectPattern, patternHistory, patternStats, PATTERNS };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   else root.Indicators = api;
 })(typeof window !== "undefined" ? window : globalThis);

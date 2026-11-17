@@ -11,7 +11,7 @@ const { holdingsHandler, askHandler, socialHandler, configHandler, proHandler, r
 
 const PORT = +process.env.PORT || 8000;
 const PUBLIC = path.join(__dirname, "public");
-const TYPES = { ".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".svg": "image/svg+xml", ".webmanifest": "application/manifest+json" };
+const TYPES = { ".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".svg": "image/svg+xml", ".webmanifest": "application/manifest+json", ".json": "application/json" };
 
 const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, "http://localhost");
@@ -23,7 +23,7 @@ const server = http.createServer(async (req, res) => {
   if (url.pathname === "/api/research") return researchHandler(req, res);
 
   const file = url.pathname === "/" ? "index.html" : url.pathname.slice(1);
-  if (!/^((coins|art)\/)?[\w-]+\.(html|js|svg|webmanifest)$/.test(file) || !fs.existsSync(path.join(PUBLIC, file))) { res.writeHead(404); return res.end("Not found"); }
+  if (!/^((coins|art)\/)?[\w-]+\.(html|js|svg|webmanifest|json)$/.test(file) || !fs.existsSync(path.join(PUBLIC, file))) { res.writeHead(404); return res.end("Not found"); }
   res.writeHead(200, { "Content-Type": TYPES[path.extname(file)] });
   fs.createReadStream(path.join(PUBLIC, file)).pipe(res);
 });

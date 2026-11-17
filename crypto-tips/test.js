@@ -73,4 +73,27 @@ assert(lv.support < cyc[599] && lv.resistance > cyc[599], "floor below and ceili
 assert(Math.abs(I.typicalMove(mk([100, 101, 100, 101, 100])) - 0.0099) < 0.001);
 assert.strictEqual(I.median([3, 1, 2]), 2);
 
+// ── Chart patterns: textbook shapes are named correctly, and detection never looks ahead ──
+const zig = (n, start, slope, amp, per = 12) => Array.from({ length: n }, (_, i) => start * Math.exp(slope * i) * (1 + amp * Math.sin((i / per) * 2 * Math.PI)));
+const mkHL = (cl) => cl.map((c, i) => ({ time: i, open: c, high: c * 1.003, low: c * 0.997, close: c, volume: 1 }));
+assert.strictEqual(I.detectPattern(mkHL(zig(120, 100, 0.004, 0.03))).id, "rising-channel");
+assert.strictEqual(I.detectPattern(mkHL(zig(120, 100, -0.004, 0.03))).id, "falling-channel");
+assert.strictEqual(I.detectPattern(mkHL(zig(120, 100, 0, 0.02))).id, "range"); // a 4% swing is too small to be a double top
+// Double bottom: down to 80, up to 92, back to 80, then rising away
+const db = [...Array.from({ length: 50 }, (_, i) => 110 - i * 0.6), ...Array.from({ length: 15 }, (_, i) => 80 + i * 0.8), ...Array.from({ length: 15 }, (_, i) => 92 - i * 0.8), ...Array.from({ length: 12 }, (_, i) => 80 + i * 0.6)];
+assert.strictEqual(I.detectPattern(mkHL(db)).id, "double-bottom");
+// Bull flag: a steep rise, then a short gentle drift down
+const bf = [...Array.from({ length: 70 }, () => 100), ...Array.from({ length: 22 }, (_, i) => 100 + i * 1.5), ...Array.from({ length: 8 }, (_, i) => 131 - i * 0.3)];
+assert.strictEqual(I.detectPattern(mkHL(bf)).id, "bull-flag");
+assert.strictEqual(I.detectPattern(mkHL(zig(40, 100, 0, 0.03))).id, "none", "too little history");
+// History replay: events never use candles after their own time, and repeats of the same pattern count once
+const longZ = mkHL([...zig(200, 100, 0.004, 0.03), ...zig(200, 220, -0.004, 0.03)]);
+const ev = I.patternHistory(longZ, { horizon: 30 });
+assert(ev.length >= 2 && ev.every((e, k) => k === 0 || e.id !== ev[k - 1].id || e.t - ev[k - 1].t > 1));
+assert(ev.every((e) => I.detectPattern(longZ.slice(0, e.t + 1)).id === e.id), "no look-ahead");
+const ps = I.patternStats(ev, ev[0].id);
+assert(ps.n >= 1 && ps.up >= 0 && ps.up <= 1);
+assert.strictEqual(I.patternStats(ev, "head-shoulders").n, 0);
+assert(Object.keys(I.PATTERNS).length === 17 && Object.values(I.PATTERNS).every((p) => p.name && ["up", "down", "neutral"].includes(p.bias)));
+
 console.log("all tests passed", { dip: a.action, down: d.action });
