@@ -1,0 +1,54 @@
+{
+ "generated": "2026-11-17",
+ "coinsStudied": 386,
+ "from": "2025-03-28",
+ "to": "2026-11-17",
+ "rule": "Price up 30% or more over 7 days, with 3-day trading volume at least 3x its normal (previous 30-day) level. One event per coin per 14 days.",
+ "events": 888,
+ "after7": {
+  "higher": 0.256,
+  "up20": 0.09,
+  "median": -0.1099
+ },
+ "after30": {
+  "higher": 0.251,
+  "up50": 0.05,
+  "down30": 0.298,
+  "median": -0.1937
+ },
+ "within30": {
+  "fellBy30AtSomePoint": 0.404,
+  "roseBy50AtSomePoint": 0.146
+ },
+ "ordinaryDay7": {
+  "higher": 0.399,
+  "median": -0.0216
+ },
+ "buckets": {
+  "surge30to60": {
+   "n": 698,
+   "higher7": 0.268,
+   "median7": -0.1034
+  },
+  "surge60to100": {
+   "n": 141,
+   "higher7": 0.234,
+   "median7": -0.1791
+  },
+  "surgeOver100": {
+   "n": 49,
+   "higher7": 0.143,
+   "median7": -0.289
+  },
+  "bigCoins": {
+   "n": 47,
+   "higher7": 0.404,
+   "median7": -0.0362
+  },
+  "smallCoins": {
+   "n": 632,
+   "higher7": 0.228,
+   "median7": -0.1245
+  }
+ }
+}

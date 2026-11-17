@@ -165,6 +165,50 @@
   body[data-level="beginner"] #tf { display: none; }
   body[data-level="beginner"] .rcol.rneutral { display: none; }
 
+  /* ── Less scrolling ── */
+  .band { padding: 48px 0; }
+  .hero { padding: 40px 0; }
+  .summary { font-size: 56px; line-height: 60px; }
+  .summary small { margin-top: 16px; }
+  .hero-ctas { margin-top: 22px; }
+  .hero-card { padding: 24px; }
+  .hrow { padding: 7px 6px; }
+  .section-head { grid-template-columns: minmax(0, 1fr) minmax(0, 300px); gap: 32px; margin-bottom: 24px; }
+  .wrap.narrow .section-head { grid-template-columns: minmax(0, 1fr) minmax(0, 260px); }
+  .art-card { border-radius: var(--r-lg); }
+  .lead { margin: 10px 0 0; }
+  /* Coin view: a panel beside the list (desktop), a full sheet (phone) */
+  #detail { position: fixed; top: var(--top-h, 113px); right: 0; bottom: 0; width: min(780px, 100vw); margin: 0; z-index: 26; overflow-y: auto; overscroll-behavior: contain;
+    border-radius: 32px 0 0 0; box-shadow: -12px 0 40px rgba(10, 11, 13, .14); padding: 0 32px 48px; background: var(--panel); }
+  #detail .detailHead { padding-top: 24px; }
+  #detailScrim { display: none; }
+  body.detailOpen #detailScrim { display: block; position: fixed; inset: var(--top-h, 113px) 0 0 0; background: rgba(10, 11, 13, .22); z-index: 25; }
+  .dnav { position: sticky; top: 0; z-index: 3; display: flex; gap: 6px; overflow-x: auto; margin: 0 -32px 8px; padding: 14px 32px 10px; background: var(--panel); border-bottom: 1px solid var(--border); scrollbar-width: none; }
+  .dnav::-webkit-scrollbar { display: none; }
+  .dnav button { min-height: 34px; padding: 0 14px; font-size: 14px; background: #fff; white-space: nowrap; }
+  .dnav button:hover { background: var(--alt); }
+  .dnav button[hidden] { display: none; }
+  #detail h2[id], #detail [id^="d-"], #techDetails { scroll-margin-top: 64px; }
+  /* Trench */
+  .trench-study { margin-bottom: 20px; }
+  .ts-head { display: flex; flex-direction: column; gap: 4px; margin-bottom: 14px; } .ts-head b { font-size: 19px; }
+  .trench-study .stats div { background: var(--panel); }
+  .trench-bar { flex-wrap: wrap; margin-bottom: 14px; } .trench-ctl { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .chk { display: inline-flex; gap: 8px; align-items: center; font-weight: 600; font-size: 15px; } .chk input { min-height: 0; width: 18px; height: 18px; }
+  .tgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 14px; }
+  .tcard { background: #fff; border-radius: var(--r-lg); padding: 20px 22px; display: flex; flex-direction: column; gap: 12px; }
+  .tc-name { display: inline-flex; gap: 10px; align-items: center; } .tc-name > span:last-child { display: flex; flex-direction: column; line-height: 1.25; } .tc-name b { font-size: 17px; } .tc-name .muted { font-size: 13px; }
+  .tc-moves { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; } .tc-moves div { background: var(--panel); border-radius: 14px; padding: 8px 12px; display: flex; flex-direction: column; }
+  .tc-moves b { font-family: var(--display); font-size: 22px; font-weight: 500; font-variant-numeric: tabular-nums; }
+  .tc-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+  .tag2 { font-size: 12.5px; font-weight: 600; padding: 4px 10px; border-radius: 999px; background: var(--panel); color: var(--text); text-decoration: none; }
+  .tag2.up { background: #e3f4ea; color: var(--buy); } .tag2.down { background: #fbe7e9; color: var(--sell); } .tag2.cb { background: #eaf1ff; color: #003099; }
+  a.tag2:hover { background: var(--alt); }
+  .tc-hist { font-size: 14px; color: var(--dim); background: #fdf6e7; color: #5c3d00; border-radius: 14px; padding: 8px 12px; margin: 0; }
+  .tc-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: auto; }
+  .tc-actions .pill { min-height: 40px; font-size: 14px; }
+  .pill-link { color: var(--accent); font-weight: 600; font-size: 14px; text-decoration: none; padding: 0 8px; }
+
   /* Welcome cards */
   .welcome { position: relative; background: #fff; border-radius: var(--r-lg); padding: 24px; margin-bottom: 32px; box-shadow: 0 0 0 1px var(--border); }
   .welcome[hidden] { display: none; }
@@ -194,7 +238,7 @@
   .help summary { cursor: pointer; font-weight: 600; font-size: 17px; } .help ul { list-style: none; margin-top: 12px; } .help li { margin: 10px 0; }
 
   /* Coin detail */
-  #detail { background: var(--panel); border-radius: var(--r-xl); padding: 40px; margin: 8px 0 0; display: none; scroll-margin-top: 130px; }
+  #detail { background: var(--panel); display: none; scroll-margin-top: 130px; }
   .detailHead h2 { font-family: var(--display); font-weight: 400; font-size: 40px; line-height: 44px; letter-spacing: -0.02em; }
   .detailHead .x { font-size: 20px; }
   .chartBox { position: relative; margin: 10px 0; }
@@ -372,15 +416,23 @@
     .lead { font-size: 16px; line-height: 24px; margin-bottom: 24px; }
     .section-head, .wrap.narrow .section-head { grid-template-columns: 1fr; gap: 20px; margin-bottom: 28px; }
     .section-head .art-card { order: -1; aspect-ratio: 16 / 9; }
-    .grid { grid-template-columns: 1fr 1fr; gap: 10px; }
-    body[data-level="pro"] .grid { grid-template-columns: 1fr 1fr; }
+    .grid { grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 10px; } .card { min-width: 0; overflow-wrap: anywhere; }
+    body[data-level="pro"] .grid { grid-template-columns: minmax(0,1fr) minmax(0,1fr); }
     .card, body[data-level="pro"] .card { padding: 14px; border-radius: 20px; }
     .price, body[data-level="pro"] .card .price { font-size: 21px; line-height: 26px; }
     .card .name { display: block; margin-left: 0; }
     .card .coin-ic { --s: 28px !important; }
+    #detail { width: 100vw; border-radius: 24px 24px 0 0; padding: 0 16px 40px; }
+    .dnav { margin: 0 -16px 8px; padding: 12px 16px 8px; }
+    body.detailOpen { overflow: hidden; }
+    .summary { font-size: 40px; line-height: 44px; }
+    .hero { padding: 24px 0 32px; }
+    .band { padding: 36px 0; }
+    .section-head .art-card { aspect-ratio: 21 / 9; }
+    .tgrid { grid-template-columns: minmax(0,1fr); } .tc-moves b { font-size: 18px; } .tc-moves div { padding: 8px 10px; min-width: 0; }
     .lesson-head { padding: 14px 16px; gap: 12px; } .lesson-body { padding: 0 16px 20px; }
     .startHere { margin-top: 20px; }
-    #detail { padding: 20px 16px; }
+
     .detailHead h2 { font-size: 28px; line-height: 32px; }
     .chartBox canvas { height: 280px; }
     .panel { padding: 20px 16px; }
@@ -397,6 +449,7 @@
     <a class="brand" href="#" data-go="signals" aria-label="Signal Tips home"><img src="icon.svg" alt="" width="40" height="40" /><span>Signal Tips</span></a>
     <nav class="tabs" id="tabs" aria-label="Sections">
       <button data-go="signals"><span class="ico">📈</span><span>Signals</span></button>
+      <button data-go="trench"><span class="ico">🔥</span><span>Trench</span></button>
       <button data-go="buzz"><span class="ico">📣</span><span>Buzz</span></button>
       <button data-go="alerts"><span class="ico">🔔</span><span>Alerts</span><b class="count" id="alCount" hidden></b></button>
       <button data-go="ai"><span class="ico">🤖</span><span>Ask AI</span></button>
@@ -497,9 +550,27 @@
             <li><b>Score:</b> each indicator adds or removes points. The total decides BUY, HOLD or SELL. Tap any coin to see the full breakdown.</li>
           </ul>
         </details>
+        <div id="detailScrim" aria-hidden="true"></div>
         <div id="detail"></div>
         <div class="botnote"><span class="bot-ico">🤖</span><div><b>Coming soon: the Signal Tips trading bot</b>
           <span>We’re building a bot that can follow the signals you choose, with limits you set. It isn’t available yet, and nothing in this app trades for you today.</span></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ───────── Trench ───────── -->
+  <section class="tab" data-tab="trench" hidden>
+    <div class="band alt">
+      <div class="wrap">
+        <div class="section-head"><div><h2 class="display">Trench</h2>
+          <p class="lead">Coins making big moves right now: price, volume, trending searches and social buzz in one place, with how risky chasing each move has been.</p></div>
+          <div class="art-card"><img src="art/trench.svg" alt="" width="480" height="320" /></div></div>
+        <div class="tipbox forBeginner"><b>💡 How to use this</b><span>This is a radar, not a shopping list. It shows what's moving fast. Most of these moves have already happened, and history says chasing them usually loses money. Use it to understand the hype, and tap "Look closer" to see a coin's full signal and risks before doing anything.</span></div>
+        <div class="trench-study panel" id="trenchStudy"></div>
+        <div class="row trench-bar"><span class="muted" id="trenchStatus">Open this page to scan the market.</span>
+          <span class="trench-ctl"><label class="chk"><input type="checkbox" id="trenchCB" /> Only coins on Coinbase</label><button id="trenchRefresh">↻ Rescan</button></span></div>
+        <div class="tgrid" id="trenchList"></div>
+        <p class="muted small" style="margin-top:14px">Sources: CoinGecko (top 500 coins by trading volume, and trending searches), Coinbase listings, StockTwits posts. A coin appears when it's up 30%+ in 7 days or 20%+ in 24 hours. Not financial advice.</p>
       </div>
     </div>
   </section>
@@ -690,7 +761,7 @@
     <div class="footer-grid">
       <img class="footer-logo" src="icon.svg" alt="Signal Tips" width="56" height="56" />
       <div class="fgroup"><h4>App</h4><ul>
-        <li><button data-go="signals">Signals</button></li><li><button data-go="buzz">Social buzz</button></li><li><button data-go="alerts">Price alerts</button></li>
+        <li><button data-go="signals">Signals</button></li><li><button data-go="trench">Trench (big movers)</button></li><li><button data-go="buzz">Social buzz</button></li><li><button data-go="alerts">Price alerts</button></li>
         <li><button data-go="ai">Ask AI</button></li><li><button data-go="coins">My coins</button></li><li><button data-go="me">Beginner or experienced</button></li></ul></div>
       <div class="fgroup"><h4>Learn</h4><ul>
         <li><button data-open-help>What BUY, HOLD and SELL mean</button></li><li><button data-open-help>Glossary of terms</button></li>
@@ -721,6 +792,7 @@
 <script src="ai-chat.js"></script>
 <script src="learn.js"></script>
 <script src="wallets.js"></script>
+<script src="trench-ui.js"></script>
 <div id="toasts" aria-live="polite"></div>
 </body>
 </html>

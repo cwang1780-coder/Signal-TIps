@@ -7,6 +7,7 @@ const { getSocial } = require("./social.js");
 const pro = require("./pro.js");
 const { getResearch } = require("./research.js");
 const wallet = require("./wallet.js");
+const { getTrench } = require("./trench.js");
 
 const ON_VERCEL = Boolean(process.env.VERCEL);
 let cache = { at: 0, data: null };
@@ -157,6 +158,17 @@ async function walletHandler(req, res) {
   }
 }
 
+// Public: Trench, coins making big moves right now. GET /api/trench
+async function trenchHandler(req, res) {
+  try {
+    const data = await getTrench();
+    res.writeHead(200, { "Content-Type": "application/json", "Cache-Control": "public, max-age=120, s-maxage=300" });
+    res.end(JSON.stringify(data));
+  } catch (e) {
+    json(res, 502, { reason: "Market scanner unavailable right now: " + e.message });
+  }
+}
+
 // Public site settings. COINBASE_REFERRAL_URL: your Coinbase affiliate link (must be an https coinbase.com link).
 async function configHandler(req, res) {
   let ref = null;
@@ -197,4 +209,4 @@ async function proHandler(req, res) {
   }
 }
 
-module.exports = { holdingsHandler, askHandler, socialHandler, configHandler, proHandler, researchHandler, walletHandler, authorize };
+module.exports = { holdingsHandler, askHandler, socialHandler, configHandler, proHandler, researchHandler, walletHandler, trenchHandler, authorize };

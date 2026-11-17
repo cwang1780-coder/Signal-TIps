@@ -96,6 +96,16 @@ Each coin's detail view adds context that does **not** change the score:
 What testing showed: similar-pattern matches called the next move's direction right about half the time (no better than chance), and
 "buy on extreme fear" was barely better than any ordinary day for Bitcoin from 2018 to 2026. The app says this next to those sections.
 
+## Trench (big movers)
+
+The Trench tab is a live radar of coins making big moves: up 30%+ in 7 days or 20%+ in 24 hours, from the top 500 coins by trading volume (CoinGecko), with trending-search rank, whether it trades on Coinbase, StockTwits buzz and a chase-risk rating. Refreshes every 5 minutes (`/api/trench`).
+
+It does not pick sure winners. `node tools/trench-study.js` measured what happened after 888 big come-ups on 386 Coinbase coins (Mar 2025 to Nov 2026): only 26% were higher 7 days later (40% on an ordinary day), the typical result after 30 days was −19%, and the biggest surges did worst. Each card shows the matching figure. X/Twitter data needs a paid X API plan, so buzz comes from StockTwits and CoinGecko trending instead.
+
+## Coin view
+
+Tapping a coin opens a panel beside the list (a full-screen sheet on phones) with jump links: Chart, Why, Pattern, Reasons, History, Track record, Details, News. Close it with ✕, Esc, or by tapping outside.
+
 ## Chart patterns
 Each coin's view names the classic chart pattern its last 90 candles fit: head and shoulders (and inverse), double top/bottom,
 bull/bear flag, ascending/descending/symmetrical triangle, rising/falling wedge, rising/falling channel, sideways range, or

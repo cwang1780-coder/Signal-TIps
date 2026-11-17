@@ -5,7 +5,7 @@
   "description": "Indicator-based crypto buy/sell tips with Coinbase sync and an AI assistant",
   "scripts": {
     "start": "node server.js",
-    "test": "node test.js && node test-coinbase.js && node test-ai.js && node test-auth.js && node test-social.js && node test-pro.js && node test-wallet.js"
+    "test": "node test.js && node test-coinbase.js && node test-ai.js && node test-auth.js && node test-social.js && node test-pro.js && node test-wallet.js && node test-trench.js"
   },
   "engines": {
     "node": "22.x"

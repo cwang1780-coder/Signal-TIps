@@ -148,7 +148,7 @@
       const items = all.filter((x) => x.side === side);
       return `<div class="rcol ${cls}"><h3>${title} <span class="muted">${items.length}</span></h3>${items.length ? items.map((x) => `<div class="reason"><b>${esc(x.title)}</b><span>${x.text}</span></div>`).join("") : `<div class="muted">Nothing stands out right now.</div>`}</div>`;
     };
-    return `<h2>More to weigh <span class="muted">other reasons people buy or sell. These don't change the score above.</span></h2>
+    return `<h2 id="d-reasons">More to weigh <span class="muted">other reasons people buy or sell. These don't change the score above.</span></h2>
       <div class="rgrid">${col("for", "👍 Reasons for", "rfor")}${col("against", "👎 Reasons against", "ragainst")}${col("neutral", "🔎 Worth knowing", "rneutral")}</div>`;
   }
 
@@ -183,7 +183,7 @@
     const pro = window.userLevel?.() === "pro";
     const biasTxt = { up: "Traders usually read it as bullish (up)", down: "Traders usually read it as bearish (down)", neutral: "Traders don't expect a direction from it" }[pat.bias];
     const pc = (x) => Math.round(x * 100) + "%";
-    let html = `<h2>Chart pattern <span class="muted">what shape the price is in, and what happened after it before</span></h2>
+    let html = `<h2 id="d-pattern">Chart pattern <span class="muted">what shape the price is in, and what happened after it before</span></h2>
       <div class="pattern"><div class="pattern-head"><span class="pattern-name">${esc(pat.name)}</span>
       <span class="badge ${pat.bias === "up" ? "b-BUY" : pat.bias === "down" ? "b-SELL" : "b-HOLD"}">${biasTxt}</span></div>
       <p>${esc(pat.text)}</p>`;
@@ -238,7 +238,7 @@
     const key = sym + ":" + gran(), stillLoading = !deep[key];
     const years = ((h[h.length - 1].time - h[0].time) / (365 * 86400));
     const span = years >= 1 ? `${years.toFixed(1)} years` : `${Math.round(years * 365)} days`;
-    let html = `<h2>What history says <span class="muted">searching ${span} of ${esc(name)}'s prices${stillLoading ? " (loading more…)" : ""}</span></h2>`;
+    let html = `<h2 id="d-history">What history says <span class="muted">searching ${span} of ${esc(name)}'s prices${stillLoading ? " (loading more…)" : ""}</span></h2>`;
 
     const sh = Indicators.setupHistory(h, 30);
     if (sh) {
@@ -271,7 +271,7 @@
     const d = research[sym]?.data;
     if (!d) return "";
     const items = d.news?.coin || [];
-    return `<h2>Latest news <span class="muted">headlines that mention ${esc(coinName(sym) || sym)}</span></h2>` +
+    return `<h2 id="d-news">Latest news <span class="muted">headlines that mention ${esc(coinName(sym) || sym)}</span></h2>` +
       (items.length ? newsList(items) : `<p class="muted">No recent headlines mention it. ${d.news?.error ? "(News is unavailable right now.)" : "See the Buzz tab for the top crypto stories."}</p>`);
   }
 
@@ -282,6 +282,7 @@
     const beginner = window.userLevel?.() === "beginner";
     el.innerHTML = patternHtml(sym) + reasonsHtml(sym) + (beginner ? "" : historyHtml(sym)) + coinNewsHtml(sym);
     loadResearch(sym); loadDeep(sym);
+    window.syncJump?.();
   }
 
   // Compact research data for the AI. Headlines are untrusted text; the server prompt says so.

@@ -29,7 +29,7 @@ function trackRecordHtml(bt) {
       : Math.abs(d) < 0.02 ? "In the past, following these signals did about the same as simply holding this coin."
       : d > 0 ? `In the past, following these signals did <b>better</b> than simply holding this coin (${(bt.strategyReturn * 100).toFixed(0)}% vs ${(bt.holdReturn * 100).toFixed(0)}%).`
       : `In the past, following these signals did <b>worse</b> than simply holding this coin (${(bt.strategyReturn * 100).toFixed(0)}% vs ${(bt.holdReturn * 100).toFixed(0)}%), so trust them less here.`;
-    return `<h2>Has this worked before?</h2><p class="trackline">${line} Past results don't predict the future. ▲ and ▼ on the chart show the past buys and sells.</p>`;
+    return `<h2 id="d-track">Has this worked before?</h2><p class="trackline">${line} Past results don't predict the future. ▲ and ▼ on the chart show the past buys and sells.</p>`;
   }
   const p = (n) => (n >= 0 ? "+" : "") + (n * 100).toFixed(1) + "%";
   const cls = (n) => (n >= 0 ? "up" : "down");
@@ -40,7 +40,7 @@ function trackRecordHtml(bt) {
     : Math.abs(diff) < 0.02 ? "About the same as simply holding."
     : diff > 0 ? `Following the signals did <b>${(diff * 100).toFixed(1)} points better</b> than simply holding.`
     : `Following the signals did <b>${(-diff * 100).toFixed(1)} points worse</b> than simply holding.`;
-  return `<h2>Track record on this chart</h2>
+  return `<h2 id="d-track">Track record on this chart</h2>
     <div class="stats">
       <div><span class="muted">Following the signals</span><b class="${cls(bt.strategyReturn)}">${p(bt.strategyReturn)}</b></div>
       <div><span class="muted">Just holding</span><b class="${cls(bt.holdReturn)}">${p(bt.holdReturn)}</b></div>
@@ -139,7 +139,7 @@ const COIN_COLORS_FB = { BTC: "#f7931a", ETH: "#627eea", SOL: "#9945ff", XRP: "#
 function coinIcon(sym, size = 36) {
   const s = String(sym).replace(/[^A-Z0-9]/gi, "").toUpperCase();
   const has = !window.COIN_LOGOS || window.COIN_LOGOS.has(s.toLowerCase());
-  return `<span class="coin-ic${has ? "" : " fb"}" style="--s:${size}px;--c:${COIN_COLORS_FB[s] || "#5b616e"}">${has ? `<img src="coins/${s.toLowerCase()}.svg" alt="" loading="lazy" onerror="this.parentNode.classList.add('fb');this.remove()" />` : ""}<b>${s.slice(0, 4)}</b></span>`;
+  return `<span class="coin-ic${has ? "" : " fb"}" style="--s:${size}px;--c:${COIN_COLORS_FB[s] || "#5b616e"}">${has ? `<img src="coins/${s.toLowerCase()}.svg" alt="" loading="lazy" onerror="this.parentNode.classList.add('fb');this.remove()" />` : ""}<b style="font-size:calc(var(--s) * ${s.length > 3 ? 0.26 : s.length > 2 ? 0.32 : 0.4})">${s.slice(0, 4)}</b></span>`;
 }
 window.coinIcon = coinIcon;
 const coinName = (sym) => (COIN_NAMES[sym] && COIN_NAMES[sym] !== sym ? COIN_NAMES[sym] : "");
@@ -239,7 +239,10 @@ function render() {
 function renderDetail() {
   const el = $("detail");
   const r = results[selected];
-  if (!r || r.error) { el.style.display = "none"; return; }
+  if (!r || r.error) { el.style.display = "none"; document.body.classList.remove("detailOpen"); return; }
+  // The coin view is a panel beside the list (a full sheet on phones), placed just under the pinned header.
+  document.documentElement.style.setProperty("--top-h", $("top").getBoundingClientRect().bottom + "px");
+  document.body.classList.add("detailOpen");
   // Don't rebuild the chart in the middle of a drawing; the next refresh will catch up.
   if (window.Draw?.isBusy() && Draw.currentSym() === selected && el.style.display === "block") return;
   el.style.display = "block";
@@ -248,9 +251,14 @@ function renderDetail() {
     <div class="row detailHead"><h2 style="margin:0">${coinIcon(selected, 44)}<span>${coinName(selected) || selected} <span class="muted">${selected}</span> · ${fmt(r.price)}</span></h2>
       <span><span class="${actionClass(r.action)}">${r.action}</span> <button class="x" id="detailClose" title="Close" aria-label="Close ${selected} details">✕</button></span></div>
     <p style="margin-top:6px">${PLAIN[r.action]}</p>
+    <nav class="dnav" aria-label="Jump to">
+      ${[["d-chart", "Chart"], ["d-why", "Why"], ["d-pattern", "Pattern"], ["d-reasons", "Reasons"], ["d-history", "History"], ["d-track", "Track record"], ["techDetails", "Details"], ["d-news", "News"]]
+        .map(([id, t]) => `<button data-jump="${id}">${t}</button>`).join("")}
+    </nav>
+    <div id="d-chart"></div>
     <div id="chartWrap"></div>
     <div class="muted">Price (black) · 50-period avg (blue) · 200-period avg (orange) · Pick a tool above the chart to draw. Drawings are saved for this coin.</div>
-    <h2>Why? <span class="muted">each line adds or removes points; the total (${r.score.toFixed(1)}) decides the signal</span></h2>
+    <h2 id="d-why">Why? <span class="muted">each line adds or removes points; the total (${r.score.toFixed(1)}) decides the signal</span></h2>
     <ul class="reasons">${r.reasons.map((x) => `<li><span class="pts" style="color:${x.pts > 0 ? "var(--buy)" : x.pts < 0 ? "var(--sell)" : "var(--dim)"}">${x.pts > 0 ? "+" : ""}${x.pts}</span><span>${x.text}</span></li>`).join("")}</ul>
     ${techTableHtml(r)}
     <div id="detailResearch"></div>
@@ -267,6 +275,7 @@ function renderDetail() {
   Draw.mount($("chartWrap"), selected, r.candles, bt?.markers);
   window.renderDetailSocial?.(selected);
   window.renderResearch?.(selected);
+  syncJump();
 }
 
 async function syncCoinbase(force) {
@@ -328,18 +337,30 @@ $("grid").addEventListener("click", (e) => {
   const rm = e.target.dataset.rm;
   if (rm) { coins = coins.filter((c) => c !== rm); store.set("coins", coins); delete results[rm]; render(); return; }
   const card = e.target.closest("[data-sym]");
-  if (card) { selected = card.dataset.sym; render(); $("detail").scrollIntoView({ behavior: "smooth", block: "start" }); }
+  if (card) { selected = card.dataset.sym; render(); $("detail").scrollTop = 0; }
 });
 $("grid").addEventListener("keydown", (e) => { if ((e.key === "Enter" || e.key === " ") && e.target.dataset.sym) { e.preventDefault(); e.target.click(); } });
-$("detail").addEventListener("click", (e) => { if (e.target.id === "detailClose") { selected = null; render(); } });
+$("detail").addEventListener("click", (e) => {
+  if (e.target.id === "detailClose") return closeDetail();
+  const j = e.target.closest("[data-jump]");
+  if (j) document.getElementById(j.dataset.jump)?.scrollIntoView({ behavior: "smooth", block: "start" });
+});
+$("detailScrim").addEventListener("click", closeDetail);
+document.addEventListener("keydown", (e) => { if (e.key === "Escape" && selected && document.body.classList.contains("detailOpen")) closeDetail(); });
 
 // ── Tabs ──
-const TABS = ["signals", "buzz", "alerts", "ai", "coins", "learn", "me"];
+const TABS = ["signals", "trench", "buzz", "alerts", "ai", "coins", "learn", "me"];
+// Jump buttons in the coin view: hide the ones whose section isn't on screen (depends on mode and loaded data).
+function syncJump() { document.querySelectorAll(".dnav [data-jump]").forEach((b) => (b.hidden = !document.getElementById(b.dataset.jump))); }
+window.syncJump = syncJump;
+function closeDetail() { selected = null; render(); }
 function showTab(name) {
   if (!TABS.includes(name)) name = "signals";
   document.querySelectorAll("section.tab").forEach((s) => (s.hidden = s.dataset.tab !== name));
   document.querySelectorAll("#tabs button").forEach((b) => { const on = b.dataset.go === name; b.classList.toggle("on", on); b.setAttribute("aria-current", on ? "page" : "false"); });
   store.set("tab", name);
+  document.body.classList.toggle("detailOpen", name === "signals" && $("detail").style.display === "block");
+  if (name === "trench") window.loadTrench?.();
   if (name === "signals") renderDetail(); // the chart needs to be visible to size itself
   window.scrollTo(0, 0);
 }
@@ -355,7 +376,7 @@ document.addEventListener("click", (e) => {
     return;
   }
   const hero = e.target.closest("[data-hero]");
-  if (hero) { selected = hero.dataset.hero; render(); $("detail").scrollIntoView({ behavior: "smooth", block: "start" }); }
+  if (hero) { selected = hero.dataset.hero; render(); $("detail").scrollTop = 0; }
 });
 // Phone/tablet menu: the section list opens full-screen under the header.
 $("menuToggle").addEventListener("click", () => {
@@ -381,7 +402,7 @@ function applyLevel() {
 // Open one coin's full view (used by the lessons' "Try it" buttons).
 window.openCoin = (sym) => {
   showTab("signals"); selected = sym; render();
-  setTimeout(() => $("detail").scrollIntoView({ behavior: "smooth", block: "start" }), 60);
+  $("detail").scrollTop = 0;
 };
 function chooseLevel(lv, fromWelcome) {
   store.set("level", lv); store.set("levelChosen", true); store.set("welcomed", true);
