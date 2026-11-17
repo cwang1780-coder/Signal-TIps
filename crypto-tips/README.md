@@ -53,6 +53,27 @@ Notes:
 - If Claude declines a question for safety reasons, the request is automatically retried on a fallback model.
 - To use a different model, set `AI_MODEL` (for example `AI_MODEL=claude-sonnet-5-5`, which is cheaper).
 
+## Beginner or experienced
+On a first visit the app asks whether you're new to trading or an experienced trader, and you can switch any time in the **👤 Me** tab.
+It changes presentation only; both see the same signals and data.
+
+| | 🌱 New to trading | 📊 Experienced |
+|---|---|---|
+| Coin cards | Plain-English sentence | RSI, score, distance from the 200 average; denser grid |
+| Technical details | Collapsed, with a "what it means" note per number | Open, compact |
+| Drawing tools | Behind a "Draw on the chart" button | Always showing |
+| Help and glossary | Open, plus a short how-to | Hidden |
+| Ask AI | Simple words, terms explained, beginner question buttons | Concise and technical, trader question buttons |
+
+## Research
+Each coin's detail view adds context that does **not** change the score:
+- **More to weigh:** other reasons people buy or sell (Bitcoin's trend, strength versus Bitcoin, distance from the high, support and resistance, how much it swings, crowd mood, market mood, whether the signals have worked on this coin).
+- **What history says:** how the coin did over the next 30 candles when it was above versus below its 200-period average, and the 8 most similar past price shapes with what followed.
+- **Latest news** that mentions the coin, plus top crypto headlines on the Buzz tab, and the Fear & Greed index and whole-market numbers on the Signals tab.
+
+What testing showed: similar-pattern matches called the next move's direction right about half the time (no better than chance), and
+"buy on extreme fear" was barely better than any ordinary day for Bitcoin from 2018 to 2026. The app says this next to those sections.
+
 ## Track record
 Each coin's detail view replays the app's own signals over the chart's history: buy when the signal turns BUY,
 sell when it turns SELL, with a 0.5% fee per trade, over roughly the last 700 candles of the chart. It shows the result next to simply holding the coin,

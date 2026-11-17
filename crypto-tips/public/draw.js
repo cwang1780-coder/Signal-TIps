@@ -17,6 +17,7 @@
   let tool = "view", color = COLORS[0];
   let sym = null, candles = [], canvas = null, wrap = null, drawings = [], history = [], markers = [];
   let active = null;     // drawing in progress
+  let barShown = false;  // beginners see the toolbar only after tapping "Draw on the chart"
   let noteOpen = false;  // note input showing
   let hover = null;      // {x,y} for crosshair
   let view = null;       // scales for current paint
@@ -245,7 +246,8 @@
     if (symbol !== sym) { drawings = load(symbol); history = []; }
     sym = symbol; candles = data; wrap = container; markers = signalMarkers || [];
     container.innerHTML = `
-      <div class="drawBar">
+      <button class="drawToggle" type="button">✏️ Draw on the chart</button>
+      <div class="drawBar${barShown ? " show" : ""}">
         ${TOOLS.map(([id, icon, title]) => `<button data-tool="${id}" title="${title}" aria-label="${title}">${icon}</button>`).join("")}
         <span class="sep"></span>
         ${COLORS.map((c) => `<button class="swatch" data-color="${c}" style="background:${c}" title="Colour" aria-label="Colour ${c}"></button>`).join("")}
@@ -256,6 +258,13 @@
       <div class="chartBox"><canvas></canvas></div>
       <div class="drawList"></div>`;
     canvas = container.querySelector("canvas");
+    container.querySelector(".drawToggle").onclick = (e) => {
+      barShown = !barShown;
+      container.querySelector(".drawBar").classList.toggle("show", barShown);
+      e.target.textContent = barShown ? "✕ Hide drawing tools" : "✏️ Draw on the chart";
+      if (!barShown) setTool("view");
+    };
+    if (barShown) container.querySelector(".drawToggle").textContent = "✕ Hide drawing tools";
     canvas.addEventListener("pointerdown", onDown);
     canvas.addEventListener("pointermove", onMove);
     canvas.addEventListener("pointerup", onUp);

@@ -48,6 +48,7 @@
           profitUSD: p && h.cost ? round((p - h.cost) * h.amt) : null, source: h.source };
       }),
       cash: cb.cash,
+      userExperience: window.userLevel ? (window.userLevel() === "pro" ? "experienced trader" : "new to trading") : "new to trading",
       social: window.socialSnapshot ? window.socialSnapshot() : null,
       research: window.researchSnapshot ? window.researchSnapshot() : null,
       trackRecordOfSelectedCoin: (() => {

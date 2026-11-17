@@ -160,9 +160,10 @@ function techTableHtml(r) {
   if (t.volRatio != null) rows.push(["Volume", `${t.volRatio.toFixed(1)}× the 20-period average`,
     t.volRatio > 1.5 ? "Unusually heavy trading. Big moves on heavy volume mean more." : t.volRatio < 0.6 ? "Quiet trading." : "Normal trading activity."]);
   rows.push(["Signal score", `<b>${r.score > 0 ? "+" : ""}${r.score.toFixed(1)}</b>`, "The total of the points above. +2 or more is BUY, −2 or less is SELL, in between is HOLD. ±4.5 is STRONG."]);
-  return `<h2>Technical details <span class="muted">the numbers behind the signal, and how to read them</span></h2>
+  const open = level() === "pro" || store.get("techOpen", false);
+  return `<details class="techDetails" id="techDetails" ${open ? "open" : ""}><summary>Technical details <span class="muted">${level() === "pro" ? "indicator values" : "the numbers behind the signal, and how to read them"}</span></summary>
     <div class="tablewrap"><table class="tech"><tr><th>Indicator</th><th>Now</th><th>What it means</th></tr>
-    ${rows.map(([a, b, c]) => `<tr><td>${a}</td><td>${b}</td><td class="muted">${c}</td></tr>`).join("")}</table></div>`;
+    ${rows.map(([a, b, c]) => `<tr><td>${a}</td><td>${b}</td><td class="muted">${c}</td></tr>`).join("")}</table></div></details>`;
 }
 
 function renderSummary() {
@@ -298,7 +299,7 @@ $("grid").addEventListener("keydown", (e) => { if ((e.key === "Enter" || e.key =
 $("detail").addEventListener("click", (e) => { if (e.target.id === "detailClose") { selected = null; render(); } });
 
 // ── Tabs ──
-const TABS = ["signals", "buzz", "alerts", "ai", "coins"];
+const TABS = ["signals", "buzz", "alerts", "ai", "coins", "me"];
 function showTab(name) {
   if (!TABS.includes(name)) name = "signals";
   document.querySelectorAll("section.tab").forEach((s) => (s.hidden = s.dataset.tab !== name));
@@ -310,9 +311,31 @@ function showTab(name) {
 window.showTab = showTab;
 $("tabs").addEventListener("click", (e) => { const b = e.target.closest("[data-go]"); if (b) showTab(b.dataset.go); });
 
-// ── First-visit welcome ──
+// ── Experience level: "beginner" (default) or "pro". Changes presentation only, never the signals. ──
+function level() { return store.get("level", "beginner") === "pro" ? "pro" : "beginner"; }
+window.userLevel = level;
+function applyLevel() {
+  const lv = level();
+  document.body.dataset.level = lv;
+  document.querySelectorAll(".levelOpt").forEach((b) => { const on = b.dataset.level === lv && store.get("levelChosen", false); b.classList.toggle("on", on); b.setAttribute("aria-pressed", on); });
+  document.querySelector(".help").open = lv === "beginner";
+  render();
+}
+function chooseLevel(lv, fromWelcome) {
+  store.set("level", lv); store.set("levelChosen", true); store.set("welcomed", true);
+  $("welcome").hidden = true;
+  $("beginnerTips").hidden = !(lv === "beginner" && fromWelcome);
+  applyLevel();
+}
+document.addEventListener("click", (e) => {
+  const b = e.target.closest(".levelOpt");
+  if (b) chooseLevel(b.dataset.level, Boolean(b.closest("#welcome")));
+});
 if (!store.get("welcomed", false)) $("welcome").hidden = false;
-for (const id of ["welcomeOk", "welcomeClose"]) $(id).onclick = () => { store.set("welcomed", true); $("welcome").hidden = true; };
+$("welcomeClose").onclick = () => chooseLevel("beginner", true);
+for (const id of ["tipsOk", "tipsClose"]) $(id).onclick = () => { $("beginnerTips").hidden = true; };
+// Remember a beginner opening the technical details
+$("detail").addEventListener("toggle", (e) => { if (e.target.id === "techDetails" && level() === "beginner") store.set("techOpen", e.target.open); }, true);
 $("holdings").addEventListener("click", (e) => {
   const i = e.target.dataset.hrm;
   if (i != null) { holdings.splice(+i, 1); store.set("holdings", holdings); renderHoldings(); }
@@ -350,7 +373,7 @@ if (location.protocol !== "file:") {
   fetch("/api/config").then((r) => (r.ok ? r.json() : null)).then((c) => { if (c) { siteConfig = c; renderDetail(); window.onSiteConfig?.(c); } }).catch(() => {});
 }
 showTab(new URLSearchParams(location.search).has("pro_session") ? "ai" : store.get("tab", "signals"));
-render();
+applyLevel();
 syncCoinbase().then(refresh);
 setInterval(refresh, 60000);
 setInterval(() => location.protocol !== "file:" && syncCoinbase(), 120000);

@@ -116,6 +116,26 @@
   .proRestore { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 8px; font-size: 13px; }
   .proRestore input { flex: 1 1 180px; min-width: 0; font-size: 13px; padding: 5px 8px; } .proRestore button { font-size: 13px; padding: 5px 10px; }
   .proNote { margin-top: 8px; font-size: 13px; color: #f3d9a4; overflow-wrap: anywhere; }
+  /* ── experience level ── */
+  .levelPick { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px; }
+  .levelOpt { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; text-align: left; padding: 14px 16px; border-radius: 12px; border: 2px solid var(--border); background: var(--panel2); height: 100%; }
+  .levelOpt .big { font-size: 28px; } .levelOpt b { font-size: 17px; color: var(--text); } .levelOpt .muted { font-size: 14px; line-height: 1.4; }
+  .levelOpt.on { border-color: var(--accent); background: #0f2238; } .levelOpt.on b::after { content: "  ✓ selected"; color: var(--accent); font-size: 13px; }
+  .levelTable td:first-child { font-weight: 600; white-space: nowrap; } .levelTable td, .levelTable th { font-size: 14px; vertical-align: top; }
+  .techDetails > summary { cursor: pointer; font-weight: 700; font-size: 17px; margin: 22px 0 10px; list-style: none; }
+  .techDetails > summary::-webkit-details-marker { display: none; }
+  .techDetails > summary::before { content: "▸ "; color: var(--accent); } .techDetails[open] > summary::before { content: "▾ "; }
+  .drawToggle { display: none; margin-top: 10px; }
+  body[data-level="pro"] .forBeginner, body[data-level="beginner"] .forPro { display: none; }
+  body[data-level="pro"] .card .plain, body[data-level="pro"] .help, body[data-level="pro"] #beginnerTips { display: none; }
+  body[data-level="pro"] .grid { grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 8px; }
+  body[data-level="pro"] .card { padding: 12px; } body[data-level="pro"] .card .price { font-size: 18px; }
+  body[data-level="pro"] .techrow { font-size: 13px; }
+  body[data-level="pro"] table.tech td:nth-child(3), body[data-level="pro"] table.tech th:nth-child(3) { display: none; }
+  body[data-level="pro"] .chartBox canvas { height: 420px; }
+  body[data-level="beginner"] .card .techrow { display: none; }
+  body[data-level="beginner"] .drawToggle { display: inline-flex; }
+  body[data-level="beginner"] .drawBar:not(.show) { display: none; }
   /* ── research ── */
   .marketBar { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 14px; color: var(--dim); margin: 6px 0; }
   .marketBar[hidden] { display: none; } .marketBar b { color: var(--text); } .marketBar b.up { color: var(--buy); } .marketBar b.down { color: var(--sell); }
@@ -205,6 +225,7 @@
     <button data-go="alerts"><span class="ico">🔔</span><span>Alerts</span><b class="count" id="alCount" hidden></b></button>
     <button data-go="ai"><span class="ico">🤖</span><span>Ask AI</span></button>
     <button data-go="coins"><span class="ico">💼</span><span>My coins</span></button>
+    <button data-go="me"><span class="ico">👤</span><span>Me</span></button>
   </nav>
 
   <form id="lockBar" class="lock" hidden>
@@ -216,14 +237,24 @@
   <!-- ───────── Signals ───────── -->
   <section class="tab" data-tab="signals">
     <div id="welcome" class="welcome" hidden>
-      <button class="x" id="welcomeClose" aria-label="Close welcome">✕</button>
-      <h2>👋 Welcome! Here's how this works</h2>
+      <button class="x" id="welcomeClose" aria-label="Close and keep the default (new to trading)">✕</button>
+      <h2>👋 Welcome! Which describes you best?</h2>
+      <p class="muted" style="margin-bottom:10px">We'll set the app up to match. You can change this any time in the 👤 Me tab.</p>
+      <div class="levelPick">
+        <button class="levelOpt" data-level="beginner"><span class="big">🌱</span><b>I'm new to trading</b><span class="muted">Plain-English tips, short explanations of every term, and the extra detail tucked away until you want it.</span></button>
+        <button class="levelOpt" data-level="pro"><span class="big">📊</span><b>I'm an experienced trader</b><span class="muted">Indicator values up front, a denser layout, the drawing tools ready, and shorter, more technical AI answers.</span></button>
+      </div>
+    </div>
+    <div id="beginnerTips" class="welcome" hidden>
+      <button class="x" id="tipsClose" aria-label="Close tips">✕</button>
+      <h2>🌱 Here's how to use it</h2>
       <ol>
         <li><b>Tap a coin</b> to see whether its trend looks good, and why.</li>
         <li><b>Check the Buzz</b> to see what people are saying and how hyped it is.</li>
         <li><b>Set an alert</b> so you don't have to keep watching the price.</li>
+        <li>Stuck on a word? Open <b>"What do BUY, HOLD, SELL and the numbers mean?"</b> below, or ask the AI.</li>
       </ol>
-      <button class="primary" id="welcomeOk">Got it</button>
+      <button class="primary" id="tipsOk">Got it</button>
     </div>
 
     <div class="summary" id="summary">Loading live prices…</div>
@@ -297,10 +328,14 @@
     <div id="aiPanel">
       <div id="proBox" hidden></div>
       <div class="chips" id="aiChips">
-        <button data-q="Which coin looks best right now, and why?">Which coin looks best?</button>
-        <button data-q="Review my holdings: what looks risky and what would you consider doing?">Review my coins</button>
-        <button data-q="Explain today's signals like I'm a beginner.">Explain like I'm new</button>
-        <button data-q="Which coins are hyped right now, and is the hype a warning sign?">What's hyped?</button>
+        <button class="forBeginner" data-q="Which coin looks best right now, and why?">Which coin looks best?</button>
+        <button class="forBeginner" data-q="Review my holdings: what looks risky and what would you consider doing?">Review my coins</button>
+        <button class="forBeginner" data-q="Explain today's signals like I'm a beginner.">Explain like I'm new</button>
+        <button class="forBeginner" data-q="Which coins are hyped right now, and is the hype a warning sign?">What's hyped?</button>
+        <button class="forPro" data-q="Rank my coins by trend strength and momentum. Give RSI, distance from the 200-period average and MACD state for each.">Rank by trend + momentum</button>
+        <button class="forPro" data-q="For the open coin: key support and resistance, where the setup is invalidated, and the risk/reward to each level.">Levels + risk/reward</button>
+        <button class="forPro" data-q="Where do the trend signal, social sentiment and the Fear &amp; Greed index disagree right now, and which matters most?">Where signals disagree</button>
+        <button class="forPro" data-q="Review my holdings for concentration, drawdown risk and which positions are against the trend.">Portfolio risk check</button>
       </div>
       <div id="aiLog"></div>
       <form id="aiForm">
@@ -325,6 +360,27 @@
       <button id="hAdd" class="primary">+ Add</button>
     </div>
     <p class="muted" style="margin-top:6px">🔒 Your coins, alerts and drawings are saved only in this browser. Nothing you enter is sent to us.</p>
+  </section>
+
+  <!-- ───────── Me ───────── -->
+  <section class="tab" data-tab="me" hidden>
+    <h2>Your experience <span class="muted">pick the one that fits and the app adjusts</span></h2>
+    <div class="levelPick" id="levelPickMe">
+        <button class="levelOpt" data-level="beginner"><span class="big">🌱</span><b>I'm new to trading</b><span class="muted">Plain-English tips, short explanations of every term, and the extra detail tucked away until you want it.</span></button>
+        <button class="levelOpt" data-level="pro"><span class="big">📊</span><b>I'm an experienced trader</b><span class="muted">Indicator values up front, a denser layout, the drawing tools ready, and shorter, more technical AI answers.</span></button>
+      </div>
+    <div class="panel" style="margin-top:14px">
+      <h3 style="margin-bottom:8px">What changes</h3>
+      <div class="tablewrap"><table class="levelTable">
+        <tr><th></th><th>🌱 New to trading</th><th>📊 Experienced</th></tr>
+        <tr><td>Coin cards</td><td>A plain-English sentence for each coin</td><td>RSI, score and trend distance, more coins per screen</td></tr>
+        <tr><td>Technical details</td><td>Tucked away, with a "what it means" note on every number</td><td>Open by default, compact table</td></tr>
+        <tr><td>Chart drawing tools</td><td>Hidden until you tap "Draw on the chart"</td><td>Always showing</td></tr>
+        <tr><td>Help and glossary</td><td>Open, plus a short how-to on first visit</td><td>Out of the way</td></tr>
+        <tr><td>Ask AI</td><td>Simple words, terms explained, beginner questions</td><td>Short and technical, trader questions</td></tr>
+      </table></div>
+      <p class="muted" style="margin-top:8px">Both see the same signals and the same data. Saved in this browser only.</p>
+    </div>
   </section>
 
   <footer>
