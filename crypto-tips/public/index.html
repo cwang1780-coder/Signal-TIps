@@ -183,19 +183,24 @@
   /* Coin view: a panel beside the list (desktop), a full sheet (phone) */
   #detail { --dp: max(32px, calc((100vw - 1120px) / 2)); position: fixed; inset: 0; width: 100vw; margin: 0; z-index: 60; overflow-y: auto; overscroll-behavior: contain;
     border-radius: 0; padding: 0 var(--dp) 56px; background: var(--panel); }
-  #detail .detailHead { padding-top: 24px; }
+  #detail .detailHead { padding-top: 14px; }
   #detailScrim { display: none; }
   body.detailOpen { overflow: hidden; }
-  .dnav { position: sticky; top: 0; z-index: 3; display: flex; gap: 6px; align-items: center; margin: 0 calc(-1 * var(--dp)) 8px; padding: 12px var(--dp) 10px; background: var(--panel); border-bottom: 1px solid var(--border); scrollbar-width: none; }
-  .dnav::-webkit-scrollbar { display: none; }
-  .dnav button { min-height: 34px; padding: 0 14px; font-size: 14px; background: #fff; white-space: nowrap; }
-  .dnav button:hover { background: var(--alt); }
-  .dnav button[hidden] { display: none; }
-  .dnav button.on { background: var(--text); color: #fff; }
-  .dnav .dnav-close { background: #fff; color: var(--text); border: 1px solid var(--border); }
-  .dsec { padding-top: 6px; min-height: 50vh; } .dsec > h2:first-child, .dsec > :first-child > h2:first-child { margin-top: 12px; }
-  .dtabs { display: flex; gap: 6px; overflow-x: auto; flex: 1; min-width: 0; scrollbar-width: none; } .dtabs::-webkit-scrollbar { display: none; }
-  .dnav .dnav-close { flex: none; margin-left: 6px; }
+  .dnav { position: sticky; top: 0; z-index: 3; margin: 0 calc(-1 * var(--dp)) 4px; padding: 10px var(--dp) 0; background: var(--panel); border-bottom: 1px solid var(--border); }
+  .dnav-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 40px; }
+  .dback { min-height: 38px; padding: 0 14px; font-size: 15px; font-weight: 700; background: #fff; border: 1px solid var(--border); }
+  .dback:hover { background: var(--alt); }
+  .dmini { display: inline-flex; align-items: center; gap: 8px; min-width: 0; opacity: 0; transform: translateY(4px); transition: opacity .15s, transform .15s; pointer-events: none; white-space: nowrap; }
+  .dmini b { font-size: 15px; overflow: hidden; text-overflow: ellipsis; } .dmini-px { font-weight: 600; font-variant-numeric: tabular-nums; } .dmini .badge { padding: 1px 8px; }
+  #detail.scrolled .dmini { opacity: 1; transform: none; }
+  .dtabs { display: flex; gap: 26px; overflow-x: auto; scrollbar-width: none; margin-top: 4px; scroll-behavior: smooth; } .dtabs::-webkit-scrollbar { display: none; }
+  .dtabs button { flex: none; background: none; border-radius: 0; min-height: 46px; padding: 0 2px; display: inline-flex; align-items: center; gap: 7px; font-size: 15px; font-weight: 600; color: var(--dim); border-bottom: 3px solid transparent; white-space: nowrap; }
+  .dtabs button .i { width: 18px; height: 18px; }
+  .dtabs button:hover { color: var(--text); background: none; }
+  .dtabs button.on { color: var(--text); border-bottom-color: var(--accent); }
+  .dtabs button.on .i { color: var(--accent); }
+  .dtabs button[hidden] { display: none; }
+  .dtabs button:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
   #detail h2[id], #detail [id^="d-"], #techDetails { scroll-margin-top: 64px; }
   /* Trench */
   .trench-study { margin-bottom: 20px; }
@@ -499,7 +504,8 @@
     .card .name { display: block; margin-left: 0; }
     .card .coin-ic { --s: 28px !important; }
     #detail { --dp: 16px; padding-bottom: 40px; }
-    .dnav .dnav-close span { display: none; } .dnav .dnav-close { width: 36px; padding: 0; justify-content: center; }
+    .dtabs { gap: 20px; -webkit-mask-image: linear-gradient(90deg, #000 85%, transparent); mask-image: linear-gradient(90deg, #000 85%, transparent); padding-right: 30px; }
+    .dtabs button { font-size: 14px; } .dback span { display: none; } .dback { width: 40px; padding: 0; font-size: 18px; }
     .summary { font-size: 40px; line-height: 44px; }
     .hero { padding: 24px 0 32px; }
     .band { padding: 36px 0; }

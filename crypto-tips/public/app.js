@@ -281,13 +281,16 @@ function renderDetail() {
   el.style.display = "block";
   const bt = trackRecord(selected, r.candles);
   el.innerHTML = `
+    <nav class="dnav" aria-label="${coinName(selected) || selected} sections">
+      <div class="dnav-top">
+        <button class="dback" data-close aria-label="Back to all coins">← <span>All coins</span></button>
+        <span class="dmini" aria-hidden="true">${coinIcon(selected, 24)}<b>${coinName(selected) || selected}</b><span class="dmini-px">${fmt(r.price)}</span><span class="${actionClass(r.action)}">${r.action}</span></span>
+      </div>
+      <div class="dtabs" role="tablist">${DSECS.map(([id, t, ic]) => `<button role="tab" data-dtab="${id}">${icon(ic)}<span>${t}</span></button>`).join("")}</div>
+    </nav>
     <div class="row detailHead"><h2 style="margin:0">${coinIcon(selected, 44)}<span>${coinName(selected) || selected} <span class="muted">${selected}</span> · ${fmt(r.price)}</span></h2>
       <span class="${actionClass(r.action)}">${r.action}</span></div>
     <p style="margin-top:6px">${PLAIN[r.action]}</p>
-    <nav class="dnav" role="tablist" aria-label="Sections">
-      <div class="dtabs">${DSECS.map(([id, t]) => `<button role="tab" data-dtab="${id}">${t}</button>`).join("")}</div>
-      <button class="dnav-close" data-close aria-label="Close ${selected} details">✕<span> Close</span></button>
-    </nav>
     <section class="dsec" data-sec="overview">
     <div id="detailMove"></div>
     <div id="d-chart"></div>
@@ -318,10 +321,11 @@ function renderDetail() {
   syncJump();
 }
 // The coin view's sections, shown one at a time so there's no long scroll.
-const DSECS = [["overview", "Overview"], ["score", "Score"], ["pattern", "Pattern"], ["reasons", "Reasons"], ["history", "History"], ["track", "Track record"], ["news", "News & buzz"]];
+const DSECS = [["overview", "Overview", "gauge"], ["score", "Score", "bars"], ["pattern", "Pattern", "chart"], ["reasons", "Reasons", "search"], ["history", "History", "clock"], ["track", "Track record", "check"], ["news", "News & buzz", "news"]];
 let dTab = "overview", dTabSym = null;
 function showDTab(name) {
   dTab = name;
+  // Back to the top of the section, keeping the coin's header in view.
   $("detail").scrollTop = 0;
   syncJump();
   // A chart drawn while its tab was hidden has no size: redraw it now that it's visible.
@@ -412,8 +416,16 @@ function syncJump() {
     b.hidden = !s || empty(s);
     b.classList.toggle("on", b.dataset.dtab === dTab);
     b.setAttribute("aria-selected", b.dataset.dtab === dTab);
+    // On narrow screens, slide the chosen tab into view in the scrolling strip.
+    const c = b.parentElement;
+    if (b.dataset.dtab === dTab && (b.offsetLeft < c.scrollLeft || b.offsetLeft + b.offsetWidth > c.scrollLeft + c.clientWidth)) c.scrollLeft = b.offsetLeft - 24;
   });
 }
+// Show the mini coin header in the bar once the big header has scrolled away.
+$("detail").addEventListener("scroll", () => {
+  const h = $("detail").querySelector(".detailHead");
+  $("detail").classList.toggle("scrolled", !!h && $("detail").scrollTop > h.offsetTop + h.offsetHeight - 60);
+}, { passive: true });
 window.syncJump = syncJump;
 function closeDetail() {
   if (history.state?.coin) return history.back(); // the popstate handler below closes it
