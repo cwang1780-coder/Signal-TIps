@@ -243,6 +243,7 @@ function renderDetail() {
   // The coin view is a panel beside the list (a full sheet on phones), placed just under the pinned header.
   document.documentElement.style.setProperty("--top-h", $("top").getBoundingClientRect().bottom + "px");
   document.body.classList.add("detailOpen");
+  if (!history.state?.coin) history.pushState({ coin: selected }, ""); // so the phone's Back button closes the coin
   // Don't rebuild the chart in the middle of a drawing; the next refresh will catch up.
   if (window.Draw?.isBusy() && Draw.currentSym() === selected && el.style.display === "block") return;
   el.style.display = "block";
@@ -254,6 +255,7 @@ function renderDetail() {
     <nav class="dnav" aria-label="Jump to">
       ${[["d-move", "Why it's moving"], ["d-chart", "Chart"], ["d-why", "Score"], ["d-pattern", "Pattern"], ["d-reasons", "Reasons"], ["d-history", "History"], ["d-track", "Track record"], ["techDetails", "Details"], ["d-news", "News"]]
         .map(([id, t]) => `<button data-jump="${id}">${t}</button>`).join("")}
+      <button class="dnav-close" data-close aria-label="Close ${selected} details">✕ Close</button>
     </nav>
     <div id="detailMove"></div>
     <div id="d-chart"></div>
@@ -342,7 +344,7 @@ $("grid").addEventListener("click", (e) => {
 });
 $("grid").addEventListener("keydown", (e) => { if ((e.key === "Enter" || e.key === " ") && e.target.dataset.sym) { e.preventDefault(); e.target.click(); } });
 $("detail").addEventListener("click", (e) => {
-  if (e.target.id === "detailClose") return closeDetail();
+  if (e.target.id === "detailClose" || e.target.closest("[data-close]")) return closeDetail();
   const j = e.target.closest("[data-jump]");
   if (j) document.getElementById(j.dataset.jump)?.scrollIntoView({ behavior: "smooth", block: "start" });
 });
@@ -354,7 +356,11 @@ const TABS = ["signals", "trench", "buzz", "alerts", "ai", "coins", "learn", "me
 // Jump buttons in the coin view: hide the ones whose section isn't on screen (depends on mode and loaded data).
 function syncJump() { document.querySelectorAll(".dnav [data-jump]").forEach((b) => (b.hidden = !document.getElementById(b.dataset.jump))); }
 window.syncJump = syncJump;
-function closeDetail() { selected = null; render(); }
+function closeDetail() {
+  if (history.state?.coin) return history.back(); // the popstate handler below closes it
+  selected = null; render();
+}
+window.addEventListener("popstate", () => { if (selected && document.body.classList.contains("detailOpen")) { selected = null; render(); } });
 function showTab(name) {
   if (!TABS.includes(name)) name = "signals";
   document.querySelectorAll("section.tab").forEach((s) => (s.hidden = s.dataset.tab !== name));
