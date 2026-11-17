@@ -11,7 +11,7 @@ let coins = store.get("coins", DEFAULT_COINS);
 let holdings = store.get("holdings", []); // [{sym, amt, cost}]
 let results = {}; // sym -> analysis
 let cb = { holdings: [], cash: [], status: "" }; // synced from Coinbase via local server
-const allSyms = () => [...new Set([...coins, ...cb.holdings.map((h) => h.sym)])];
+const allSyms = () => [...new Set([...coins, ...cb.holdings.map((h) => h.sym), ...(window.walletHoldings?.() || []).map((h) => h.sym)])];
 let selected = null;
 let siteConfig = { coinbaseRef: null }; // from /api/config
 const btCache = {}; // sym -> {key, result}
@@ -138,7 +138,8 @@ const COIN_NAMES = {
 const COIN_COLORS_FB = { BTC: "#f7931a", ETH: "#627eea", SOL: "#9945ff", XRP: "#23292f", DOGE: "#c2a633", ADA: "#0033ad", AVAX: "#e84142", LINK: "#2a5ada", LTC: "#345d9d", DOT: "#e6007a", PEPE: "#3d9b41", SHIB: "#e2761b", SUI: "#4da2ff", NEAR: "#00c08b", ARB: "#28a0f0", OP: "#ff0420", APT: "#06b6a4", BONK: "#f7a600", HBAR: "#222222" };
 function coinIcon(sym, size = 36) {
   const s = String(sym).replace(/[^A-Z0-9]/gi, "").toUpperCase();
-  return `<span class="coin-ic" style="--s:${size}px;--c:${COIN_COLORS_FB[s] || "#5b616e"}"><img src="coins/${s.toLowerCase()}.svg" alt="" loading="lazy" onerror="this.parentNode.classList.add('fb');this.remove()" /><b>${s.slice(0, 4)}</b></span>`;
+  const has = !window.COIN_LOGOS || window.COIN_LOGOS.has(s.toLowerCase());
+  return `<span class="coin-ic${has ? "" : " fb"}" style="--s:${size}px;--c:${COIN_COLORS_FB[s] || "#5b616e"}">${has ? `<img src="coins/${s.toLowerCase()}.svg" alt="" loading="lazy" onerror="this.parentNode.classList.add('fb');this.remove()" />` : ""}<b>${s.slice(0, 4)}</b></span>`;
 }
 window.coinIcon = coinIcon;
 const coinName = (sym) => (COIN_NAMES[sym] && COIN_NAMES[sym] !== sym ? COIN_NAMES[sym] : "");
@@ -300,8 +301,9 @@ async function syncCoinbase(force) {
 function renderHoldings() {
   $("cbStatus").innerHTML = cb.status;
   const cash = cb.cash.filter((c) => c.amt >= 0.01).map((c) => `${c.amt.toLocaleString(undefined, { maximumFractionDigits: 2 })} ${c.sym}`).join(" · ");
-  $("cbCash").textContent = cash ? "Cash on Coinbase: " + cash : "";
-  const all = [...cb.holdings.map((h) => ({ ...h, src: "Coinbase" })), ...holdings.map((h, i) => ({ ...h, src: "Manual", idx: i }))];
+  const wcash = Object.entries(window.walletCash?.() || {}).map(([s, a]) => `${a.toLocaleString(undefined, { maximumFractionDigits: 2 })} ${s}`).join(" · ");
+  $("cbCash").textContent = [cash && "Cash on Coinbase: " + cash, wcash && "Stablecoins in your wallets: " + wcash].filter(Boolean).join("  ·  ");
+  const all = [...cb.holdings.map((h) => ({ ...h, src: "Coinbase" })), ...(window.walletHoldings?.() || []), ...holdings.map((h, i) => ({ ...h, src: "Manual", idx: i }))];
   if (!all.length) { $("holdings").innerHTML = `<tr><td class="muted">Nothing here yet. Add a coin you own below to see what it's worth and the signal for it.</td></tr>`; return; }
   let total = 0, totalCost = 0, costedValue = 0;
   const rows = all.map((h) => {

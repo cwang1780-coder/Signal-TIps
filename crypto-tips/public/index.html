@@ -150,6 +150,16 @@
   .pattern p { margin: 8px 0; }
   .pattern .stats div { background: var(--panel); }
   .verdict { font-size: 17px; margin: 14px 0 12px; padding: 14px 16px; border-radius: var(--r-md); background: var(--panel); }
+  .wallet-panel { margin-bottom: 16px; }
+  .wallet-panel h3 { display: flex; align-items: center; gap: 10px; font-size: 20px; margin-bottom: 12px; }
+  .privacy { background: #e3f4ea; color: #06331f; border-radius: var(--r-md); padding: 14px 18px; margin-bottom: 14px; font-size: 15px; }
+  .privacy ul { margin: 8px 0 0 18px; } .privacy li { margin: 4px 0; }
+  .wallets { list-style: none; margin-top: 8px; } .wallets li { display: flex; justify-content: space-between; gap: 10px; align-items: flex-start; padding: 12px 0; border-bottom: 1px solid var(--border); }
+  .wallets code { font-size: 13px; } .wbal { margin-top: 4px; display: flex; flex-wrap: wrap; gap: 4px 6px; align-items: center; font-variant-numeric: tabular-nums; }
+  #walletMsg:empty { display: none; } #walletMsg { margin-top: 8px; }
+  .botnote { display: flex; gap: 16px; align-items: center; background: var(--text); color: #fff; border-radius: var(--r-lg); padding: 20px 24px; margin-top: 24px; }
+  .botnote .bot-ico { font-size: 34px; } .botnote b { display: block; font-size: 17px; } .botnote span { color: #c9cfd8; }
+  .fgroup .soon { color: var(--dim); font: 400 16px/24px var(--font); }
   .trackline { background: #fff; border-radius: var(--r-md); padding: 16px 18px; font-size: 16px; }
   /* Beginner simplifications (experienced keeps everything) */
   body[data-level="beginner"] #tf { display: none; }
@@ -488,6 +498,8 @@
           </ul>
         </details>
         <div id="detail"></div>
+        <div class="botnote"><span class="bot-ico">🤖</span><div><b>Coming soon: the Signal Tips trading bot</b>
+          <span>We’re building a bot that can follow the signals you choose, with limits you set. It isn’t available yet, and nothing in this app trades for you today.</span></div></div>
       </div>
     </div>
   </section>
@@ -573,6 +585,29 @@
       <div class="wrap">
         <div class="section-head"><div><h2 class="display">My coins</h2>
         <p class="lead">What you own, what it's worth, and the signal for each.</p></div><div class="art-card"><img src="art/coins.svg" alt="" width="480" height="320" /></div></div>
+        <div class="panel wallet-panel">
+          <h3>Connect a wallet <span class="badge b-BUY">Read-only</span></h3>
+          <div class="privacy">
+            <b>🔒 We only need your public address. Nothing else.</b>
+            <ul>
+              <li>We <b>never</b> ask for your username, password, email or recovery phrase, and we don’t keep any of them.</li>
+              <li>A public address is the one you’d give someone to <b>receive</b> crypto. It’s already visible to anyone on the blockchain and <b>can’t be used to move your money</b>.</li>
+              <li>Your address is saved <b>only in this browser</b>. Our server looks up the balance on the public blockchain and forgets it. We don’t store or log addresses.</li>
+              <li>Remove a wallet any time with ✕.</li>
+            </ul>
+          </div>
+          <div class="tipbox forBeginner"><b>💡 Where do I find my address?</b><span>In <b>Exodus</b>: open the coin, tap <b>Receive</b>, then copy the address. In <b>MetaMask</b> or <b>Coinbase Wallet</b>: tap your account name to copy it, or use the Connect button. Coins held inside the Coinbase exchange app don’t have their own address: add those manually below.</span></div>
+          <form id="walletForm" class="addh">
+            <select id="walletNet" aria-label="Network"></select>
+            <input id="walletAddr" placeholder="Public address, e.g. bc1q… or 0x…" autocomplete="off" spellcheck="false" aria-label="Public wallet address" style="flex:1 1 260px" />
+            <input id="walletLabel" placeholder="Nickname (optional)" aria-label="Nickname" />
+            <button class="primary" type="submit">Connect</button>
+            <button type="button" id="walletBrowser" hidden>🦊 Connect browser wallet</button>
+          </form>
+          <p class="muted" id="walletMsg" aria-live="polite"></p>
+          <ul id="walletList" class="wallets"></ul>
+          <p class="muted small">Supported: Bitcoin, Ethereum (with USDC, USDT, DAI, LINK, UNI, SHIB, PEPE, AAVE, WBTC, POL, ARB), Solana, Litecoin, Dogecoin and XRP. <span id="walletStatus"></span></p>
+        </div>
         <div class="tipbox forBeginner"><b>💡 How to use this</b><span>Add each coin you own, or a pretend one for practice: the coin, how many, and the price you paid. The table shows what it’s worth now, whether you’re up or down, and the signal for it.</span></div>
         <div class="panel">
           <div class="row" style="margin-bottom:10px"><span class="muted" id="cbStatus"></span><button id="cbSync">Sync Coinbase</button></div>
@@ -584,7 +619,8 @@
             <input id="hCost" placeholder="Price you paid $ (optional)" type="number" step="any" aria-label="Average buy price" />
             <button id="hAdd" class="primary">+ Add</button>
           </div>
-          <p class="muted" style="margin-top:10px">🔒 Your coins, alerts and drawings are saved only in this browser. Nothing you enter is sent to us.</p>
+          <p class="muted" style="margin-top:10px">🔒 Your coins, alerts, drawings and wallet addresses are saved only in this browser. To show a wallet’s balance, its public address is looked up on the public blockchain through our server and then forgotten; we never store it.</p>
+          <p class="muted" style="margin-top:6px">🤖 <b>Coming soon:</b> we’re building a trading bot. It isn’t available yet, and this app never trades for you.</p>
         </div>
       </div>
     </div>
@@ -641,6 +677,8 @@
       <div class="disclosure-body">
         <p><b>DISCLOSURE STATEMENT</b></p>
         <p>Signal Tips shows automated technical indicators, public social media posts and news headlines for general information only. It does not know your situation and does not recommend any trade. Trading crypto assets may result in the loss of all invested capital. Past results, including the track records shown in the app, do not predict future results.</p>
+        <p>Connected wallets are read-only. We only ever ask for a public wallet address, never usernames, passwords, emails or recovery phrases, and we don’t store or log addresses. They are saved only in your browser.</p>
+        <p>We are building a trading bot. It is not available yet, and nothing on this site places trades for you.</p>
         <p>This site is not affiliated with Coinbase, Exodus, StockTwits, CoinGecko, alternative.me, Cointelegraph or Decrypt.</p>
       </div>
     </div>
@@ -666,12 +704,14 @@
       <div class="fgroup"><h4>Trade elsewhere</h4><ul>
         <li><a href="https://www.coinbase.com/" target="_blank" rel="noopener">Coinbase</a></li>
         <li><a href="https://www.exodus.com/" target="_blank" rel="noopener">Exodus</a></li>
-        <li><a href="https://www.tradingview.com/" target="_blank" rel="noopener">TradingView</a></li></ul></div>
+        <li><a href="https://www.tradingview.com/" target="_blank" rel="noopener">TradingView</a></li></ul>
+        <h4 style="margin-top:22px">Coming soon</h4><ul><li><span class="soon">🤖 Signal Tips trading bot</span></li></ul></div>
     </div>
     <div class="legal"><span>© 2026 Signal Tips</span><span class="dot">•</span><span>Not financial advice</span><span class="dot">•</span><span>Your data stays in your browser</span></div>
   </div>
 </footer>
 
+<script src="coins/list.js"></script>
 <script src="indicators.js"></script>
 <script src="draw.js"></script>
 <script src="app.js"></script>
@@ -680,6 +720,7 @@
 <script src="pro.js"></script>
 <script src="ai-chat.js"></script>
 <script src="learn.js"></script>
+<script src="wallets.js"></script>
 <div id="toasts" aria-live="polite"></div>
 </body>
 </html>

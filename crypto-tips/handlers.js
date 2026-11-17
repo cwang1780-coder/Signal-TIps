@@ -6,6 +6,7 @@ const ai = require("./ai.js");
 const { getSocial } = require("./social.js");
 const pro = require("./pro.js");
 const { getResearch } = require("./research.js");
+const wallet = require("./wallet.js");
 
 const ON_VERCEL = Boolean(process.env.VERCEL);
 let cache = { at: 0, data: null };
@@ -134,6 +135,28 @@ async function researchHandler(req, res) {
   }
 }
 
+// Public, read-only: balances for a PUBLIC wallet address. GET /api/wallet?chain=btc&address=...
+// Never takes usernames, passwords or recovery phrases. Addresses aren't stored or logged.
+async function walletHandler(req, res) {
+  const q = new URL(req.url, "http://x").searchParams;
+  const address = String(q.get("address") || "").trim().slice(0, 120);
+  let chain = String(q.get("chain") || "auto").toLowerCase();
+  const send = (status, body) => { res.writeHead(status, { "Content-Type": "application/json", "Cache-Control": "private, no-store" }); res.end(JSON.stringify(body)); };
+  if (!address) return send(400, { reason: "Paste a public wallet address." });
+  if (/\s/.test(address) || address.split(/\s+/).length > 1) return send(400, { reason: "That looks like more than one word. Paste only your public address, never your recovery phrase." });
+  if (chain === "auto") {
+    const found = wallet.detectChains(address);
+    if (!found.length) return send(400, { reason: "We couldn't recognise that address. Pick the network and check you copied the whole address." });
+    chain = found[0];
+  }
+  try {
+    send(200, await wallet.getWallet(chain, address));
+  } catch (e) {
+    console.error("[wallet]", chain, e.message); // the address itself is never logged
+    send(e.status || 502, { reason: e.status === 400 ? e.message : "Couldn't reach the blockchain lookup right now. Try again shortly." });
+  }
+}
+
 // Public site settings. COINBASE_REFERRAL_URL: your Coinbase affiliate link (must be an https coinbase.com link).
 async function configHandler(req, res) {
   let ref = null;
@@ -174,4 +197,4 @@ async function proHandler(req, res) {
   }
 }
 
-module.exports = { holdingsHandler, askHandler, socialHandler, configHandler, proHandler, researchHandler, authorize };
+module.exports = { holdingsHandler, askHandler, socialHandler, configHandler, proHandler, researchHandler, walletHandler, authorize };

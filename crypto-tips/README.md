@@ -53,6 +53,20 @@ Notes:
 - If Claude declines a question for safety reasons, the request is automatically retried on a fallback model.
 - To use a different model, set `AI_MODEL` (for example `AI_MODEL=claude-sonnet-5-5`, which is cheaper).
 
+## Connect a wallet (read-only)
+In **My coins**, people can add a wallet by its **public address** (the "receive" address), or tap **Connect browser wallet** for
+MetaMask or Coinbase Wallet, which shares only the address. The app shows that wallet's balances, values and signals.
+
+- **Supported:** Bitcoin, Ethereum (plus USDC, USDT, DAI, LINK, UNI, SHIB, PEPE, AAVE, WBTC, POL, ARB), Solana, Litecoin, Dogecoin and XRP.
+- **Never asked for:** usernames, passwords, emails, recovery phrases or private keys. Anything that looks like a recovery phrase or private key is refused and cleared in the browser before it is sent; the server refuses it too.
+- **Storage:** addresses are saved only in the visitor's browser. `/api/wallet` looks the address up on public blockchain explorers
+  (mempool.space, publicnode RPC, BlockCypher, xrplcluster), caches the result in memory for 60 seconds, and never writes or logs the address.
+- Stablecoins (USDC, USDT, DAI) are shown as cash rather than coins to trade.
+
+## Trading bot (coming soon)
+A trading bot that follows chosen signals within user-set limits is being built. It is not available yet; nothing in the app
+places trades. The app says this on the home page, in My coins, in the footer and in the disclosure statement.
+
 ## Images
 - **Coin logos:** `public/coins/` holds the [cryptocurrency-icons](https://github.com/spothq/cryptocurrency-icons) set (v0.18.1, CC0 public domain, 483 coins). A coin with no logo there shows its initials on a coloured circle instead.
 - **Section pictures:** `public/art/` holds original illustrations made for this app (signals, buzz, alerts, AI, coins, experience).
@@ -244,4 +258,4 @@ Type in what you hold on Coinbase, Exodus or any other wallet. The app shows the
 profit or loss, and the current tip for each coin. This data stays in your browser's localStorage.
 
 ## Tests
-    npm test   # indicators, Coinbase auth/parsing, AI request + endpoint (all offline, mocked APIs)
+    npm test   # indicators, Coinbase, AI, access rules, social, Stripe and wallet lookups (all offline, mocked APIs)

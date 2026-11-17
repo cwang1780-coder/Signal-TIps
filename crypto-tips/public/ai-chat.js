@@ -37,7 +37,7 @@
         reasons: r.reasons.map((x) => `${x.pts > 0 ? "+" : ""}${x.pts}: ${x.text}`),
       };
     }
-    const all = [...cb.holdings.map((h) => ({ ...h, source: "Coinbase" })), ...holdings.map((h) => ({ ...h, source: "Manual (e.g. Exodus)" }))];
+    const all = [...cb.holdings.map((h) => ({ ...h, source: "Coinbase" })), ...(window.walletHoldings?.() || []).map((h) => ({ ...h, source: "Connected wallet (read-only)" })), ...holdings.map((h) => ({ ...h, source: "Manual (e.g. Exodus)" }))];
     return {
       timeframe: $("tf").selectedOptions[0].textContent,
       selectedCoin: selected || null,
