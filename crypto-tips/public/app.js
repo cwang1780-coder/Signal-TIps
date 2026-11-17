@@ -362,7 +362,7 @@ function closeDetail() {
 }
 window.addEventListener("popstate", () => { if (selected && document.body.classList.contains("detailOpen")) { selected = null; render(); } });
 function showTab(name) {
-  if (!TABS.includes(name)) name = "signals";
+  if (!TABS.includes(name) || (name === "learn" && level() === "pro")) name = "signals";
   document.querySelectorAll("section.tab").forEach((s) => (s.hidden = s.dataset.tab !== name));
   document.querySelectorAll("#tabs button").forEach((b) => { const on = b.dataset.go === name; b.classList.toggle("on", on); b.setAttribute("aria-current", on ? "page" : "false"); });
   store.set("tab", name);
@@ -404,6 +404,8 @@ function applyLevel() {
   // Beginners use the long-term view only: it's the slowest-moving and easiest to follow.
   if (lv === "beginner" && $("tf").value !== "86400") { $("tf").value = "86400"; $("tf").dispatchEvent(new Event("change")); }
   window.renderAlertTypes?.();
+  // Learn is for beginners only: leave it if someone switches to experienced while on it.
+  if (lv === "pro" && !document.querySelector('.tab[data-tab="learn"]').hidden) showTab("signals");
   render();
 }
 // Open one coin's full view (used by the lessons' "Try it" buttons).
