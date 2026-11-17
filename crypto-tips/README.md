@@ -100,7 +100,7 @@ What testing showed: similar-pattern matches called the next move's direction ri
 
 At the top of every coin view: is it **doing well, badly or just mid** (from its 7-day and 30-day change), and what's behind it. The coin's week is split into the part the whole market explains (Bitcoin's move × how closely the coin usually follows it, measured over the last 90 candles) and its own part. The other clues are trading volume compared with the previous month, a break above its 30-day high or below its 30-day low, the long-term trend, headlines from the last 4 days, social buzz and trending searches. It describes the recent move; it doesn't forecast.
 
-## Trading simulator (Learn tab, beginners only)
+## Trading simulator (Practice tab, everyone)
 
 $1,000 of pretend money and 60 trading days, run like a real exchange:
 

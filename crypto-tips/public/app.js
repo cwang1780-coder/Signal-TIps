@@ -399,7 +399,7 @@ $("detailScrim").addEventListener("click", closeDetail);
 document.addEventListener("keydown", (e) => { if (e.key === "Escape" && selected && document.body.classList.contains("detailOpen")) closeDetail(); });
 
 // ── Tabs ──
-const TABS = ["signals", "trench", "buzz", "alerts", "ai", "coins", "learn", "me"];
+const TABS = ["signals", "trench", "buzz", "alerts", "ai", "coins", "sim", "learn", "me"];
 // Show the chosen section; hide tabs whose section is empty (depends on mode and loaded data).
 function syncJump() {
   if (selected !== dTabSym) { dTab = "overview"; dTabSym = selected; } // a new coin starts on Overview

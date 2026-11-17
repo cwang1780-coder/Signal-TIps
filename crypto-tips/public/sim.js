@@ -95,6 +95,7 @@
   const qtyf = (q) => q >= 1000 ? q.toLocaleString(undefined, { maximumFractionDigits: 0 }) : q >= 1 ? q.toFixed(3) : q.toPrecision(4);
   const best = () => { try { return store.get("simBest", {}); } catch { return {}; } };
   let g = null, timer = null, side = "buy", otype = "market", lastId = null;
+  let chip = null; // {f, text}: a 25/50/75/Max chip the amount came from, so Max sells everything even if the price moved
 
   // ── game state ──
   function begin(mode, data) {
@@ -146,17 +147,21 @@
   const slip = () => 1 + Math.random() * Math.min(0.004, 0.0008 + vol() * 0.03); // bigger in wilder markets
 
   function placeOrder() {
-    const amt = parseFloat(root.querySelector("#tkAmt").value.replace(/[$,]/g, ""));
-    const msg = (t) => { root.querySelector("#tkMsg").textContent = t; };
-    if (!(amt >= 1)) return msg("Enter an amount of at least $1.");
+    const input = root.querySelector("#tkAmt").value;
+    const msg = (t, bad) => { const m = root.querySelector("#tkMsg"); m.textContent = t; m.classList.toggle("bad", !!bad); };
+    if (side === "sell" && freeCoins() <= 0) return msg("You don't own any coins yet. Buy first, then you can sell.", true);
+    if (side === "buy" && freeCash() < 1) return msg("You have no free cash left. Sell some coins first.", true);
+    // From a chip: use that share of what you have right now (Max = all of it).
+    const f = chip && chip.text === input ? chip.f : null;
+    const amt = f ? (side === "buy" ? freeCash() * f : freeCoins() * bid() * f) : parseFloat(input.replace(/[$,]/g, ""));
+    if (!(amt >= 1)) return msg("Type an amount in dollars, or tap 25%, 50%, 75% or Max.", true);
     if (otype === "market") {
       if (side === "buy") {
         if (amt > freeCash() + 0.005) return msg(`You only have ${usd(freeCash())} free cash.`);
         const px = ask() * slip(), qty = Math.min(amt, freeCash()) / (px * (1 + FEE.taker));
         fill("buy", qty, px, "market");
       } else {
-        const qty = Math.min(amt / bid(), freeCoins());
-        if (qty <= 0) return msg("You don't have any coins to sell.");
+        const qty = f ? freeCoins() * f : Math.min(amt / bid(), freeCoins());
         fill("sell", qty, bid() / slip(), "market");
       }
     } else {
@@ -167,14 +172,14 @@
         if (lim >= ask()) return msg("That's at or above the current price: use a market order to buy now.");
         g.orders.push({ id: g.nextId++, side: "buy", lim, usd: Math.min(amt, freeCash()), qty: Math.min(amt, freeCash()) / (lim * (1 + FEE.maker)) });
       } else {
-        const qty = Math.min(amt / lim, freeCoins());
-        if (qty <= 0) return msg("You don't have any coins to sell.");
+        const qty = f ? freeCoins() * f : Math.min(amt / lim, freeCoins());
         if (lim <= bid()) return msg("That's at or below the current price: use a market order to sell now.");
         g.orders.push({ id: g.nextId++, side: "sell", lim, qty });
       }
     }
-    root.querySelector("#tkAmt").value = "";
-    msg(otype === "market" ? "Filled." : "Order placed. It fills if the price gets there.");
+    root.querySelector("#tkAmt").value = ""; chip = null;
+    const last = g.log[0];
+    msg(otype === "market" ? `Filled: ${last.side === "Buy" ? "bought" : "sold"} ${qtyf(last.qty)} coins at ${pxf(last.px)}.` : "Order placed. It fills if the price gets there.");
     update();
   }
 
@@ -358,7 +363,8 @@
       <div class="kv"><span>Worth now (at bid)</span><b>${usd(g.coins * bid())}</b></div>
       <div class="kv"><span>Open profit/loss</span><b class="${unreal >= 0 ? "up" : "down"}">${unreal >= 0 ? "+" : "−"}${usd(Math.abs(unreal))} (${pct(unreal / g.cost)})</b></div>
       <div class="kv"><span>Realised so far</span><b class="${g.realized >= 0 ? "up" : "down"}">${g.realized >= 0 ? "+" : "−"}${usd(Math.abs(g.realized))}</b></div>
-      <div class="kv"><span>Fees paid</span><b>${usd(g.fees)}</b></div>`
+      <div class="kv"><span>Fees paid</span><b>${usd(g.fees)}</b></div>
+      <button class="sellall" data-sellall>Sell all now (market order)</button>`
       : `<p class="muted small">No coins yet. ${g.realized ? `Realised: <b class="${g.realized >= 0 ? "up" : "down"}">${g.realized >= 0 ? "+" : "−"}${usd(Math.abs(g.realized))}</b> · ` : ""}Fees paid: ${usd(g.fees)}</p>`);
     const ords = [...g.orders.map((o) => `<li><span>${o.side === "buy" ? "Buy" : "Sell"} limit at ${pxf(o.lim)} · ${o.side === "buy" ? usd(o.usd) : qtyf(o.qty) + " coins"}</span><button class="x" data-cancel="${o.id}" aria-label="Cancel order">✕</button></li>`),
       ...(g.sl ? [`<li><span class="down">Stop-loss at ${pxf(g.sl)}</span><button class="x" data-cancel="sl" aria-label="Cancel stop-loss">✕</button></li>`] : []),
@@ -374,6 +380,11 @@
     const atPx = otype === "limit" ? parseFloat(root.querySelector("#tkLimit").value) || 0 : side === "buy" ? ask() : bid();
     put("#tkEst", amt && atPx ? `≈ ${qtyf(side === "buy" ? amt / (atPx * (1 + rate)) : amt / atPx)} coins at ${pxf(atPx)}${otype === "market" ? " + slippage" : ""} · fee ${usd(amt * rate)} (${(rate * 100).toFixed(1)}%)`
       : `Available: ${side === "buy" ? usd(freeCash()) + " cash" : qtyf(freeCoins()) + " coins (" + usd(freeCoins() * bid()) + ")"}`);
+    // The big button says what will happen, and can't be pressed when there's nothing to trade.
+    const go = root.querySelector("#tkGo"), none = side === "sell" ? freeCoins() <= 0 : freeCash() < 1;
+    const goText = none ? (side === "sell" ? "No coins to sell yet" : "No free cash") : `${otype === "limit" ? "Place limit " : ""}${side === "buy" ? "Buy" : "Sell"}`;
+    if (go.textContent !== goText) go.textContent = goText;
+    go.disabled = none;
     const slb = root.querySelector('[data-sim="sl"]'), tpb = root.querySelector('[data-sim="tp"]');
     slb.textContent = g.sl ? "Update" : "Set"; tpb.textContent = g.tp ? "Update" : "Set";
     slb.disabled = tpb.disabled = !g.coins;
@@ -423,9 +434,16 @@
     if (n) return newGame(n.dataset.simNew);
     if (!g || g.over) return;
     const sd = e.target.closest("[data-side]"), ty = e.target.closest("[data-type]"), pc = e.target.closest("[data-pct]"), cx = e.target.closest("[data-cancel]");
-    if (sd) { side = sd.dataset.side; if (otype === "limit") root.querySelector("#tkLimit").value = ""; syncTicket(); return update(); }
+    if (sd) { side = sd.dataset.side; chip = null; root.querySelector("#tkAmt").value = ""; if (otype === "limit") root.querySelector("#tkLimit").value = ""; syncTicket(); return update(); }
     if (ty) { otype = ty.dataset.type; root.querySelector("#tkLimit").value = ""; syncTicket(); return update(); }
-    if (pc) { const f = +pc.dataset.pct; root.querySelector("#tkAmt").value = (side === "buy" ? freeCash() * f : freeCoins() * bid() * f).toFixed(2); return update(); }
+    if (pc) { const f = +pc.dataset.pct, text = (side === "buy" ? freeCash() * f : freeCoins() * bid() * f).toFixed(2); root.querySelector("#tkAmt").value = text; chip = { f, text }; return update(); }
+    if (e.target.closest("[data-sellall]")) {
+      if (g.coins <= 0) return;
+      g.orders = g.orders.filter((o) => o.side !== "sell");
+      fill("sell", g.coins, bid() / slip(), "market");
+      root.querySelector("#tkMsg").textContent = `Sold everything at ${pxf(g.log[0].px)}.`;
+      return update();
+    }
     if (cx) { const id = cx.dataset.cancel; if (id === "sl") g.sl = null; else if (id === "tp") g.tp = null; else g.orders = g.orders.filter((o) => String(o.id) !== id); return update(); }
     if (e.target.id === "tkGo") return placeOrder();
     const a = e.target.closest("button[data-sim]");
@@ -443,7 +461,7 @@
       msg(k === "sl" ? `Stop-loss set at ${pxf(v)}.` : `Take-profit set at ${pxf(v)}.`); update();
     }
   });
-  root.addEventListener("input", (e) => { if (e.target.id === "tkAmt" || e.target.id === "tkLimit") update(); });
+  root.addEventListener("input", (e) => { if (e.target.id === "tkAmt") chip = null; if (e.target.id === "tkAmt" || e.target.id === "tkLimit") update(); });
   root.addEventListener("keydown", (e) => { if (e.key === "Enter" && (e.target.id === "tkAmt" || e.target.id === "tkLimit")) { e.preventDefault(); placeOrder(); } });
   window.addEventListener("resize", () => g && drawChart());
   // Pause when the Learn tab isn't showing.

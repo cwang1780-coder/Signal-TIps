@@ -67,7 +67,10 @@
   .brand { display: flex; align-items: center; gap: 10px; text-decoration: none; color: var(--text); font-weight: 700; font-size: 18px; white-space: nowrap; }
   .brand img { border-radius: 12px; }
   .tabs { display: flex; align-items: center; gap: 2px; }
-  .tabs button { background: none; position: relative; padding: 0 20px; font-size: 16px; }
+  .tabs button { background: none; position: relative; padding: 0 20px; font-size: 16px; white-space: nowrap; }
+  .header .pill, .header select { white-space: nowrap; }
+  @media (max-width: 1440px) { .tabs button { padding: 0 12px; } .header { gap: 14px; } }
+  @media (max-width: 1240px) { .tabs button { padding: 0 9px; font-size: 15px; } .brand span { display: none; } }
   .tabs button:hover { background: var(--alt); }
   .tabs button.on { background: var(--alt); }
   .tabs .ico { display: none; }
@@ -256,7 +259,10 @@
   .quote { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; } .quote > span { background: var(--panel); border-radius: 12px; padding: 6px 10px; display: flex; flex-direction: column; font-size: 12px; } .quote b { font-size: 16px; font-variant-numeric: tabular-nums; }
   .chips { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; } .chips button { min-height: 32px; font-size: 13px; padding: 0; }
   .tk-go { min-height: 46px; font-size: 16px; font-weight: 700; color: #fff; } .tk-go.buy { background: var(--buy); } .tk-go.sell { background: var(--sell); }
-  .tk-msg { min-height: 18px; color: var(--dim); }
+  .tk-msg { min-height: 18px; color: var(--dim); } .tk-msg.bad { color: var(--sell); font-weight: 600; }
+  .tk-go:disabled { opacity: .45; cursor: default; }
+  .sellall { width: 100%; margin-top: 10px; min-height: 40px; font-size: 14px; background: #fbe7e9; color: var(--sell); font-weight: 700; }
+  .section-head.compact { grid-template-columns: minmax(0, 1fr); margin-bottom: 18px; }
   .tk-row { display: flex; gap: 6px; } .tk-row button { min-height: 42px; flex: none; }
   .protect b { font-size: 15px; color: var(--text); } .protect button:disabled { opacity: .45; }
   .sim-panels { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
@@ -523,6 +529,7 @@
       <button data-go="alerts"><span class="ico"><i data-i="bell"></i></span><span>Alerts</span><b class="count" id="alCount" hidden></b></button>
       <button data-go="ai"><span class="ico"><i data-i="sparkle"></i></span><span>Ask AI</span></button>
       <button data-go="coins"><span class="ico"><i data-i="wallet"></i></span><span>My coins</span></button>
+      <button data-go="sim"><span class="ico"><i data-i="game"></i></span><span>Practice</span></button>
       <button data-go="learn" class="forBeginner"><span class="ico"><i data-i="cap"></i></span><span>Learn</span></button>
       <button data-go="me"><span class="ico"><i data-i="user"></i></span><span>Me</span></button>
     </nav>
@@ -766,16 +773,25 @@
     </div>
   </section>
 
+  <!-- ───────── Practice: trading simulator (everyone) ───────── -->
+  <section class="tab" data-tab="sim" hidden>
+    <div class="band alt">
+      <div class="wrap">
+        <div class="section-head compact"><div><h2 class="display">Practice</h2>
+          <p class="lead">Trade with $1,000 of pretend money on real past prices or made-up scenarios: market and limit orders, the spread, fees, stop-losses and take-profits. Nothing here is real money.</p></div></div>
+        <div class="panel simgame" id="simWrap"><div id="simGame"></div></div>
+      </div>
+    </div>
+  </section>
+
   <!-- ───────── Learn (beginners) ───────── -->
   <section class="tab" data-tab="learn" hidden>
     <div class="band alt">
       <div class="wrap narrow">
         <div class="section-head"><div><h2 class="display">Learn to trade</h2>
-          <p class="lead">Practise in the trading simulator with pretend money, then take seven short lessons (about 20 minutes). Each lesson ends with one quick question.</p>
+          <p class="lead">Seven short lessons, about 20 minutes in total. Each ends with one quick question. Then try what you learned in the <button class="linkbtn" data-go="sim">trading simulator</button>.</p>
           <div class="learnProgress" id="learnProgress"></div></div>
           <div class="art-card"><img src="art/learn.svg" alt="" width="480" height="320" /></div></div>
-        <div class="panel simgame" id="simWrap"><h2 class="sim-title"><i data-i="game"></i> Trading simulator <span class="muted">practise with pretend money</span></h2><div id="simGame"></div></div>
-        <h2 class="subh" style="margin-top:28px">Lessons</h2>
         <div id="learnList" class="lessons"></div>
         <p class="muted" style="margin-top:16px">Lessons are general education, not financial advice. Your progress is saved in this browser.</p>
       </div>
@@ -836,7 +852,7 @@
         <li><button data-go="ai">Ask AI</button></li><li><button data-go="coins">My coins</button></li><li><button data-go="me">Beginner or experienced</button></li></ul></div>
       <div class="fgroup"><h4>Learn</h4><ul>
         <li><button data-open-help>What BUY, HOLD and SELL mean</button></li><li><button data-open-help>Glossary of terms</button></li>
-        <li><button data-go="ai">Ask the AI a question</button></li><li class="forBeginner"><button data-go="learn">Learn to trade (lessons)</button></li></ul></div>
+        <li><button data-go="ai">Ask the AI a question</button></li><li><button data-go="sim">Trading simulator</button></li><li class="forBeginner"><button data-go="learn">Learn to trade (lessons)</button></li></ul></div>
       <div class="fgroup"><h4>Data sources</h4><ul>
         <li><a href="https://docs.cdp.coinbase.com/exchange/" target="_blank" rel="noopener">Coinbase market data</a></li>
         <li><a href="https://stocktwits.com/" target="_blank" rel="noopener">StockTwits</a></li>
