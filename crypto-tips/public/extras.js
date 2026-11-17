@@ -57,7 +57,7 @@
   function renderAlerts() {
     const typeSel = $("alType").value;
     $("alValue").hidden = !TYPES[typeSel].needsValue;
-    $("alValue").placeholder = TYPES[typeSel].needsValue === "%" ? "e.g. 5" : "Price $";
+    $("alValue").placeholder = TYPES[typeSel].needsValue === "%" ? "e.g. 5" : `Price in ${Currency.code}`;
     const syms = allSyms();
     const cur = $("alSym").value;
     $("alSym").innerHTML = syms.map((s) => `<option${s === cur ? " selected" : ""}>${s}</option>`).join("");
@@ -96,7 +96,8 @@
   $("alType").onchange = renderAlerts;
   $("alForm").addEventListener("submit", (e) => {
     e.preventDefault();
-    const type = $("alType").value, sym = $("alSym").value, value = parseFloat($("alValue").value);
+    const type = $("alType").value, sym = $("alSym").value, typed = parseFloat($("alValue").value);
+    const value = TYPES[type].needsValue === "$" ? Currency.toUsd(typed) : typed; // prices are stored in USD
     if (!sym || (TYPES[type].needsValue && !(value > 0))) { $("alValue").focus(); return; }
     alerts.push({ id: Date.now().toString(36), sym, type, value: TYPES[type].needsValue ? value : null, triggeredAt: null });
     $("alValue").value = "";
@@ -216,6 +217,7 @@
   window.renderDetailSocial = renderDetailSocial;
 
   // Hooks from app.js
+  document.addEventListener("currency-changed", () => renderAlerts());
   document.addEventListener("prices-updated", () => {
     renderAlerts(); checkAlerts();
     const missing = allSyms().slice(0, 15).some((s) => !(s in (social.coins || {})));

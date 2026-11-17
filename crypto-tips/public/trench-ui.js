@@ -5,7 +5,7 @@
   let data = null, stats = null, onlyCoinbase = store.get("trenchCB", false), loadedAt = 0;
   const pc = (x) => Math.round(x * 100) + "%";
   const sgn = (x) => (x >= 0 ? "+" : "") + x.toFixed(1) + "%";
-  const money = (n) => n >= 1e9 ? "$" + (n / 1e9).toFixed(1) + "B" : n >= 1e6 ? "$" + (n / 1e6).toFixed(1) + "M" : "$" + Math.round(n / 1e3) + "K";
+  const money = (n) => Currency.compact(n);
   const BUCKET_TXT = { surge30to60: "Coins that rose 30–60% in a week", surge60to100: "Coins that rose 60–100% in a week", surgeOver100: "Coins that more than doubled in a week" };
 
   function momentum(x) {
@@ -81,4 +81,5 @@
   $("trenchRefresh").onclick = () => load(true);
   window.loadTrench = load;
   setInterval(() => { if (!document.querySelector('[data-tab="trench"]').hidden) load(true); }, 5 * 60000);
+  document.addEventListener("currency-changed", () => { if (typeof data !== "undefined" && data) render2(); });
 })();

@@ -65,7 +65,7 @@
     el.hidden = false;
     const f = d.fearGreed, g = d.global, parts = [];
     if (f?.value != null) parts.push(`<span title="The Fear &amp; Greed index: 0 is extreme fear, 100 is extreme greed. A week ago it was ${f.weekAgo ?? "?"}.">Market mood <b class="${moodClass(f.value)}">${esc(f.label)} · ${f.value}/100</b></span>`);
-    if (g?.marketCapUsd) parts.push(`<span title="The combined value of all cryptocurrencies">All crypto <b>$${(g.marketCapUsd / 1e12).toFixed(2)}T</b>${g.change24hPct != null ? ` <b class="${g.change24hPct >= 0 ? "up" : "down"}">${g.change24hPct >= 0 ? "+" : ""}${g.change24hPct}% today</b>` : ""}</span>`);
+    if (g?.marketCapUsd) parts.push(`<span title="The combined value of all cryptocurrencies">All crypto <b>${Currency.compact(g.marketCapUsd)}</b>${g.change24hPct != null ? ` <b class="${g.change24hPct >= 0 ? "up" : "down"}">${g.change24hPct >= 0 ? "+" : ""}${g.change24hPct}% today</b>` : ""}</span>`);
     if (g?.btcDominancePct != null) parts.push(`<span title="Bitcoin's share of the whole crypto market. A rising share usually means money is leaving smaller coins.">Bitcoin's share <b>${g.btcDominancePct}%</b></span>`);
     el.innerHTML = parts.join("");
   }
@@ -421,5 +421,6 @@
   window.renderResearch = renderResearch;
 
   document.addEventListener("prices-updated", () => { loadResearch(""); renderMarket(); });
+  document.addEventListener("currency-changed", () => { renderMarket(); if (selected) renderResearch(selected); });
   renderMarket();
 })();

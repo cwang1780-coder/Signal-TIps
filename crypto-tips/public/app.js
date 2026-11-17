@@ -64,7 +64,8 @@ function showLock(message) {
 }
 
 const $ = (id) => document.getElementById(id);
-const fmt = (n) => n == null ? "—" : "$" + (n >= 1 ? n.toLocaleString(undefined, { maximumFractionDigits: 2 }) : n.toPrecision(4));
+// Prices are USD internally; shown in the visitor's chosen currency (currency.js).
+const fmt = (n) => Currency.fmt(n);
 const pct = (n) => (n >= 0 ? "+" : "") + (n * 100).toFixed(2) + "%";
 const actionClass = (a) => "badge b-" + a.replace(" ", ".");
 
@@ -512,7 +513,8 @@ $("addSym").onclick = async () => {
   document.dispatchEvent(new Event("prices-updated"));
 };
 $("hAdd").onclick = async () => {
-  const sym = $("hSym").value.trim().toUpperCase(), amt = parseFloat($("hAmt").value), cost = parseFloat($("hCost").value) || 0;
+  // The price you paid is typed in your currency and stored in USD, like everything else.
+  const sym = $("hSym").value.trim().toUpperCase(), amt = parseFloat($("hAmt").value), cost = Currency.toUsd(parseFloat($("hCost").value) || 0);
   if (!/^[A-Z0-9]{1,15}$/.test(sym) || !(amt > 0)) return;
   holdings.push({ sym, amt, cost }); store.set("holdings", holdings);
   if (!coins.includes(sym)) { coins.push(sym); store.set("coins", coins); }
@@ -530,6 +532,21 @@ $("lockBar").addEventListener("submit", (e) => {
   syncCoinbase(true);
 });
 $("tf").onchange = () => { results = {}; render(); refresh(); };
+// Currency picker (header and Me tab)
+function syncCurrency() {
+  document.querySelectorAll(".curSel").forEach((s) => {
+    const short = s.classList.contains("curTop"); // the header box shows just the code; the Me tab shows names
+    const opts = Currency.list().map((c) => `<option value="${c}" title="${Currency.names[c]}">${short ? c : c + " · " + Currency.names[c]}</option>`).join("");
+    if (s.dataset.opts !== opts) { s.innerHTML = opts; s.dataset.opts = opts; }
+    s.value = Currency.chosen;
+  });
+  $("hCost").placeholder = `Price you paid per coin, ${Currency.code} (optional)`;
+  $("curNote").textContent = Currency.code === "USD" ? "Prices are in US dollars, straight from Coinbase's USD markets."
+    : `Prices come from Coinbase's US-dollar markets and are converted at today's rate (1 USD = ${Currency.toLocal(1).toFixed(4)} ${Currency.code}). Coinbase's own ${Currency.code} prices can differ by a fraction of a percent.`;
+}
+document.addEventListener("change", (e) => { if (e.target.classList.contains("curSel")) Currency.set(e.target.value); });
+document.addEventListener("currency-changed", () => { syncCurrency(); render(); });
+syncCurrency();
 window.addEventListener("resize", () => selected && renderDetail());
 
 if (location.protocol !== "file:") {

@@ -26,7 +26,7 @@
   const load = (s) => { try { return JSON.parse(localStorage.getItem(key(s))) || []; } catch { return []; } };
   const persist = () => { try { localStorage.setItem(key(sym), JSON.stringify(drawings)); } catch {} };
   const snapshot = () => { history.push(JSON.stringify(drawings)); if (history.length > 50) history.shift(); };
-  const fmtP = (p) => "$" + (p >= 1 ? p.toLocaleString(undefined, { maximumFractionDigits: 2 }) : p.toPrecision(4));
+  const fmtP = (p) => Currency.fmt(p);
 
   function scales() {
     const W = canvas.clientWidth, H = canvas.clientHeight;

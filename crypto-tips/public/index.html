@@ -69,6 +69,10 @@
   .tabs { display: flex; align-items: center; gap: 2px; }
   .tabs button { background: none; position: relative; padding: 0 20px; font-size: 16px; white-space: nowrap; }
   .header .pill, .header select { white-space: nowrap; }
+  .curTop { width: auto; min-width: 84px; font-weight: 700; }
+  @media (max-width: 400px) { #refresh { display: none; } }
+  @media (max-width: 480px) { .header-right { gap: 6px; } .curTop { min-width: 0; padding-left: 10px; padding-right: 24px; } #tf { max-width: 128px; padding-left: 12px; padding-right: 24px; text-overflow: ellipsis; } }
+  .curTop option { font-weight: 400; }
   @media (max-width: 1440px) { .tabs button { padding: 0 12px; } .header { gap: 14px; } }
   @media (max-width: 1240px) { .tabs button { padding: 0 9px; font-size: 15px; } .brand span { display: none; } }
   .tabs button:hover { background: var(--alt); }
@@ -546,6 +550,8 @@
         <option value="21600">Medium · 6h</option>
         <option value="3600">Short-term · 1h</option>
       </select>
+      <label class="sr-only" for="curTop">Currency</label>
+      <select id="curTop" class="curSel curTop" title="Show prices in this currency"></select>
       <button id="refresh" class="icon-btn" title="Refresh prices now" aria-label="Refresh prices now">↻</button>
       <button class="primary pill hide-sm" data-go="ai">Ask AI</button>
       <button class="icon-btn menu-toggle" id="menuToggle" aria-label="Open menu" aria-expanded="false" aria-controls="tabs">
@@ -815,6 +821,11 @@
           <button class="levelOpt" data-level="pro"><span class="big"><i data-i="bars"></i></span><b>I'm an experienced trader</b><span class="muted">Indicator values up front, a denser layout, the drawing tools ready, and shorter, more technical AI answers.</span></button>
         </div>
         <div class="panel" style="margin-top:16px">
+          <h3 style="margin-bottom:6px">Currency</h3>
+          <div class="row" style="justify-content:flex-start;gap:12px;flex-wrap:wrap"><label for="curMe" class="muted">Show prices in</label><select id="curMe" class="curSel"></select></div>
+          <p class="muted small" id="curNote" style="margin-top:8px"></p>
+        </div>
+        <div class="panel" style="margin-top:16px">
           <h3 style="margin-bottom:10px">What changes</h3>
           <div class="tablewrap"><table class="levelTable">
             <tr><th></th><th>New to trading</th><th>Experienced</th></tr>
@@ -876,6 +887,7 @@
 </footer>
 
 <script src="icons.js"></script>
+<script src="currency.js"></script>
 <script src="coins/list.js"></script>
 <script src="indicators.js"></script>
 <script src="draw.js"></script>

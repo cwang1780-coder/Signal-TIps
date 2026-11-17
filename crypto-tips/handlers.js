@@ -196,6 +196,20 @@ async function candlesHandler(req, res) {
   }
 }
 
+// Exchange rates (1 USD = x), so prices can be shown in the visitor's currency. Coinbase's public rates, cached 1 hour.
+const FX_CODES = ["USD", "CAD", "EUR", "GBP", "AUD", "NZD", "JPY", "INR", "MXN", "BRL", "PHP", "NGN", "ZAR", "CHF", "SGD", "HKD", "KRW", "TRY", "SEK", "NOK", "PLN", "AED"];
+let fxCache = { at: 0, rates: null };
+async function getFx() {
+  if (fxCache.rates && Date.now() - fxCache.at < 3600_000) return fxCache.rates;
+  try {
+    const r = await fetch("https://api.coinbase.com/v2/exchange-rates?currency=USD", { headers: { "User-Agent": "signal-tips/1.0" }, signal: AbortSignal.timeout(6000) });
+    const all = (await r.json())?.data?.rates || {};
+    const rates = Object.fromEntries(FX_CODES.filter((c) => +all[c] > 0).map((c) => [c, +(+all[c]).toPrecision(8)]));
+    if (rates.CAD) fxCache = { at: Date.now(), rates };
+  } catch (e) { console.error("[fx]", e.message); }
+  return fxCache.rates;
+}
+
 // Public site settings. COINBASE_REFERRAL_URL: your Coinbase affiliate link (must be an https coinbase.com link).
 async function configHandler(req, res) {
   let ref = null;
@@ -209,7 +223,7 @@ async function configHandler(req, res) {
     catch (e) { console.error("[pro] price lookup failed:", e.message); }
   }
   res.writeHead(200, { "Content-Type": "application/json", "Cache-Control": "public, max-age=300" });
-  res.end(JSON.stringify({ coinbaseRef: ref, pro: proInfo }));
+  res.end(JSON.stringify({ coinbaseRef: ref, pro: proInfo, fx: await getFx(), fxUpdated: fxCache.at || null }));
 }
 
 // Pro subscription endpoints: /api/pro?action=checkout|activate|status|portal
