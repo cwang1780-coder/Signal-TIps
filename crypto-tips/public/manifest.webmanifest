@@ -1,10 +1,24 @@
 {
-  "name": "Crypto Signal Tips",
+  "name": "Signal Tips: crypto signals",
   "short_name": "Signal Tips",
-  "description": "Crypto buy/sell signals, social hype check, chart drawing and price alerts. Not financial advice.",
-  "start_url": "/",
+  "description": "Crypto buy/sell signals, social buzz from 7 sources, big movers, price alerts and a trading simulator. Not financial advice.",
+  "id": "/",
+  "start_url": "/?source=app",
+  "scope": "/",
   "display": "standalone",
+  "orientation": "portrait",
   "background_color": "#ffffff",
   "theme_color": "#ffffff",
-  "icons": [{ "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }]
+  "categories": ["finance", "education"],
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ],
+  "shortcuts": [
+    { "name": "Trench: big movers", "url": "/?tab=trench", "icons": [{ "src": "icon-192.png", "sizes": "192x192" }] },
+    { "name": "Price alerts", "url": "/?tab=alerts", "icons": [{ "src": "icon-192.png", "sizes": "192x192" }] },
+    { "name": "Practice", "url": "/?tab=sim", "icons": [{ "src": "icon-192.png", "sizes": "192x192" }] }
+  ]
 }

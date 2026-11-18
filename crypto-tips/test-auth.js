@@ -25,11 +25,11 @@ const run = (env) => JSON.parse(execFileSync(process.execPath, [__filename, "chi
 // Online without a password: private endpoints are switched off.
 const off = run({ VERCEL: "1", APP_PASSWORD: "" });
 assert.strictEqual(off.rightHoldings, 503);
-assert.strictEqual(off.rightAsk, 503);
+assert.strictEqual(off.rightAsk, 402); // Ask AI is Pro: visitors are pointed to the trial
 
 // Online with a password: only the right password gets through (400 = reached the handler, body was empty).
 const on = run({ VERCEL: "1", APP_PASSWORD: "correct horse" });
 assert.deepStrictEqual([on.noneHoldings, on.wrongHoldings, on.rightHoldings], [401, 401, 200]);
-assert.deepStrictEqual([on.noneAsk, on.wrongAsk, on.rightAsk], [401, 401, 400]);
+assert.deepStrictEqual([on.noneAsk, on.wrongAsk, on.rightAsk], [402, 402, 400]); // owner password still works
 
 console.log("auth tests passed");

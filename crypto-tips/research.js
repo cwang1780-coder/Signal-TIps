@@ -89,4 +89,4 @@ async function getResearch(sym, name) {
   };
 }
 
-module.exports = { getResearch, parseRss, newsFor, decode };
+module.exports = { getResearch, getNews, parseRss, newsFor, decode };

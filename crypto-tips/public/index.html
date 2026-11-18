@@ -6,7 +6,11 @@
 <title>Crypto Signal Tips</title>
 <link rel="manifest" href="manifest.webmanifest" />
 <link rel="icon" href="icon.svg" type="image/svg+xml" />
-<link rel="apple-touch-icon" href="icon.svg" />
+<link rel="apple-touch-icon" href="icon-180.png" />
+<link rel="icon" href="icon-192.png" type="image/png" sizes="192x192" />
+<meta name="apple-mobile-web-app-title" content="Signal Tips" />
+<meta name="apple-mobile-web-app-status-bar-style" content="default" />
+<meta name="mobile-web-app-capable" content="yes" />
 <meta name="theme-color" content="#ffffff" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -672,6 +676,68 @@
   .tcard, .ticket, .sim-box, .sim-chart, .sim-result, .lesson, .levelOpt, .tipbox { border: 1px solid var(--border); }
   .simgame .sim-stats div, .sim-box, .ticket { background: #fff; }
   .simgame { background: var(--panel); }
+
+  /* ═════ Accounts, Pro, install ═════ */
+  .acct-btn { white-space: nowrap; }
+  .acct-btn.signed { background: none; padding: 0 4px; display: inline-flex; align-items: center; gap: 6px; min-height: 44px; }
+  .avatar { width: 36px; height: 36px; border-radius: 50%; background: var(--accent); color: #fff; display: inline-flex; align-items: center; justify-content: center; font-weight: 700; font-size: 16px; flex: none; }
+  .avatar.lg { width: 48px; height: 48px; font-size: 20px; }
+  .pro-tag { font-size: 11px; font-weight: 800; color: var(--accent); background: #eaf1ff; border-radius: 6px; padding: 2px 6px; letter-spacing: .04em; }
+  .sheet-dialog { border: 0; padding: 0; border-radius: 24px; width: min(480px, calc(100vw - 24px)); max-height: calc(100vh - 32px); box-shadow: 0 24px 64px rgba(10,11,13,.25); margin: auto; }
+  .sheet-dialog::backdrop { background: rgba(10,11,13,.45); }
+  .sheet { padding: 28px 24px 24px; display: flex; flex-direction: column; gap: 12px; position: relative; }
+  .sheet h2 { margin: 0; font-size: 24px; line-height: 30px; }
+  .sheet-x { position: absolute; top: 12px; right: 12px; }
+  .sheet label { display: flex; flex-direction: column; gap: 6px; font-weight: 600; font-size: 14px; }
+  .sheet input { min-height: 48px; font-size: 16px; }
+  .auth-err { color: var(--sell); font-weight: 600; min-height: 0; margin: 0; } .auth-err:empty { display: none; }
+  .pro-badge { align-self: flex-start; display: inline-flex; gap: 6px; align-items: center; font-weight: 700; font-size: 13px; color: var(--accent); background: #eaf1ff; border-radius: 999px; padding: 4px 12px; }
+  .pro-list { list-style: none; margin: 4px 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+  .pro-list li { display: grid; grid-template-columns: 24px 1fr; gap: 12px; align-items: start; }
+  .pro-list li > .i { width: 22px; height: 22px; color: var(--accent); margin-top: 1px; }
+  .pro-list li > span { display: flex; flex-direction: column; gap: 2px; } .pro-list .muted { font-size: 14px; line-height: 1.4; }
+  .me-grid { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 16px; align-items: start; margin-bottom: 16px; }
+  .acct-panel h3, .install-card h3, .plans h3 { margin: 0 0 10px; font-size: 18px; }
+  .acct-row { display: flex; gap: 12px; align-items: center; margin-bottom: 10px; } .acct-row > span { display: flex; flex-direction: column; }
+  .plan-line { margin: 0 0 8px; } .plan-badge { display: inline-block; font-size: 12px; font-weight: 800; padding: 3px 10px; border-radius: 999px; background: var(--alt); margin-right: 6px; letter-spacing: .02em; }
+  .plan-badge.pro { background: var(--accent); color: #fff; }
+  .acct-actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
+  .acct-note { color: var(--accent); font-weight: 600; }
+  .acct-more { margin-top: 10px; } .acct-more summary { cursor: pointer; color: var(--dim); font-size: 14px; }
+  .acct-form { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0; } .acct-form input { flex: 1 1 180px; min-width: 0; }
+  button.danger { background: #fbe7e9; color: var(--sell); }
+  .install-steps { margin: 8px 0 0 20px; } .install-steps li { margin: 4px 0; }
+  .plan-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  .plan-table th, .plan-table td { text-align: left; padding: 9px 10px; border-bottom: 1px solid var(--alt); vertical-align: top; }
+  .plan-table th:nth-child(3), .plan-table td:nth-child(3) { color: var(--accent); font-weight: 600; }
+  /* Locked Pro sections and teasers */
+  .dsec.locked > :not(.lockpanel) { display: none !important; }
+  .lockpanel, .src-lock, .tc-locked { border: 1px dashed #b9c6e8; background: #f5f8ff; border-radius: 16px; padding: 20px; display: flex; flex-direction: column; gap: 8px; align-items: flex-start; margin: 12px 0; }
+  .lockpanel > .i, .src-lock > .i, .tc-locked > .i { width: 22px; height: 22px; color: var(--accent); }
+  .src-lock { flex-direction: row; align-items: center; gap: 12px; } .src-lock > span { flex: 1; display: flex; flex-direction: column; }
+  .dtabs button.pro-tab span::after { content: " PRO"; font-size: 10px; font-weight: 800; color: var(--accent); margin-left: 4px; vertical-align: 1px; }
+  /* Buzz sources */
+  .srcs { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 8px; margin: 10px 0 6px; }
+  .src { display: flex; gap: 10px; align-items: center; border: 1px solid var(--border); border-radius: 12px; padding: 8px 10px; color: var(--text); text-decoration: none; background: #fff; }
+  .src > span { display: flex; flex-direction: column; line-height: 1.25; } .src b { font-size: 14px; } .src .muted { font-size: 12px; }
+  .src.quiet { opacity: .55; } .src > .i { color: var(--accent); }
+  .src-tag { font-size: 11px; font-weight: 700; background: var(--alt); border-radius: 6px; padding: 1px 6px; color: var(--dim); }
+  /* Toast */
+  #toast { position: fixed; left: 50%; bottom: 88px; transform: translate(-50%, 20px); background: var(--text); color: #fff; padding: 12px 18px; border-radius: 14px; font-weight: 600; z-index: 80; opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s; max-width: calc(100vw - 32px); }
+  #toast.show { opacity: 1; transform: translate(-50%, 0); }
+  /* Install banner (phones) */
+  .install-banner { position: fixed; left: 8px; right: 8px; bottom: calc(76px + env(safe-area-inset-bottom)); z-index: 44; display: flex; align-items: center; gap: 10px; background: #fff; border: 1px solid var(--border); border-radius: 16px; padding: 10px 10px 10px 12px; box-shadow: 0 8px 24px rgba(10,11,13,.12); }
+  .install-banner[hidden] { display: none; }
+  .install-banner img { border-radius: 10px; } .install-banner > span { flex: 1; display: flex; flex-direction: column; line-height: 1.25; min-width: 0; } .install-banner .muted { font-size: 12px; }
+  .install-banner .pill { min-height: 38px; padding: 0 16px; }
+  body.detailOpen .install-banner { display: none; }
+  @media (max-width: 480px) { #tf, .acct-btn .pro-tag { display: none; } }
+  @media (max-width: 767px) {
+    .me-grid { grid-template-columns: minmax(0, 1fr); }
+    .acct-btn.pill { min-height: 40px; padding: 0 14px; font-size: 14px; }
+    .sheet-dialog { width: 100vw; max-width: 100vw; margin: auto 0 0; border-radius: 24px 24px 0 0; max-height: 92vh; }
+    .sheet { padding-bottom: calc(24px + env(safe-area-inset-bottom)); }
+  }
 </style>
 </head>
 <body>
@@ -713,6 +779,7 @@
       <select id="curTop" class="curSel curTop" title="Show prices in this currency"></select>
       <button id="searchBtn" class="icon-btn search-btn" aria-label="Search for a coin"><i data-i="search"></i></button>
       <button id="refresh" class="icon-btn" title="Refresh prices now" aria-label="Refresh prices now">↻</button>
+      <button id="acctBtn" class="acct-btn pill" aria-label="Sign in or create an account">Sign in</button>
       <button class="primary pill hide-sm" data-go="ai">Ask AI</button>
       <button class="icon-btn menu-toggle" id="menuToggle" aria-label="Open menu" aria-expanded="false" aria-controls="tabs">
         <svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><path d="M2 4.5h16M2 10h16M2 15.5h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
@@ -970,7 +1037,30 @@
   <section class="tab" data-tab="me" hidden>
     <div class="band alt">
       <div class="wrap">
-        <div class="section-head"><div><h2 class="display">Your experience</h2>
+        <div class="section-head"><div><h2 class="display">Account</h2>
+        <p class="lead">Your account, plan and the app on your phone.</p></div></div>
+        <div class="me-grid">
+          <div class="panel acct-panel" id="acctPanel"><h3>Your account</h3><p class="muted">Loading…</p></div>
+          <div class="panel install-card" id="installCard"></div>
+        </div>
+        <div class="panel plans" id="plans">
+          <h3>Free and Pro</h3>
+          <div class="tablewrap"><table class="plan-table">
+            <tr><th></th><th>Free</th><th>Pro</th></tr>
+            <tr><td>Live signals, charts, drawing tools</td><td>✓</td><td>✓</td></tr>
+            <tr><td>Watchlist</td><td>10 coins</td><td>Unlimited</td></tr>
+            <tr><td>Price alerts</td><td>3</td><td>Unlimited</td></tr>
+            <tr><td>Why it's moving, score, reasons, news</td><td>✓</td><td>✓</td></tr>
+            <tr><td>Chart patterns, similar past moments, track record</td><td>–</td><td>✓</td></tr>
+            <tr><td>Social buzz sources</td><td>StockTwits + trending</td><td>7 sources: + Bluesky, Mastodon, Hacker News, Lemmy, news</td></tr>
+            <tr><td>Trench (big movers)</td><td>Top 3</td><td>All, plus Coinbase-only filter</td></tr>
+            <tr><td>Ask AI</td><td>–</td><td>✓</td></tr>
+            <tr><td>Trading simulator</td><td>Scenarios</td><td>+ Real past markets</td></tr>
+            <tr><td>Sync between phone and computer</td><td>With a free account</td><td>✓</td></tr>
+          </table></div>
+          <button class="primary pill" data-pw="show" style="margin-top:14px">See Pro</button>
+        </div>
+        <div class="section-head" style="margin-top:32px"><div><h2 class="display">Your experience</h2>
         <p class="lead">Pick the one that fits and the app adjusts.</p></div><div class="art-card"><img src="art/me.svg" alt="" width="480" height="320" /></div></div>
         <div class="levelPick" id="levelPickMe">
           <button class="levelOpt" data-level="beginner"><span class="big"><i data-i="sprout"></i></span><b>I'm new to trading</b><span class="muted">Plain-English tips, short explanations of every term, and the extra detail tucked away until you want it.</span></button>
@@ -1016,6 +1106,16 @@
   </section>
 </main>
 
+<!-- Sign in / upgrade sheet -->
+<dialog id="authDialog" class="sheet-dialog" aria-label="Account"></dialog>
+<!-- Phones: suggest installing the app -->
+<div class="install-banner" id="installBanner" hidden>
+  <img src="icon-192.png" alt="" width="36" height="36" />
+  <span><b>Get the Signal Tips app</b><span class="muted">Opens full screen from your home screen</span></span>
+  <button class="primary pill" data-install>Install</button>
+  <button class="x" data-install-dismiss aria-label="Not now">✕</button>
+</div>
+
 <!-- Phone: bottom tab bar -->
 <nav class="bottomnav" aria-label="Main">
   <button data-go="signals"><i data-i="chart"></i><span>Home</span></button>
@@ -1059,7 +1159,7 @@
 <script src="app.js"></script>
 <script src="extras.js"></script>
 <script src="research.js"></script>
-<script src="pro.js"></script>
+<script src="account.js"></script>
 <script src="ai-chat.js"></script>
 <script src="learn.js"></script>
 <script src="wallets.js"></script>

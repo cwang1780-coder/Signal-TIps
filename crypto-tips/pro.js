@@ -58,15 +58,27 @@ function verifyKey(key) {
 }
 
 // ── Stripe calls ──
-async function createCheckout(origin) {
+// With a signed-in user, the checkout is tied to their account (client_reference_id) and pre-fills their email.
+async function createCheckout(origin, user) {
   const s = await stripe("POST", "/v1/checkout/sessions", {
     mode: "subscription",
     line_items: [{ price: process.env.STRIPE_PRICE_ID, quantity: 1 }],
     success_url: origin + "/?pro_session={CHECKOUT_SESSION_ID}",
     cancel_url: origin + "/?pro=cancelled",
     allow_promotion_codes: true,
+    ...(user ? { client_reference_id: user.id, customer_email: user.email, subscription_data: { metadata: { account: user.id } } } : {}),
   });
   return s.url;
+}
+
+// Confirm a completed checkout belongs to this account and return its subscription id.
+async function subscriptionFor(sessionId, user) {
+  if (!/^cs_[A-Za-z0-9_]{5,200}$/.test(sessionId || "")) throw Object.assign(new Error("Invalid checkout session"), { status: 400 });
+  const s = await stripe("GET", "/v1/checkout/sessions/" + sessionId);
+  const subId = typeof s.subscription === "string" ? s.subscription : s.subscription?.id;
+  if (s.status !== "complete" || !subId) throw Object.assign(new Error("That checkout was not completed"), { status: 402 });
+  if (s.client_reference_id && s.client_reference_id !== user.id) throw Object.assign(new Error("That checkout belongs to a different account."), { status: 403 });
+  return subId;
 }
 
 async function activate(sessionId) {
@@ -93,6 +105,9 @@ const usedThisMonth = (sub) => (sub.metadata?.ai_month === month() ? parseInt(su
 async function check(key, { fresh = false } = {}) {
   const subId = verifyKey(key);
   if (!subId) return { ok: false, reason: "That Pro key isn't valid." };
+  return checkSub(subId, fresh);
+}
+async function checkSub(subId, fresh = false) {
   let sub;
   try { sub = await getSub(subId, fresh); }
   catch (e) { return { ok: false, reason: e.status === 404 ? "That subscription no longer exists." : "Couldn't check your subscription right now. Try again shortly." }; }
@@ -131,4 +146,4 @@ async function getPrice() {
   return data;
 }
 
-module.exports = { enabled, monthlyLimit, makeKey, verifyKey, createCheckout, activate, check, consume, portalUrl, getPrice, form };
+module.exports = { enabled, monthlyLimit, makeKey, verifyKey, createCheckout, subscriptionFor, activate, check, checkSub, consume, portalUrl, getPrice, form };

@@ -96,6 +96,28 @@ Each coin's detail view adds context that does **not** change the score:
 What testing showed: similar-pattern matches called the next move's direction right about half the time (no better than chance), and
 "buy on extreme fear" was barely better than any ordinary day for Bitcoin from 2018 to 2026. The app says this next to those sections.
 
+## Accounts, Pro and payments
+
+- **Accounts:** people create an account with an email and password. Passwords are stored only as salted scrypt hashes, and the session is an HttpOnly cookie signed by the server. Accounts live in a **private Vercel Blob store** (`signal-tips-accounts`, connected to the project as `BLOB_READ_WRITE_TOKEN`). Locally they're saved in `.data/`, which is never committed or deployed.
+- **What an account gives:** the watchlist, alerts, holdings and settings sync between devices. Wallet addresses stay on each device.
+- **Plans:**
+  - **Free:** 10-coin watchlist, 3 alerts, the top 3 Trench movers, and buzz from StockTwits plus trending searches.
+  - **Pro:** Ask AI; buzz from 7 sources; the full Trench with the Coinbase filter; chart patterns, similar past moments and track record; an unlimited watchlist and alerts; the real-market simulator.
+  - **Trial:** every account can start a **7-day Pro trial with no card**, once.
+- **Owner:** emails listed in `OWNER_EMAILS` (comma-separated) get Pro for free.
+- **Payments (Stripe):** set `STRIPE_SECRET_KEY` and `STRIPE_PRICE_ID` (a recurring price) in the Vercel project. The **Go Pro** button then opens Stripe Checkout tied to the account, and **Manage subscription** opens Stripe's billing portal. Until those are set, Go Pro is hidden and the trial still works.
+- **Ask AI** needs `ANTHROPIC_API_KEY` (or a Claude key, see Ask AI above) in the Vercel project.
+- **Endpoint:** `/api/account?action=me|signup|login|logout|trial|checkout|activate|portal|sync|password|delete`. Changes must be same-site JSON requests.
+
+## Phone app
+
+The site is an installable web app. It has a manifest, PNG icons (including maskable and Apple touch icons) and a service worker (`sw.js`). The service worker loads the network first and falls back to the cache when offline; `/api/*` is never cached.
+
+- **iPhone:** open the site in Safari, tap Share, then **Add to Home Screen**.
+- **Android:** open it in Chrome, tap ⋮, then **Install app**.
+
+The Me tab shows these steps, and phones get an install banner.
+
 ## Layout
 
 The layout follows a trading app (Signal Tips' own branding, not Coinbase's):
@@ -233,6 +255,8 @@ Alerts are checked every minute while the page is open (a background tab is fine
 Each alert fires once; press **Re-arm** to use it again.
 
 ## Social buzz
+
+Free accounts get StockTwits plus CoinGecko trending searches. Pro adds **Bluesky, Mastodon, Hacker News, Lemmy and news headlines** (all public, no keys), with mentions in the last 24 hours per source, a combined hype level, and the newest posts from every source. Reddit isn't included, because it blocks requests from cloud servers unless the site registers a Reddit app.
 Shows what people are posting about each coin, so you can see the hype as well as the chart:
 - **StockTwits** posts. Many are tagged Bullish or Bearish by their authors, so you see the crowd's mood (% bullish) and how fast people are posting.
 - **CoinGecko trending:** the coins people are searching for most right now.

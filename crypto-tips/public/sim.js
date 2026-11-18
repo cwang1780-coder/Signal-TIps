@@ -109,6 +109,7 @@
     layout(); play();
   }
   async function newGame(mode) {
+    if (mode === "real" && !window.proGate?.("The real-market simulator")) return;
     clearInterval(timer);
     if (mode === "real") {
       root.innerHTML = `<p class="muted" style="padding:20px 0">Loading a real market…</p>`;
@@ -281,7 +282,7 @@
   function pickerHtml() {
     const b = best(), seen = Object.keys(SCENARIOS).filter((k) => b[k] != null).length;
     return `<div class="sim-pick">
-      <button class="primary" data-sim-new="real">${icon("chart")} Real market</button>
+      <button class="primary" data-sim-new="real">${icon("chart")} Real market${window.isPro?.() ? "" : ` <span class="pro-tag">PRO</span>`}</button>
       <button data-sim-new="scenario">${icon("dice")} Practice scenario</button>
       <span class="muted">${b.real != null ? `Best real-market result ${pct(b.real)} · ` : ""}${seen ? `Scenarios found ${seen} of 6` : ""}</span></div>`;
   }

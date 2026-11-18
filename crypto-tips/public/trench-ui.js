@@ -21,7 +21,7 @@
     $("trenchStatus").textContent = "Scanning the market…";
     try {
       const [t, s] = await Promise.all([
-        fetch("/api/trench").then(async (r) => { const d = await r.json(); if (!r.ok) throw new Error(d.reason || "HTTP " + r.status); return d; }),
+        fetch("/api/trench" + (window.isPro?.() ? "?full=1" : ""), { credentials: "same-origin" }).then(async (r) => { const d = await r.json(); if (!r.ok) throw new Error(d.reason || "HTTP " + r.status); return d; }),
         stats ? stats : fetch("trench-stats.json").then((r) => (r.ok ? r.json() : null)).catch(() => null),
       ]);
       data = t; stats = s; loadedAt = Date.now();
@@ -62,7 +62,9 @@
           ${x.onCoinbase ? `<button class="pill dark" data-trench-open="${esc(x.sym)}">Look closer in Signal Tips</button>` : ""}
           <a class="pill-link" href="${esc(x.url)}" target="_blank" rel="noopener">CoinGecko ↗</a></div>
       </article>`;
-    }).join("") : `<p class="muted">No coins are making a big move right now${onlyCoinbase ? " on Coinbase" : ""}. That's normal in quiet or falling markets.</p>`;
+    }).join("") + (data.locked ? `<article class="tcard tc-locked">${icon("lock")}<b>${data.locked} more coin${data.locked === 1 ? " is" : "s are"} making a big move</b>
+        <span class="muted">Pro shows the full list, refreshed every 5 minutes, plus the Coinbase-only filter.</span><button class="primary pill" data-pw="show">See all movers with Pro</button></article>` : "")
+      : `<p class="muted">No coins are making a big move right now${onlyCoinbase ? " on Coinbase" : ""}. That's normal in quiet or falling markets.</p>`;
   }
 
   window.trenchSnapshot = () => data && { movers: data.movers.slice(0, 10).map((x) => ({ sym: x.sym, ch7: x.ch7, ch24: x.ch24, risk: x.risk, trending: x.trendingRank, onCoinbase: x.onCoinbase, social: x.social && { hype: x.social.hype, bullishPct: x.social.bullishPct } })),
@@ -77,7 +79,11 @@
     openCoin(sym);
   });
   $("trenchCB").checked = onlyCoinbase;
-  $("trenchCB").onchange = () => { onlyCoinbase = $("trenchCB").checked; store.set("trenchCB", onlyCoinbase); render2(); };
+  $("trenchCB").onchange = () => {
+    if ($("trenchCB").checked && !window.proGate?.("The Coinbase-only filter")) { $("trenchCB").checked = false; return; }
+    onlyCoinbase = $("trenchCB").checked; store.set("trenchCB", onlyCoinbase); render2();
+  };
+  document.addEventListener("plan-changed", () => { if (!window.isPro?.()) { onlyCoinbase = false; $("trenchCB").checked = false; } data = null; if (!document.querySelector('[data-tab="trench"]').hidden) load(true); });
   $("trenchRefresh").onclick = () => load(true);
   window.loadTrench = load;
   setInterval(() => { if (!document.querySelector('[data-tab="trench"]').hidden) load(true); }, 5 * 60000);

@@ -472,10 +472,26 @@ document.addEventListener("keydown", (e) => { if (e.key === "Escape" && selected
 // ── Tabs ──
 const TABS = ["signals", "trench", "buzz", "alerts", "ai", "coins", "sim", "learn", "me"];
 // Show the chosen section; hide tabs whose section is empty (depends on mode and loaded data).
+// Deep research tabs are Pro: free accounts see what's inside, and an upgrade card instead of the content.
+const PRO_SECS = { pattern: "Chart patterns", history: "Similar past moments", track: "Signal track record" };
+function lockSections() {
+  const pro = window.isPro?.();
+  document.querySelectorAll("#detail .dsec").forEach((s) => {
+    const name = PRO_SECS[s.dataset.sec];
+    s.classList.toggle("locked", Boolean(name && !pro));
+    s.querySelector(":scope > .lockpanel")?.remove();
+    if (name && !pro && s.textContent.trim()) s.insertAdjacentHTML("afterbegin", `<div class="lockpanel">${icon("lock")}<b>${name} is part of Pro</b>
+      <span class="muted">${{ pattern: "What chart pattern this coin is in, and what happened after it across years of history.", history: "The moments in this coin's past that looked most like today, and what came next.", track: "How following the signals has done on this coin compared with just holding it." }[s.dataset.sec]}</span>
+      <button class="primary pill" data-pw="show">Unlock with Pro</button></div>`);
+  });
+  document.querySelectorAll(".dnav [data-dtab]").forEach((b) => b.classList.toggle("pro-tab", Boolean(PRO_SECS[b.dataset.dtab] && !pro)));
+}
+document.addEventListener("plan-changed", () => { if (selected) renderDetail(); render(); });
 function syncJump() {
   if (selected !== dTabSym) { dTab = "overview"; dTabSym = selected; } // a new coin starts on Overview
+  lockSections();
   const secs = [...document.querySelectorAll("#detail .dsec")];
-  const empty = (s) => !s.textContent.trim();
+  const empty = (s) => !s.querySelector(":scope > :not(.lockpanel)")?.textContent.trim();
   if (secs.some((s) => s.dataset.sec === dTab && empty(s)) && dTab !== "overview") dTab = "overview";
   secs.forEach((s) => (s.hidden = s.dataset.sec !== dTab));
   document.querySelectorAll(".dnav [data-dtab]").forEach((b) => {
@@ -574,6 +590,8 @@ $("holdings").addEventListener("click", (e) => {
 });
 async function addCoin(sym) {
   if (!/^[A-Z0-9]{1,15}$/.test(sym) || coins.includes(sym)) return;
+  // Free accounts follow up to 10 coins; Pro is unlimited.
+  if (!window.isPro?.() && coins.length >= (window.freeLimits?.coins || 10)) { window.paywall?.("A bigger watchlist"); return; }
   coins.push(sym); store.set("coins", coins);
   render();
   try { results[sym] = await analyzeCoin(sym); } catch (e) { results[sym] = { error: e.message }; }
@@ -623,7 +641,8 @@ window.addEventListener("resize", () => selected && renderDetail());
 if (location.protocol !== "file:") {
   fetch("/api/config").then((r) => (r.ok ? r.json() : null)).then((c) => { if (c) { siteConfig = c; renderDetail(); window.onSiteConfig?.(c); } }).catch(() => {});
 }
-showTab(new URLSearchParams(location.search).has("pro_session") ? "ai" : store.get("tab", "signals"));
+const startQ = new URLSearchParams(location.search);
+showTab(startQ.has("pro_session") ? "me" : startQ.get("tab") || store.get("tab", "signals"));
 applyLevel();
 refresh(); // prices don't wait for the owner-only Coinbase check
 syncCoinbase();

@@ -81,6 +81,7 @@
   // Used by chart drawings: turn a price level into an alert.
   window.addAlert = (sym, type, value) => {
     if (!TYPES[type] || alerts.some((a) => a.sym === sym && a.type === type && a.value === value && !a.triggeredAt)) return true;
+    if (!window.isPro?.() && alerts.filter((a) => !a.triggeredAt).length >= (window.freeLimits?.alerts || 3)) { window.paywall?.("More than 3 alerts"); return false; }
     alerts.push({ id: Date.now().toString(36), sym, type, value, triggeredAt: null });
     save(); renderAlerts(); checkAlerts();
     return true;
@@ -99,6 +100,7 @@
     const type = $("alType").value, sym = $("alSym").value, typed = parseFloat($("alValue").value);
     const value = TYPES[type].needsValue === "$" ? Currency.toUsd(typed) : typed; // prices are stored in USD
     if (!sym || (TYPES[type].needsValue && !(value > 0))) { $("alValue").focus(); return; }
+    if (!window.isPro?.() && alerts.filter((a) => !a.triggeredAt).length >= (window.freeLimits?.alerts || 3)) { window.paywall?.("More than 3 alerts"); return; }
     alerts.push({ id: Date.now().toString(36), sym, type, value: TYPES[type].needsValue ? value : null, triggeredAt: null });
     $("alValue").value = "";
     save(); renderAlerts(); checkAlerts();
@@ -125,11 +127,12 @@
     if (!syms.length) return;
     $("socStatus").textContent = "Loading social posts…";
     try {
-      const res = await fetch("/api/social?coins=" + syms.join(","));
+      const full = window.isPro?.();
+      const res = await fetch("/api/social?coins=" + (full ? syms.slice(0, 10) : syms).join(",") + (full ? "&full=1" : ""), { credentials: "same-origin" });
       const d = await res.json();
       if (!res.ok) throw new Error(d.reason || "HTTP " + res.status);
       social = d;
-      $("socStatus").textContent = "Updated " + new Date(d.updated).toLocaleTimeString() + " · refreshes every 5 min";
+      $("socStatus").textContent = "Updated " + new Date(d.updated).toLocaleTimeString() + " · refreshes every 5 min" + (d.full ? " · 7 sources" : "");
     } catch (e) {
       $("socStatus").textContent = "Social data unavailable: " + e.message;
     }
@@ -152,7 +155,26 @@
       <span class="muted">${s.bullishPct}% bullish <small>(${s.tagged} posts)</small></span>`;
   }
 
+  // Pro: per-source breakdown and the newest posts from every source.
+  const SRC_ICON = { StockTwits: "chart", Bluesky: "sparkle", Mastodon: "megaphone", "Hacker News": "news", Lemmy: "user", News: "news" };
+  function sourcesHtml(s) {
+    if (!s.sources) return "";
+    const st = s.posts ? { source: "StockTwits", count24h: s.posts.filter((p) => Date.now() - Date.parse(p.time) < 864e5).length, url: s.url, bullishPct: s.bullishPct } : null;
+    const all = [st, ...s.sources].filter(Boolean);
+    return `<div class="srcs">${all.map((x) => `<a class="src ${x.count24h ? "" : "quiet"}" ${x.url ? `href="${esc(x.url)}" target="_blank" rel="noopener"` : ""}>${icon(SRC_ICON[x.source] || "news")}<span><b>${esc(x.source)}</b><span class="muted">${x.count24h} in 24h${x.bullishPct != null ? ` · ${x.bullishPct}% ${x.source === "StockTwits" ? "bullish" : "upbeat"}` : ""}</span></span></a>`).join("")}</div>
+      <p class="muted small">${s.mentions24h} mentions in the last 24 hours across ${s.sourcesActive} active sources. "Upbeat" is a rough word count, not a measurement.</p>`;
+  }
+  function latestHtml(s) {
+    if (!s.latest?.length) return "";
+    return `<ul class="posts">${s.latest.map((p) => `<li>
+      <div class="row"><span><span class="src-tag">${esc(p.source)}</span> <b>${esc(p.user || "")}</b> ${p.sentiment ? `<span class="tag ${p.sentiment === "Bullish" ? "bull" : "bear"}">${esc(p.sentiment)}</span>` : ""}</span>
+      <span class="muted">${esc(ago(p.time))}${p.url ? ` · <a href="${esc(p.url)}" target="_blank" rel="noopener">open ↗</a>` : ""}</span></div>
+      <div>${esc(p.text)}</div></li>`).join("")}</ul>`;
+  }
+  const lockedSources = () => window.isPro?.() ? "" : `<div class="src-lock">${icon("lock")}<span><b>See buzz from 7 sources with Pro</b><span class="muted">Adds Bluesky, Mastodon, Hacker News, Lemmy and news headlines, with a combined hype score.</span></span><button class="pill" data-pw="show">Unlock</button></div>`;
+
   function postsHtml(s) {
+    if (s.latest?.length) return sourcesHtml(s) + latestHtml(s);
     if (!s.posts?.length) return `<div class="muted">No recent posts.</div>`;
     return `<ul class="posts">${s.posts.map((p) => `<li>
       <div class="row"><span><b>@${esc(p.user)}</b> ${p.sentiment ? `<span class="tag ${p.sentiment === "Bullish" ? "bull" : "bear"}">${esc(p.sentiment)}</span>` : ""}</span>
@@ -178,15 +200,16 @@
           <b class="sym">${window.coinIcon ? window.coinIcon(sym, 24) : ""} ${sym}</b>
           <span class="badge ${HYPE_CLASS[s.hype]}">Hype: ${s.hype}</span>
           ${s.error ? `<span class="muted">${esc(s.error)}</span>` : `${moodBar(s)}<span class="muted">${s.postsPerHour ?? "?"} posts/hr</span>`}
+          ${s.mentions24h != null ? `<span class="badge">${s.mentions24h} mentions · ${s.sourcesActive} sources</span>` : ""}
           ${s.trendingRank ? `<span class="badge h-high">${icon("flame")} Trending #${s.trendingRank}</span>` : ""}
           ${r?.action ? `<span class="${actionClass(r.action)}">Chart: ${r.action}</span>` : ""}
           <span class="muted caret">${open ? "▲" : "▼ posts"}</span>
         </div>
         ${crowdVsChart(s, r)}
-        ${open && !s.error ? postsHtml(s) : ""}
+        ${open && (!s.error || s.latest) ? postsHtml(s) : ""}
       </div>`;
     }).join("");
-    $("socList").innerHTML = rows || `<div class="muted">Loading…</div>`;
+    $("socList").innerHTML = (rows ? lockedSources() + rows : `<div class="muted">Loading…</div>`);
   }
 
   function renderDetailSocial(sym) {
@@ -197,7 +220,7 @@
     if (s.error) { el.innerHTML = `<h2>What people are saying</h2><div class="muted">${esc(s.error)}</div>`; return; }
     el.innerHTML = `<h2>What people are saying <span class="badge ${HYPE_CLASS[s.hype]}">Hype: ${s.hype}</span></h2>
       <div class="socrow">${moodBar(s)}<span class="muted">${s.postsPerHour ?? "?"} posts/hr</span>${s.trendingRank ? `<span class="badge h-high">${icon("flame")} Trending #${s.trendingRank}</span>` : ""}</div>
-      ${crowdVsChart(s, results[sym])}${postsHtml({ ...s, posts: s.posts.slice(0, 4) })}`;
+      ${crowdVsChart(s, results[sym])}${s.latest ? postsHtml({ ...s, latest: s.latest.slice(0, 6) }) : postsHtml({ ...s, posts: s.posts.slice(0, 4) }) + lockedSources()}`;
   }
 
   $("socList").addEventListener("click", (e) => {
@@ -224,6 +247,7 @@
     if (missing) loadSocial(); else renderSocial();
   });
   $("socRefresh").onclick = loadSocial;
+  document.addEventListener("plan-changed", loadSocial);
   setInterval(loadSocial, 5 * 60 * 1000);
   renderAlerts();
   // "Set a price alert" from a coin's page: pick that coin and a price alert, ready to type the price.

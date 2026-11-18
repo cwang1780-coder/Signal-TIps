@@ -8,6 +8,7 @@ const pro = require("./pro.js");
 const { getResearch } = require("./research.js");
 const wallet = require("./wallet.js");
 const { getTrench } = require("./trench.js");
+const accounts = require("./accounts.js");
 
 const ON_VERCEL = Boolean(process.env.VERCEL);
 let cache = { at: 0, data: null };
@@ -74,6 +75,14 @@ async function readJson(req) {
 // Who may use Ask AI: the owner (password), or a Pro subscriber with questions left this month.
 // Returns { subId } for subscribers, {} for the owner, or null after sending a refusal.
 async function askAccess(req, res) {
+  const user = await accounts.userFromRequest(req).catch(() => null);
+  if (user) {
+    const plan = await accounts.planOf(user);
+    if (plan.pro) {
+      if (accounts.aiUsed(user) >= plan.aiLimit) { json(res, 429, { error: "limit", reason: `You've used all ${plan.aiLimit} AI questions for this month${plan.kind === "trial" ? " on your trial" : ""}.` }); return null; }
+      return { user };
+    }
+  }
   const proKey = req.headers["x-pro-key"];
   if (pro.enabled() && proKey) {
     const c = await pro.check(proKey);
@@ -83,7 +92,7 @@ async function askAccess(req, res) {
   }
   const password = process.env.APP_PASSWORD;
   const isOwner = password && sameSecret(req.headers["x-app-password"] || "", password);
-  if (pro.enabled() && ON_VERCEL && !isOwner) { json(res, 402, { error: "pro", reason: "Ask AI is a Pro feature." }); return null; }
+  if (ON_VERCEL && !isOwner) { json(res, 402, { error: "pro", reason: "Ask AI is a Pro feature. Start a free trial or go Pro under Me." }); return null; }
   return (await authorize(req, res)) ? {} : null;
 }
 
@@ -101,6 +110,7 @@ async function askHandler(req, res) {
   try {
     await ai.ask(input, (text) => res.write(text));
     if (access.subId) await pro.consume(access.subId).catch((e) => console.error("[pro] usage count failed:", e.message));
+    if (access.user) await accounts.countAi(access.user).catch((e) => console.error("[account] usage count failed:", e.message));
   } catch (e) {
     console.error("[ai]", e.message);
     res.write("\n\n⚠️ " + ai.friendlyError(e));
@@ -113,9 +123,11 @@ async function socialHandler(req, res) {
   const q = new URL(req.url, "http://x").searchParams.get("coins") || "";
   const syms = [...new Set(q.toUpperCase().split(",").filter((s) => /^[A-Z0-9]{1,15}$/.test(s)))].slice(0, 15);
   if (!syms.length) return json(res, 400, { reason: "Pass ?coins=BTC,ETH" });
+  const wantFull = new URL(req.url, "http://x").searchParams.get("full") === "1";
+  const full = wantFull && (await isPro(req));
   try {
-    const data = await getSocial(syms);
-    res.writeHead(200, { "Content-Type": "application/json", "Cache-Control": "public, max-age=120, s-maxage=300" });
+    const data = await getSocial(full ? syms.slice(0, 10) : syms, { full });
+    res.writeHead(200, { "Content-Type": "application/json", "Cache-Control": wantFull ? "private, no-store" : "public, max-age=120, s-maxage=300" });
     res.end(JSON.stringify(data));
   } catch (e) {
     json(res, 502, { reason: "Social sources unavailable: " + e.message });
@@ -162,8 +174,11 @@ async function walletHandler(req, res) {
 async function trenchHandler(req, res) {
   try {
     const data = await getTrench();
-    res.writeHead(200, { "Content-Type": "application/json", "Cache-Control": "public, max-age=120, s-maxage=300" });
-    res.end(JSON.stringify(data));
+    const wantFull = new URL(req.url, "http://x").searchParams.get("full") === "1";
+    const full = wantFull && (await isPro(req));
+    const out = full ? { ...data, full: true } : { ...data, full: false, movers: data.movers.slice(0, FREE_TRENCH), locked: Math.max(0, data.movers.length - FREE_TRENCH) };
+    res.writeHead(200, { "Content-Type": "application/json", "Cache-Control": wantFull ? "private, no-store" : "public, max-age=120, s-maxage=300" });
+    res.end(JSON.stringify(out));
   } catch (e) {
     json(res, 502, { reason: "Market scanner unavailable right now: " + e.message });
   }
@@ -210,6 +225,73 @@ async function getFx() {
   return fxCache.rates;
 }
 
+// ───────────── Accounts ─────────────
+const FREE_TRENCH = 3;
+async function isPro(req) {
+  try { const u = await accounts.userFromRequest(req); return u ? (await accounts.planOf(u)).pro : false; } catch { return false; }
+}
+const isHttps = (req) => ON_VERCEL || req.headers["x-forwarded-proto"] === "https";
+const originOf = (req) => (isHttps(req) ? "https://" : "http://") + (req.headers.host || "");
+
+// /api/account?action=me|signup|login|logout|trial|checkout|activate|portal|sync|password|delete
+async function accountHandler(req, res) {
+  const action = new URL(req.url, "http://x").searchParams.get("action") || "me";
+  const send = (status, body, cookie) => {
+    res.writeHead(status, { "Content-Type": "application/json", "Cache-Control": "private, no-store", ...(cookie ? { "Set-Cookie": cookie } : {}) });
+    res.end(JSON.stringify(body));
+  };
+  if (!accounts.available()) return send(503, { reason: "Accounts aren't set up on this site yet." });
+  const host = req.headers.host || "";
+  if (!/^[a-z0-9.-]+(:\d+)?$/i.test(host)) return send(400, { reason: "Bad host" });
+  // Changes must be same-site JSON posts (blocks other websites from acting for a signed-in visitor).
+  if (req.method === "POST" || req.method === "PUT") {
+    const origin = req.headers.origin;
+    if (!(req.headers["content-type"] || "").startsWith("application/json") || (origin && origin !== originOf(req))) return send(403, { reason: "Forbidden" });
+  }
+  try {
+    if (action === "signup" || action === "login") {
+      if (req.method !== "POST") return send(405, { reason: "POST only" });
+      const b = await readJson(req);
+      if (action === "login") await new Promise((r) => setTimeout(r, 300)); // slow down password guessing
+      const u = action === "signup" ? await accounts.signup(b.email, b.password) : await accounts.login(b.email, b.password);
+      return send(200, { user: accounts.publicUser(u, await accounts.planOf(u)) }, accounts.sessionCookie(accounts.makeToken(u.id), isHttps(req)));
+    }
+    if (action === "logout") return send(200, { ok: true }, accounts.clearCookie(isHttps(req)));
+
+    const u = await accounts.userFromRequest(req);
+    if (action === "me") return send(200, u ? { user: accounts.publicUser(u, await accounts.planOf(u)), prefsUpdated: u.prefs?.updated || null } : { user: null });
+    if (!u) return send(401, { reason: "Sign in first." });
+
+    if (action === "trial") { if (req.method !== "POST") return send(405, { reason: "POST only" }); await accounts.startTrial(u); return send(200, { user: accounts.publicUser(u, await accounts.planOf(u)) }); }
+    if (action === "checkout") {
+      if (req.method !== "POST") return send(405, { reason: "POST only" });
+      if (!pro.enabled()) return send(503, { reason: "Payments aren't switched on yet. Start the free trial meanwhile." });
+      return send(200, { url: await pro.createCheckout(originOf(req), u) });
+    }
+    if (action === "activate") {
+      if (!pro.enabled()) return send(503, { reason: "Payments aren't switched on." });
+      u.subId = await pro.subscriptionFor(new URL(req.url, "http://x").searchParams.get("session_id"), u);
+      await accounts.saveUser(u);
+      return send(200, { user: accounts.publicUser(u, await accounts.planOf(u)) });
+    }
+    if (action === "portal") {
+      if (req.method !== "POST") return send(405, { reason: "POST only" });
+      if (!u.subId || !pro.enabled()) return send(400, { reason: "There's no subscription on this account." });
+      return send(200, { url: await pro.portalUrl(u.subId, originOf(req)) });
+    }
+    if (action === "sync") {
+      if (req.method === "PUT") { const b = await readJson(req); return send(200, { updated: await accounts.savePrefs(u, b.prefs) }); }
+      return send(200, { prefs: u.prefs?.data || null, updated: u.prefs?.updated || null });
+    }
+    if (action === "password") { const b = await readJson(req); await accounts.changePassword(u, b.current, b.next); return send(200, { ok: true }); }
+    if (action === "delete") { const b = await readJson(req); await accounts.deleteAccount(u, b.password); return send(200, { ok: true }, accounts.clearCookie(isHttps(req))); }
+    return send(400, { reason: "Unknown action" });
+  } catch (e) {
+    if (!e.status || e.status >= 500) console.error("[account]", action, e.message);
+    return send(e.status && e.status < 500 ? e.status : 502, { reason: e.status && e.status < 500 ? e.message : "Something went wrong. Try again shortly." });
+  }
+}
+
 // Public site settings. COINBASE_REFERRAL_URL: your Coinbase affiliate link (must be an https coinbase.com link).
 async function configHandler(req, res) {
   let ref = null;
@@ -223,7 +305,8 @@ async function configHandler(req, res) {
     catch (e) { console.error("[pro] price lookup failed:", e.message); }
   }
   res.writeHead(200, { "Content-Type": "application/json", "Cache-Control": "public, max-age=300" });
-  res.end(JSON.stringify({ coinbaseRef: ref, pro: proInfo, fx: await getFx(), fxUpdated: fxCache.at || null }));
+  res.end(JSON.stringify({ coinbaseRef: ref, pro: proInfo, fx: await getFx(), fxUpdated: fxCache.at || null,
+    accounts: accounts.available(), trialDays: accounts.TRIAL_DAYS, aiConfigured: ai.hasCredentials(), freeTrench: FREE_TRENCH }));
 }
 
 // Pro subscription endpoints: /api/pro?action=checkout|activate|status|portal
@@ -250,4 +333,4 @@ async function proHandler(req, res) {
   }
 }
 
-module.exports = { holdingsHandler, askHandler, socialHandler, configHandler, proHandler, researchHandler, walletHandler, trenchHandler, candlesHandler, authorize };
+module.exports = { holdingsHandler, askHandler, socialHandler, configHandler, proHandler, researchHandler, walletHandler, trenchHandler, candlesHandler, accountHandler, authorize };
