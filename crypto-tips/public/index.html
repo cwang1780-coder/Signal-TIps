@@ -20,7 +20,7 @@
     --alt: #eef0f3; --panel: #f7f8f9; --panel2: #eef0f3; --border: #e4e7eb;
     --accent: #0052ff; --accent-hover: #0047e0;
     --buy: #098551; --sell: #cf202f; --hold: #9a5b00;
-    --gutter: 32px; --max: 1376px; --r-xl: 48px; --r-lg: 32px; --r-md: 20px;
+    --gutter: 32px; --max: 1376px; --r-xl: 20px; --r-lg: 16px; --r-md: 12px; --side: 0px;
     --font: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     --display: "Inter Tight", Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   }
@@ -524,14 +524,160 @@
     .footer-grid { grid-template-columns: 1fr; }
     .legal { flex-direction: column; } .legal .dot { display: none; }
   }
+
+  /* ═════ App shell, in the style of a trading app: sidebar, search, white surfaces ═════ */
+  .band.alt { background: #fff; }
+  .band { padding: 32px 0 56px; }
+  .panel, .help, .side-card, .assets, .welcome { border: 1px solid var(--border); box-shadow: none; }
+  .panel { border-radius: var(--r-xl); padding: 24px; }
+  .section-head, .wrap.narrow .section-head { grid-template-columns: minmax(0, 1fr) !important; margin-bottom: 24px; gap: 0; }
+  .section-head .art-card { display: none !important; }
+  h2.display { font-family: var(--font); font-weight: 700; font-size: 30px; line-height: 36px; letter-spacing: -0.01em; }
+  .lead { font-size: 16px; line-height: 24px; margin: 6px 0 0; }
+  .card { background: #fff; border: 1px solid var(--border); }
+  /* Sidebar */
+  .sidebar { display: contents; }
+  .sidebar > .brand, .side-foot { display: none; }
+  /* Header search */
+  .search { position: relative; flex: 1 1 360px; max-width: 460px; display: flex; align-items: center; }
+  .search > .i { position: absolute; left: 14px; color: var(--dim); width: 18px; height: 18px; pointer-events: none; }
+  .search input { width: 100%; border-radius: 56px; background: var(--alt); border-color: transparent; padding-left: 42px; }
+  .search input::-webkit-search-cancel-button { display: none; }
+  .searchList { position: absolute; top: calc(100% + 6px); left: 0; right: 0; list-style: none; background: #fff; border: 1px solid var(--border); border-radius: 16px; box-shadow: 0 12px 32px rgba(10,11,13,.12); padding: 6px; z-index: 50; max-height: 60vh; overflow-y: auto; }
+  .searchList[hidden] { display: none; }
+  .searchList li { display: flex; align-items: center; gap: 12px; padding: 8px 10px; border-radius: 12px; cursor: pointer; }
+  .searchList li[aria-selected="true"], .searchList li:hover { background: var(--alt); }
+  .searchList .s-nm { flex: 1; display: flex; flex-direction: column; line-height: 1.25; } .searchList .s-nm span { color: var(--dim); font-size: 13px; }
+  .searchList .s-tag { font-size: 12px; color: var(--dim); }
+  .search-btn { display: none; }
+  /* Home */
+  .home-grid { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 32px; align-items: start; }
+  .home-side { display: flex; flex-direction: column; gap: 16px; position: sticky; top: calc(var(--top-h, 113px) + 16px); }
+  .home-side .startHere { margin: 0; max-width: none; border: 1px solid var(--border); box-shadow: none; }
+  .side-card { border-radius: var(--r-xl); padding: 20px; display: flex; flex-direction: column; gap: 10px; }
+  .side-card b { font-size: 17px; } .side-actions { display: flex; flex-direction: column; gap: 8px; }
+  .home-side .botnote { margin: 0; border-radius: var(--r-xl); flex-direction: column; align-items: flex-start; gap: 10px; }
+  .mkt { padding: 4px 0 8px; }
+  .home .summary { font-family: var(--font); font-weight: 700; font-size: 32px; line-height: 40px; letter-spacing: -0.015em; }
+  .home .summary small { font-size: 16px; line-height: 24px; margin-top: 6px; color: var(--dim); font-weight: 400; }
+  .home .summary .dot { width: 12px; height: 12px; margin-right: 10px; vertical-align: 0.15em; }
+  .sec-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin: 28px 0 12px; flex-wrap: wrap; }
+  .sec-head h2 { margin: 0; font-size: 20px; }
+  .movers { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 12px; }
+  .mover { background: #fff; border: 1px solid var(--border); border-radius: var(--r-lg); padding: 14px; display: flex; flex-direction: column; gap: 8px; text-align: left; min-height: 0; font-weight: 400; cursor: pointer; }
+  .mover:hover { background: var(--panel); }
+  @media (min-width: 768px) { .movers { grid-template-columns: repeat(4, minmax(0, 1fr)); } .mover:nth-child(n+5) { display: none; } }
+  .mover .spark { width: 100%; height: 28px; }
+  .mover .m-top { display: flex; align-items: center; gap: 8px; } .mover .m-top b { font-size: 15px; }
+  .mover .m-px { font-size: 15px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .mover .m-chg { font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
+  /* Watchlist table */
+  .assets { border-radius: var(--r-xl); overflow: hidden; background: #fff; }
+  .atable { width: 100%; border-collapse: collapse; }
+  .atable th { text-align: left; font-size: 13px; font-weight: 600; color: var(--dim); padding: 12px 12px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+  .atable td { padding: 10px 12px; border-bottom: 1px solid var(--alt); vertical-align: middle; }
+  .atable tr:last-child td { border-bottom: 0; }
+  .atable tbody tr[data-sym] { cursor: pointer; } .atable tbody tr[data-sym]:hover td { background: var(--panel); }
+  .atable tbody tr.sel td { background: #f5f8ff; }
+  .atable tr:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+  .atable .num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .a-name { display: flex; align-items: center; gap: 12px; min-width: 0; } .a-name > span { display: flex; flex-direction: column; line-height: 1.25; min-width: 0; }
+  .a-name b { font-size: 15px; } .a-name small { color: var(--dim); font-size: 13px; }
+  .a-px { font-weight: 600; } .a-chg { font-weight: 600; } .a-sub { display: none; font-size: 13px; font-weight: 500; }
+  .spark { display: block; } .atable td:first-child, .atable th:first-child { padding-left: 16px; } .atable td:last-child, .atable th:last-child { padding-right: 10px; width: 48px; }
+  @media (max-width: 1440px) and (min-width: 768px) { .atable .a-col-spark .spark { width: 96px; } }
+  .star { background: none; min-height: 36px; width: 36px; padding: 0; font-size: 20px; color: var(--accent); line-height: 1; }
+  .star:hover { background: var(--alt); }
+  .atable .a-sig .badge { white-space: nowrap; }
+  .addrow { margin: 14px 0 20px; } .addrow input { border-radius: 56px; }
+  /* Phone bottom bar */
+  .bottomnav { display: none; }
+  .a-sub-sig { display: none; }
+  @media (max-width: 767px) { .a-sub-sig { display: inline; } }
+
+  @media (min-width: 1200px) {
+    :root { --side: 240px; }
+    body { padding-left: var(--side); }
+    .sidebar { display: flex; flex-direction: column; position: fixed; top: 0; left: 0; bottom: 0; width: var(--side); border-right: 1px solid var(--border); background: #fff; z-index: 40; padding: 18px 12px; gap: 18px; overflow-y: auto; }
+    .sidebar > .brand { display: flex; padding: 4px 10px; }
+    .sidebar > .brand span { display: inline !important; }
+    .sidebar .tabs { flex-direction: column; align-items: stretch; gap: 2px; }
+    .sidebar .tabs button { display: flex; align-items: center; gap: 14px; justify-content: flex-start; min-height: 48px; padding: 0 14px; border-radius: 12px; font-size: 16px; font-weight: 600; color: var(--text); }
+    .sidebar .tabs .ico { display: inline-flex; } .sidebar .tabs .ico .i { width: 22px; height: 22px; }
+    .sidebar .tabs button.on { background: #f5f8ff; color: var(--accent); }
+    .sidebar .tabs .count { position: static; margin-left: auto; }
+    .side-foot { display: block; margin-top: auto; padding: 0 10px; line-height: 1.4; }
+    .header > .brand { display: none; }
+    #detail { left: var(--side) !important; width: auto !important; }
+  }
+  @media (max-width: 1199px) {
+    .home-grid { grid-template-columns: minmax(0, 1fr); }
+    .home-side { position: static; }
+  }
+  @media (max-width: 767px) {
+    body { padding-bottom: 68px; }
+    .bottomnav { display: grid; grid-template-columns: repeat(5, 1fr); position: fixed; left: 0; right: 0; bottom: 0; z-index: 45; background: #fff; border-top: 1px solid var(--border); padding: 4px 4px calc(4px + env(safe-area-inset-bottom)); }
+    .bottomnav button { background: none; display: flex; flex-direction: column; align-items: center; gap: 2px; min-height: 56px; padding: 0; border-radius: 12px; font-size: 11px; font-weight: 600; color: var(--dim); }
+    .bottomnav button .i { width: 24px; height: 24px; }
+    .bottomnav button.on { color: var(--accent); }
+    body.detailOpen .bottomnav { display: none; }
+    .menu-toggle { display: none !important; }
+    .search { display: none; position: absolute; left: 12px; right: 12px; top: calc(100% + 8px); max-width: none; z-index: 50; }
+    body.searchOpen .search { display: flex; }
+    .search input { background: #fff; border: 1px solid var(--border); box-shadow: 0 8px 24px rgba(10,11,13,.12); min-height: 48px; }
+    .search-btn { display: inline-flex; }
+    .header { position: relative; }
+    .home .summary { font-size: 24px; line-height: 30px; }
+    .movers { grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: 148px; overflow-x: auto; scrollbar-width: none; margin: 0 -16px; padding: 0 16px; }
+    .movers::-webkit-scrollbar { display: none; }
+    .atable thead, .atable .a-col-chg, .atable .a-col-sig, .atable .a-col-pro, .atable .a-col-spark { display: none; }
+    .atable td { padding: 12px; } .a-sub { display: block; }
+    .a-name .coin-ic { --s: 32px !important; }
+  }
+
+  /* ═════ Coin page, app style ═════ */
+  #detail { background: #fff !important; --dp: max(24px, calc((100vw - var(--side) - 1240px) / 2)) !important; }
+  #detail .detailHead { display: flex; flex-direction: column; gap: 2px; padding-top: 18px; margin-bottom: 8px; }
+  .ah-name { display: flex; align-items: center; gap: 10px; font-size: 17px; } .ah-name b { font-size: 18px; }
+  .ah-px { font-size: 40px; line-height: 48px; font-weight: 700; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+  .ah-chg { font-size: 15px; font-weight: 600; } .ah-chg .muted { font-weight: 400; margin-left: 4px; }
+  .ov-grid { display: grid; grid-template-columns: minmax(0, 1fr) 320px; grid-template-areas: "chart side" "move side"; gap: 8px 28px; align-items: start; }
+  .ov-chart { grid-area: chart; min-width: 0; } .ov-move { grid-area: move; min-width: 0; }
+  .ov-side { grid-area: side; display: flex; flex-direction: column; gap: 12px; position: sticky; top: 120px; margin-top: 8px; }
+  .side-box { border: 1px solid var(--border); border-radius: 16px; padding: 16px 18px; display: flex; flex-direction: column; gap: 8px; background: #fff; }
+  .side-box h3 { font-size: 16px; margin: 0 0 4px; }
+  .sig-big { align-self: flex-start; font-size: 15px; padding: 4px 14px; } .sig-box p { margin: 0; font-weight: 500; }
+  .act-box a.btn-primary { display: flex; align-items: center; justify-content: center; min-height: 48px; border-radius: 56px; background: var(--accent); color: #fff; font-weight: 700; text-decoration: none; }
+  .act-box a.btn-primary:hover { background: var(--accent-hover); }
+  .act-box button { width: 100%; }
+  .side-links { text-align: center; } .side-links a { color: var(--dim); }
+  .mstats { display: flex; flex-direction: column; margin: 0; }
+  .mstats div { display: flex; justify-content: space-between; gap: 12px; padding: 7px 0; border-bottom: 1px solid var(--alt); font-size: 14px; }
+  .mstats div:last-child { border-bottom: 0; } .mstats dt { color: var(--dim); } .mstats dd { margin: 0; font-weight: 600; font-variant-numeric: tabular-nums; text-align: right; }
+  .tfpills { display: flex; gap: 6px; align-items: center; margin: 6px 0 4px; }
+  .tfpills button { min-height: 32px; padding: 0 14px; font-size: 13px; background: var(--alt); }
+  .tfpills button.on { background: var(--text); color: #fff; }
+  #detail .move { border: 1px solid var(--border); border-top-width: 4px; }
+  #detail .dnav { background: #fff; }
+  @media (max-width: 1099px) {
+    .ov-grid { grid-template-columns: minmax(0, 1fr); grid-template-areas: "chart" "side" "move"; }
+    .ov-side { position: static; }
+  }
+  @media (max-width: 767px) {
+    .ah-px { font-size: 32px; line-height: 38px; }
+    #detail { --dp: 16px !important; }
+  }
+
+  /* Cards that used to sit on grey bands get a hairline border on white */
+  .tcard, .ticket, .sim-box, .sim-chart, .sim-result, .lesson, .levelOpt, .tipbox { border: 1px solid var(--border); }
+  .simgame .sim-stats div, .sim-box, .ticket { background: #fff; }
+  .simgame { background: var(--panel); }
 </style>
 </head>
 <body>
-<!-- ───────── Pinned top: notice bar + header ───────── -->
-<div class="top" id="top">
-  <div class="promo"><button class="linkbtn plain" data-open-help>Not financial advice: signals are automated and often wrong. See how they work →</button></div>
-  <header class="header">
-    <a class="brand" href="#" data-go="signals" aria-label="Signal Tips home"><img src="icon.svg" alt="" width="40" height="40" /><span>Signal Tips</span></a>
+<!-- ───────── Sidebar (desktop) / menu sheet (tablet & phone) ───────── -->
+<aside class="sidebar" id="sidebar">
+  <a class="brand" href="#" data-go="signals" aria-label="Signal Tips home"><img src="icon.svg" alt="" width="36" height="36" /><span>Signal Tips</span></a>
     <nav class="tabs" id="tabs" aria-label="Sections">
       <button data-go="signals"><span class="ico"><i data-i="chart"></i></span><span>Signals</span></button>
       <button data-go="trench"><span class="ico"><i data-i="flame"></i></span><span>Trench</span></button>
@@ -543,6 +689,19 @@
       <button data-go="learn" class="forBeginner"><span class="ico"><i data-i="cap"></i></span><span>Learn</span></button>
       <button data-go="me"><span class="ico"><i data-i="user"></i></span><span>Me</span></button>
     </nav>
+  <div class="side-foot muted small">Live prices from Coinbase's public market data. Not financial advice.</div>
+</aside>
+
+<!-- ───────── Pinned top: notice bar + header ───────── -->
+<div class="top" id="top">
+  <div class="promo"><button class="linkbtn plain" data-open-help>Not financial advice: signals are automated and often wrong. See how they work →</button></div>
+  <header class="header">
+    <a class="brand" href="#" data-go="signals" aria-label="Signal Tips home"><img src="icon.svg" alt="" width="40" height="40" /><span>Signal Tips</span></a>
+    <div class="search" id="searchBox" role="search">
+      <i data-i="search"></i>
+      <input id="search" type="search" placeholder="Search for an asset" autocomplete="off" spellcheck="false" aria-label="Search for a coin" aria-controls="searchList" aria-expanded="false" />
+      <ul id="searchList" class="searchList" role="listbox" hidden></ul>
+    </div>
     <div class="header-right">
       <label class="sr-only" for="tf">Timeframe</label>
       <select id="tf" title="How far ahead you're thinking">
@@ -552,6 +711,7 @@
       </select>
       <label class="sr-only" for="curTop">Currency</label>
       <select id="curTop" class="curSel curTop" title="Show prices in this currency"></select>
+      <button id="searchBtn" class="icon-btn search-btn" aria-label="Search for a coin"><i data-i="search"></i></button>
       <button id="refresh" class="icon-btn" title="Refresh prices now" aria-label="Refresh prices now">↻</button>
       <button class="primary pill hide-sm" data-go="ai">Ask AI</button>
       <button class="icon-btn menu-toggle" id="menuToggle" aria-label="Open menu" aria-expanded="false" aria-controls="tabs">
@@ -570,9 +730,8 @@
 
   <!-- ───────── Signals ───────── -->
   <section class="tab" data-tab="signals">
-    <div class="band alt hero">
-      <div class="wrap hero-grid">
-        <div>
+    <div class="band home">
+      <div class="wrap">
           <div id="welcome" class="welcome" hidden>
             <button class="x" id="welcomeClose" aria-label="Close and keep the default (new to trading)">✕</button>
             <h2>Welcome. Which describes you best?</h2>
@@ -593,33 +752,20 @@
             </ol>
             <button class="primary" id="tipsOk">Got it</button>
           </div>
-          <h1 class="summary" id="summary">Loading live prices…</h1>
-          <div class="marketBar" id="marketBar" hidden></div>
-          <div class="hero-ctas">
-            <button class="primary pill lg" data-go="ai">Ask AI about today</button>
-            <button class="pill lg dark" data-go="alerts">Set an alert</button>
-          </div>
-          <button class="startHere forBeginner" id="startHere"></button>
-        </div>
-        <div class="hero-card">
-          <div class="hero-card-inner">
-            <div class="row"><b>Live prices</b><span class="muted" id="status">Loading…</span></div>
-            <div id="heroList" class="heroList"></div>
-            <p class="muted small">Updates every minute · tap a coin for the full picture</p>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div class="band">
-      <div class="wrap">
-        <div class="section-head"><div><h2 class="display">Today's signals</h2>
-        <p class="lead">Every coin you follow, rated from its trend, momentum and price history. Tap one to see why.</p></div><div class="art-card"><img src="art/signals.svg" alt="" width="480" height="320" /></div></div>
-        <div class="grid" id="grid"></div>
-        <div class="addrow">
-          <input id="newSym" placeholder="Add a coin, e.g. PEPE" size="14" aria-label="Coin symbol to add" />
-          <button id="addSym" class="pill dark">+ Add coin</button>
-        </div>
+        <div class="home-grid">
+          <div class="home-main">
+            <div class="mkt">
+              <h1 class="summary" id="summary">Loading live prices…</h1>
+              <div class="marketBar" id="marketBar" hidden></div>
+            </div>
+            <div class="sec-head"><h2>Top movers</h2><span class="muted">Biggest 24-hour moves among your coins</span></div>
+            <div class="movers" id="movers"></div>
+            <div class="sec-head"><h2>Watchlist</h2><span class="muted" id="status">Loading…</span></div>
+            <div class="assets"><table class="atable" id="grid"></table></div>
+            <div class="addrow">
+              <input id="newSym" placeholder="Add a coin, e.g. PEPE" size="14" aria-label="Coin symbol to add" />
+              <button id="addSym" class="pill">+ Add to watchlist</button>
+            </div>
         <details class="help" id="help">
           <summary>What do BUY, HOLD, SELL and the numbers mean?</summary>
           <ul>
@@ -638,10 +784,20 @@
             <li><b>Score:</b> each indicator adds or removes points. The total decides BUY, HOLD or SELL. Tap any coin to see the full breakdown.</li>
           </ul>
         </details>
-        <div id="detailScrim" aria-hidden="true"></div>
-        <div id="detail"></div>
+          </div>
+          <aside class="home-side">
+            <button class="startHere forBeginner" id="startHere"></button>
+            <div class="side-card">
+              <b>Not sure where to start?</b>
+              <p class="muted">Ask the AI about today's market, or get a heads-up when a price moves.</p>
+              <div class="side-actions"><button class="primary pill" data-go="ai">Ask AI about today</button><button class="pill" data-go="alerts">Set an alert</button></div>
+            </div>
         <div class="botnote"><span class="bot-ico"><i data-i="bot"></i></span><div><b>Coming soon: the Signal Tips trading bot</b>
           <span>We’re building a bot that can follow the signals you choose, with limits you set. It isn’t available yet, and nothing in this app trades for you today.</span></div></div>
+          </aside>
+        </div>
+        <div id="detailScrim" aria-hidden="true"></div>
+        <div id="detail"></div>
       </div>
     </div>
   </section>
@@ -860,6 +1016,15 @@
   </section>
 </main>
 
+<!-- Phone: bottom tab bar -->
+<nav class="bottomnav" aria-label="Main">
+  <button data-go="signals"><i data-i="chart"></i><span>Home</span></button>
+  <button data-go="trench"><i data-i="flame"></i><span>Trench</span></button>
+  <button data-go="sim"><i data-i="game"></i><span>Practice</span></button>
+  <button data-go="alerts"><i data-i="bell"></i><span>Alerts</span></button>
+  <button id="moreBtn" aria-controls="tabs"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg><span>More</span></button>
+</nav>
+
 <footer class="footer">
   <div class="wrap">
     <div class="footer-grid">
@@ -900,6 +1065,7 @@
 <script src="wallets.js"></script>
 <script src="trench-ui.js"></script>
 <script src="sim.js"></script>
+<script src="search.js"></script>
 <div id="toasts" aria-live="polite"></div>
 </body>
 </html>

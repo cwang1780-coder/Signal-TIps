@@ -226,4 +226,9 @@
   $("socRefresh").onclick = loadSocial;
   setInterval(loadSocial, 5 * 60 * 1000);
   renderAlerts();
+  // "Set a price alert" from a coin's page: pick that coin and a price alert, ready to type the price.
+  window.prefillAlert = (sym) => {
+    if (![...$("alSym").options].some((o) => o.value === sym)) $("alSym").add(new Option(sym, sym));
+    $("alSym").value = sym; $("alType").value = "above"; renderAlerts(); $("alValue").focus();
+  };
 })();

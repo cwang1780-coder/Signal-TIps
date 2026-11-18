@@ -96,6 +96,15 @@ Each coin's detail view adds context that does **not** change the score:
 What testing showed: similar-pattern matches called the next move's direction right about half the time (no better than chance), and
 "buy on extreme fear" was barely better than any ordinary day for Bitcoin from 2018 to 2026. The app says this next to those sections.
 
+## Layout
+
+The layout follows a trading app (Signal Tips' own branding, not Coinbase's):
+
+- **Desktop:** a sidebar menu, a header search ("Search for an asset", or press `/`) that finds any coin trading on Coinbase in USD, and a currency and candle-size picker.
+- **Home:** a market summary, **Top movers**, and a **watchlist table** with price, 24h change, a 7-day mini chart, the signal and a ★ to remove a coin. Experienced mode adds RSI and score columns.
+- **Coin page:** name and big price, the chart (1D/6H/1H candle buttons in experienced mode), and a side column with the signal, Trade on Coinbase, Set a price alert, Ask AI, and **Market stats**. The section tabs sit above.
+- **Phones:** a bottom tab bar (Home, Trench, Practice, Alerts, More) and a search button in the header.
+
 ## Currency
 
 Prices come from Coinbase's US-dollar markets. They're shown in the visitor's currency, converted at Coinbase's public exchange rates (refreshed hourly; `/api/config` returns them).

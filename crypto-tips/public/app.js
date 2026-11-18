@@ -242,29 +242,53 @@ function renderHeroList() {
   }).join("") : pricesFailed() ? `<p class="muted" style="padding:12px 6px">Couldn't load live prices. <button class="pill retryPrices">Try again</button></p>` : `<p class="muted" style="padding:12px 6px">Loading live prices…</p>`;
 }
 
+// A small price line for the last `secs` seconds of candles.
+function sparkline(candles, secs, w, h) {
+  if (!candles?.length) return "";
+  const last = candles[candles.length - 1].time, pts = candles.filter((c) => c.time > last - secs).map((c) => c.close);
+  if (pts.length < 2) return "";
+  const lo = Math.min(...pts), hi = Math.max(...pts), up = pts[pts.length - 1] >= pts[0];
+  const d = pts.map((v, i) => `${((i / (pts.length - 1)) * (w - 2) + 1).toFixed(1)},${(h - 2 - ((v - lo) / (hi - lo || 1)) * (h - 4)).toFixed(1)}`).join(" ");
+  return `<svg class="spark" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" aria-hidden="true"><polyline points="${d}" fill="none" stroke="${up ? "#098551" : "#cf202f"}" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/></svg>`;
+}
+
+// Top movers: the biggest 24-hour moves among your coins.
+function renderMovers() {
+  const el = $("movers");
+  if (!el) return;
+  const rs = allSyms().map((s) => [s, results[s]]).filter(([, r]) => r && !r.error).sort((a, b) => Math.abs(b[1].change24) - Math.abs(a[1].change24)).slice(0, 6);
+  el.innerHTML = rs.length ? rs.map(([sym, r]) => `<button class="mover" data-sym="${sym}" aria-label="${coinName(sym) || sym} ${pct(r.change24)} in 24 hours">
+      <span class="m-top">${coinIcon(sym, 28)}<b>${sym}</b></span>
+      <span class="m-px">${fmt(r.price)}</span>
+      <span class="m-chg ${r.change24 >= 0 ? "up" : "down"}">${pct(r.change24)}</span>
+      ${sparkline(r.candles, 86400 * 7, 140, 28)}</button>`).join("")
+    : `<p class="muted">${pricesFailed() ? "Live prices didn't load." : "Loading live prices…"}</p>`;
+}
+
 function render() {
   renderSummary();
   renderHeroList();
-  // Keep your own order (no reshuffling on every refresh), so coins stay where you expect them.
-  $("grid").innerHTML = allSyms().map((sym) => {
-    const r = results[sym];
-    const title = `<span class="sym">${coinIcon(sym, 32)}<span class="nm2"><span>${sym}</span>${coinName(sym) ? `<span class="name">${coinName(sym)}</span>` : ""}</span></span>`;
-    if (!r) return `<div class="card">${title}<div class="muted">Loading…</div></div>`;
-    if (r.error) return `<div class="card"><div class="row">${title}<button class="x" data-rm="${sym}" title="Remove ${sym}" aria-label="Remove ${sym}">✕</button></div><div class="muted">${r.error === "not on Coinbase" ? "Couldn't find this coin on Coinbase." : "Couldn't load this coin (" + r.error + ")."}</div></div>`;
-    const w = Math.min(Math.abs(r.score) / 6, 1) * 50;
-    const color = r.score >= 0 ? "var(--buy)" : "var(--sell)";
-    const left = r.score >= 0 ? 50 : 50 - w;
-    return `<div class="card ${selected === sym ? "sel" : ""}" data-sym="${sym}" role="button" tabindex="0" aria-label="${sym} ${r.action}">
-      <div class="row">${title}<span class="${actionClass(r.action)}">${r.action}</span></div>
-      <div class="price">${fmt(r.price)}</div>
-      <div class="chg ${r.change24 >= 0 ? "up" : "down"}">${r.change24 >= 0 ? "▲" : "▼"} ${pct(r.change24)} in 24h</div>
-      <div class="plain">${PLAIN[r.action]}</div>
-      <div class="techrow" title="RSI: 0 to 100, under 30 is oversold, over 70 is overbought. Score: total of the signal points. Trend: how far the price is from its 200-period average.">
-        <span>RSI <b>${r.rsi != null ? r.rsi.toFixed(0) : "–"}</b></span><span>Score <b>${r.score > 0 ? "+" : ""}${r.score.toFixed(1)}</b></span>${r.sma200 ? `<span>vs 200 avg <b class="${r.price >= r.sma200 ? "up" : "down"}">${pct(r.price / r.sma200 - 1).replace(/\.\d+%/, "%")}</b></span>` : ""}
-      </div>
-      <div class="meter" title="Signal strength ${r.score.toFixed(1)}"><i style="left:${left}%;width:${w}%;background:${color}"></i><i style="left:50%;width:1px;background:var(--dim)"></i></div>
-    </div>`;
-  }).join("");
+  renderMovers();
+  // Watchlist table. Keep your own order (no reshuffling on every refresh), so coins stay where you expect them.
+  const pro = level() === "pro";
+  $("grid").innerHTML = `<thead><tr><th>Name</th><th class="num">Price</th><th class="num a-col-chg">24h change</th><th class="a-col-spark">7 days</th><th class="a-col-sig">Signal</th>${pro ? `<th class="num a-col-pro">RSI</th><th class="num a-col-pro">Score</th>` : ""}<th class="num"><span class="sr-only">Watchlist</span></th></tr></thead><tbody>` +
+    allSyms().map((sym) => {
+      const r = results[sym], own = coins.includes(sym);
+      const name = `<div class="a-name">${coinIcon(sym, 36)}<span><b>${coinName(sym) || sym}</b><small>${sym}${r && !r.error ? ` <span class="a-sub-sig">· ${r.action}</span>` : ""}</small></span></div>`;
+      const star = own ? `<button class="star" data-rm="${sym}" title="Remove ${sym} from your watchlist" aria-label="Remove ${sym} from your watchlist">★</button>` : "";
+      const cols = 4 + (pro ? 2 : 0);
+      if (!r) return `<tr><td>${name}</td><td class="num muted" colspan="${cols}">Loading…</td><td class="num">${star}</td></tr>`;
+      if (r.error) return `<tr><td>${name}</td><td class="muted" colspan="${cols}">${r.error === "not on Coinbase" ? "Couldn't find this coin on Coinbase." : "Couldn't load this coin (" + r.error + ")."}</td><td class="num">${star}</td></tr>`;
+      const ch = `<span class="${r.change24 >= 0 ? "up" : "down"}">${r.change24 >= 0 ? "↗" : "↘"} ${pct(r.change24).replace(/^[+-]/, "")}</span>`;
+      return `<tr class="${selected === sym ? "sel" : ""}" data-sym="${sym}" tabindex="0" role="button" aria-label="${coinName(sym) || sym}, ${r.action}">
+        <td>${name}</td>
+        <td class="num"><span class="a-px">${fmt(r.price)}</span><span class="a-sub">${ch}</span></td>
+        <td class="num a-col-chg a-chg">${ch}</td>
+        <td class="a-col-spark">${sparkline(r.candles, 7 * 86400, 120, 36)}</td>
+        <td class="a-col-sig"><span class="${actionClass(r.action)}" title="${PLAIN[r.action]}">${r.action}</span></td>
+        ${pro ? `<td class="num a-col-pro">${r.rsi != null ? r.rsi.toFixed(0) : "–"}</td><td class="num a-col-pro">${r.score > 0 ? "+" : ""}${r.score.toFixed(1)}</td>` : ""}
+        <td class="num">${star}</td></tr>`;
+    }).join("") + "</tbody>";
   renderDetail();
   renderHoldings();
 }
@@ -272,6 +296,10 @@ function render() {
 function renderDetail() {
   const el = $("detail");
   const r = results[selected];
+  if (selected && !r && el.style.display === "block") {
+    el.innerHTML = `<nav class="dnav"><div class="dnav-top"><button class="dback" data-close aria-label="Back to all coins">← <span>All coins</span></button></div></nav><p class="muted" style="padding:40px 0">Loading ${coinName(selected) || selected}…</p>`;
+    return;
+  }
   if (!r || r.error) { el.style.display = "none"; document.body.classList.remove("detailOpen"); return; }
   // The coin view is a panel beside the list (a full sheet on phones), placed just under the pinned header.
   document.documentElement.style.setProperty("--top-h", $("top").getBoundingClientRect().bottom + "px");
@@ -289,21 +317,37 @@ function renderDetail() {
       </div>
       <div class="dtabs" role="tablist">${DSECS.map(([id, t, ic]) => `<button role="tab" data-dtab="${id}">${icon(ic)}<span>${t}</span></button>`).join("")}</div>
     </nav>
-    <div class="row detailHead"><h2 style="margin:0">${coinIcon(selected, 44)}<span>${coinName(selected) || selected} <span class="muted">${selected}</span> · ${fmt(r.price)}</span></h2>
-      <span class="${actionClass(r.action)}">${r.action}</span></div>
-    <p style="margin-top:6px">${PLAIN[r.action]}</p>
+    <div class="detailHead">
+      <div class="ah-name">${coinIcon(selected, 32)}<b>${coinName(selected) || selected}</b><span class="muted">${selected}</span></div>
+      <div class="ah-px">${fmt(r.price)}</div>
+      <div class="ah-chg ${r.change24 >= 0 ? "up" : "down"}">${r.change24 >= 0 ? "↗" : "↘"} ${fmt(Math.abs(r.price - r.price / (1 + r.change24)))} (${pct(Math.abs(r.change24)).replace("+", "")}) <span class="muted">past 24 hours</span></div>
+    </div>
     <section class="dsec" data-sec="overview">
-    <div id="detailMove"></div>
-    <div id="d-chart"></div>
-    <div id="chartWrap"></div>
-    <div class="muted">Price (black) · 50-period avg (blue) · 200-period avg (orange) · Pick a tool above the chart to draw. Drawings are saved for this coin.</div>
-    <div class="links">
-      ${siteConfig.coinbaseRef
-        ? `<a href="${siteConfig.coinbaseRef}" target="_blank" rel="noopener sponsored">Sign up for Coinbase ↗ <small>(referral link: we may earn a commission)</small></a>`
-        : `<a href="https://www.coinbase.com/advanced-trade/spot/${selected}-USD" target="_blank" rel="noopener">Trade on Coinbase ↗</a>`}
-      <a href="https://www.exodus.com/" target="_blank" rel="noopener">Open Exodus ↗</a>
-      <a href="https://www.tradingview.com/symbols/${selected}USD/" target="_blank" rel="noopener">Chart on TradingView ↗</a>
-      <button class="primary" onclick="askAI('Should I buy, sell or hold ${selected} right now? Walk me through the signals and what people are saying.')">Ask AI about ${selected}</button>
+    <div class="ov-grid">
+      <div class="ov-chart">
+        ${level() === "pro" ? `<div class="tfpills" role="group" aria-label="Candle size">${[["86400", "1D"], ["21600", "6H"], ["3600", "1H"]].map(([v, t]) => `<button data-tfset="${v}" class="${$("tf").value === v ? "on" : ""}" aria-pressed="${$("tf").value === v}">${t}</button>`).join("")}<span class="muted small">candles</span></div>` : ""}
+        <div id="d-chart"></div>
+        <div id="chartWrap"></div>
+        <div class="muted small">Price (black) · 50-period avg (blue) · 200-period avg (orange) · Pick a tool above the chart to draw. Drawings are saved for this coin.</div>
+      </div>
+      <aside class="ov-side">
+        <div class="side-box sig-box">
+          <span class="muted small">Signal</span>
+          <span class="${actionClass(r.action)} sig-big">${r.action}</span>
+          <p>${PLAIN[r.action]}</p>
+          <span class="muted small">Score ${r.score > 0 ? "+" : ""}${r.score.toFixed(1)} · <button class="linkbtn" data-dtab="score">See why</button></span>
+        </div>
+        <div class="side-box act-box">
+          ${siteConfig.coinbaseRef
+            ? `<a class="btn-primary" href="${siteConfig.coinbaseRef}" target="_blank" rel="noopener sponsored">Sign up for Coinbase ↗</a><span class="muted small">Referral link: we may earn a commission.</span>`
+            : `<a class="btn-primary" href="https://www.coinbase.com/advanced-trade/spot/${selected}-USD" target="_blank" rel="noopener">Trade on Coinbase ↗</a>`}
+          <button data-alertfor="${selected}">Set a price alert</button>
+          <button onclick="askAI('Should I buy, sell or hold ${selected} right now? Walk me through the signals and what people are saying.')">Ask AI about ${selected}</button>
+          <span class="muted small side-links"><a href="https://www.exodus.com/" target="_blank" rel="noopener">Exodus ↗</a> · <a href="https://www.tradingview.com/symbols/${selected}USD/" target="_blank" rel="noopener">TradingView ↗</a></span>
+        </div>
+        <div class="side-box stats-box"><h3>Market stats</h3>${marketStatsHtml(r)}</div>
+      </aside>
+      <div class="ov-move"><div id="detailMove"></div></div>
     </div>
     </section>
     <section class="dsec" data-sec="score">
@@ -321,6 +365,23 @@ function renderDetail() {
   window.renderResearch?.(selected);
   syncJump();
 }
+// Market stats for the coin view, from the candles already loaded.
+function marketStatsHtml(r) {
+  const c = r.candles, last = c[c.length - 1], gran = +$("tf").value;
+  const ago = (secs) => { let i = c.length - 1; while (i > 0 && c[i].time > last.time - secs) i--; return last.time - c[i].time >= secs * 0.7 ? r.price / c[i].close - 1 : null; };
+  const within = (secs) => c.filter((x) => x.time > last.time - secs);
+  const yr = within(365 * 86400), span = gran === 86400 && last.time - c[0].time > 300 * 86400 ? "1-year" : "Period";
+  const dayVol = gran < 86400 ? within(86400).reduce((a, x) => a + x.volume * x.close, 0) : (c[c.length - 2]?.volume || 0) * (c[c.length - 2]?.close || 0);
+  const ch = (v) => (v == null ? "–" : `<span class="${v >= 0 ? "up" : "down"}">${pct(v)}</span>`);
+  const rows = [
+    ["Price", fmt(r.price)], ["24h change", ch(r.change24)], ["7d change", ch(ago(7 * 86400))], ["30d change", ch(ago(30 * 86400))],
+    [gran < 86400 ? "Volume (24h)" : "Volume (last full day)", Currency.compact(dayVol)],
+    [`${span} high`, fmt(Math.max(...yr.map((x) => x.high)))], [`${span} low`, fmt(Math.min(...yr.map((x) => x.low)))],
+    ["200-period average", r.sma200 ? fmt(r.sma200) : "–"], ["RSI (14)", r.rsi != null ? r.rsi.toFixed(0) : "–"],
+  ];
+  return `<dl class="mstats">${rows.map(([k, v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join("")}</dl>`;
+}
+
 // The coin view's sections, shown one at a time so there's no long scroll.
 const DSECS = [["overview", "Overview", "gauge"], ["score", "Score", "bars"], ["pattern", "Pattern", "chart"], ["reasons", "Reasons", "search"], ["history", "History", "clock"], ["track", "Track record", "check"], ["news", "News & buzz", "news"]];
 let dTab = "overview", dTabSym = null;
@@ -394,9 +455,14 @@ $("grid").addEventListener("click", (e) => {
   const card = e.target.closest("[data-sym]");
   if (card) { selected = card.dataset.sym; render(); $("detail").scrollTop = 0; }
 });
+$("movers").addEventListener("click", (e) => { const m = e.target.closest("[data-sym]"); if (m) { selected = m.dataset.sym; render(); $("detail").scrollTop = 0; } });
 $("grid").addEventListener("keydown", (e) => { if ((e.key === "Enter" || e.key === " ") && e.target.dataset.sym) { e.preventDefault(); e.target.click(); } });
 $("detail").addEventListener("click", (e) => {
   if (e.target.id === "detailClose" || e.target.closest("[data-close]")) return closeDetail();
+  const tfb = e.target.closest("[data-tfset]");
+  if (tfb) { $("tf").value = tfb.dataset.tfset; $("tf").dispatchEvent(new Event("change")); return; }
+  const al = e.target.closest("[data-alertfor]");
+  if (al) { const sym = al.dataset.alertfor; showTab("alerts"); window.prefillAlert?.(sym); return; }
   const t = e.target.closest("[data-dtab]");
   if (t) showDTab(t.dataset.dtab);
 });
@@ -436,7 +502,7 @@ window.addEventListener("popstate", () => { if (selected && document.body.classL
 function showTab(name) {
   if (!TABS.includes(name) || (name === "learn" && level() === "pro")) name = "signals";
   document.querySelectorAll("section.tab").forEach((s) => (s.hidden = s.dataset.tab !== name));
-  document.querySelectorAll("#tabs button").forEach((b) => { const on = b.dataset.go === name; b.classList.toggle("on", on); b.setAttribute("aria-current", on ? "page" : "false"); });
+  document.querySelectorAll("#tabs button, .bottomnav [data-go]").forEach((b) => { const on = b.dataset.go === name; b.classList.toggle("on", on); b.setAttribute("aria-current", on ? "page" : "false"); });
   store.set("tab", name);
   document.body.classList.toggle("detailOpen", name === "signals" && $("detail").style.display === "block");
   if (name === "trench") window.loadTrench?.();
@@ -458,6 +524,8 @@ document.addEventListener("click", (e) => {
   if (hero) { selected = hero.dataset.hero; render(); $("detail").scrollTop = 0; }
 });
 // Phone/tablet menu: the section list opens full-screen under the header.
+$("moreBtn").addEventListener("click", () => $("menuToggle").click());
+$("searchBtn").addEventListener("click", () => { const open = document.body.classList.toggle("searchOpen"); if (open) $("search").focus(); });
 $("menuToggle").addEventListener("click", () => {
   document.documentElement.style.setProperty("--top-h", $("top").getBoundingClientRect().bottom + "px");
   const open = document.body.classList.toggle("navOpen");
@@ -504,14 +572,17 @@ $("holdings").addEventListener("click", (e) => {
   const i = e.target.dataset.hrm;
   if (i != null) { holdings.splice(+i, 1); store.set("holdings", holdings); renderHoldings(); }
 });
-$("addSym").onclick = async () => {
-  const sym = $("newSym").value.trim().toUpperCase();
+async function addCoin(sym) {
   if (!/^[A-Z0-9]{1,15}$/.test(sym) || coins.includes(sym)) return;
-  coins.push(sym); store.set("coins", coins); $("newSym").value = "";
+  coins.push(sym); store.set("coins", coins);
+  render();
   try { results[sym] = await analyzeCoin(sym); } catch (e) { results[sym] = { error: e.message }; }
   render();
   document.dispatchEvent(new Event("prices-updated"));
-};
+}
+window.addCoin = addCoin;
+$("addSym").onclick = () => { const sym = $("newSym").value.trim().toUpperCase(); $("newSym").value = ""; addCoin(sym); };
+$("newSym").addEventListener("keydown", (e) => { if (e.key === "Enter") $("addSym").click(); });
 $("hAdd").onclick = async () => {
   // The price you paid is typed in your currency and stored in USD, like everything else.
   const sym = $("hSym").value.trim().toUpperCase(), amt = parseFloat($("hAmt").value), cost = Currency.toUsd(parseFloat($("hCost").value) || 0);
