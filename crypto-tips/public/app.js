@@ -343,7 +343,11 @@ function renderDetail() {
             : `<a class="btn-primary" href="https://www.coinbase.com/advanced-trade/spot/${selected}-USD" target="_blank" rel="noopener">Trade on Coinbase ↗</a>`}
           <button data-alertfor="${selected}">Set a price alert</button>
           <button onclick="askAI('Should I buy, sell or hold ${selected} right now? Walk me through the signals and what people are saying.')">Ask AI about ${selected}</button>
-          <span class="muted small side-links"><a href="https://www.exodus.com/" target="_blank" rel="noopener">Exodus ↗</a> · <a href="https://www.tradingview.com/symbols/${selected}USD/" target="_blank" rel="noopener">TradingView ↗</a></span>
+          <span class="muted small side-links"><a href="https://www.tradingview.com/symbols/${selected}USD/" target="_blank" rel="noopener">Chart on TradingView ↗</a></span>
+        </div>
+        <div class="side-box buy-box">
+          <h3>Buy without an exchange account</h3>
+          ${noAccountBuyHtml(selected)}
         </div>
         <div class="side-box stats-box"><h3>Market stats</h3>${marketStatsHtml(r)}</div>
       </aside>
@@ -365,6 +369,21 @@ function renderDetail() {
   window.renderResearch?.(selected);
   syncJump();
 }
+// Ways to get a coin in your own wallet without opening an exchange account.
+// Swapping crypto you already hold needs no account or ID. Paying with a card or bank always needs ID:
+// that's the law for payment providers, so we say so instead of pretending otherwise.
+const ETH_TOKENS = { LINK: "0x514910771AF9Ca656af840dff83E8264EcF986CA", UNI: "0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984",
+  SHIB: "0x95aD61b0a150d79219dCF64E1E6Cc01f0B64C4cE", PEPE: "0x6982508145454Ce325dDbE47a25d4ec3d2311933", AAVE: "0x7Fc66500c84A76Ad7e9c93437bFc5Ac33E2DDaE9",
+  POL: "0x455e53CBB86018Ac2B8092FdCd39d8444aFFC3F6", ARB: "0xB50721BCf8d664c30412Cfbc6cf7a15145234ad1" };
+const SOL_TOKENS = { SOL: "So11111111111111111111111111111111111111112", BONK: "DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263",
+  WIF: "EKpQGSJtjMFqKZ9KQanSqYXRcF8fBopzLHYxdM65zcjm", TRUMP: "6p6xgHyF7AeE6TZkSmFsko444wqoP15icUSqi2jfGiPN" };
+function noAccountBuyHtml(sym) {
+  const links = [`<a class="buy-link" href="https://www.exodus.com/download/" target="_blank" rel="noopener"><b>Exodus wallet ↗</b><span class="muted small">Free self-custody wallet. Swap other crypto into ${sym} inside the app, no account needed.</span></a>`];
+  if (sym === "ETH" || ETH_TOKENS[sym]) links.push(`<a class="buy-link" href="https://app.uniswap.org/swap?chain=mainnet&outputCurrency=${sym === "ETH" ? "ETH" : ETH_TOKENS[sym]}" target="_blank" rel="noopener"><b>Swap on Uniswap ↗</b><span class="muted small">Swap Ethereum tokens for ${sym} from any wallet (Exodus, MetaMask…). Pays an Ethereum network fee.</span></a>`);
+  if (SOL_TOKENS[sym]) links.push(`<a class="buy-link" href="https://jup.ag/swap/${sym === "SOL" ? "USDC-SOL" : "SOL-" + SOL_TOKENS[sym]}" target="_blank" rel="noopener"><b>Swap on Jupiter ↗</b><span class="muted small">Swap Solana tokens for ${sym} from a Solana wallet (Exodus, Phantom…). Very low fees.</span></a>`);
+  return links.join("") + `<p class="muted small">Swaps only work with crypto you already have. Buying with a card or bank anywhere (including inside Exodus) asks for ID, because payment providers are required to by law. Double-check you're getting the right coin before you swap.</p>`;
+}
+
 // Market stats for the coin view, from the candles already loaded.
 function marketStatsHtml(r) {
   const c = r.candles, last = c[c.length - 1], gran = +$("tf").value;
