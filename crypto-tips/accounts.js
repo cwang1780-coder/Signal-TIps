@@ -86,24 +86,25 @@ async function signup(email, password) {
   const bad = passwordProblem(password);
   if (bad) throw err(400, bad);
   const id = emailId(email);
-  if (await getUser(id) || (ownerSeed() && ownerSeed().name === email)) throw err(409, "That name is already taken. Sign in instead.");
+  if (await getUser(id) || ownerSeed(email)) throw err(409, "That name is already taken. Sign in instead.");
   const u = { id, email, pw: hashPassword(password), created: Date.now(), trialEnds: null, subId: null, ai: null, prefs: null };
   await saveUser(u);
   return u;
 }
 
-// The site owner's account can be set up without a database write: OWNER_ACCOUNT = "name:scrypt$salt$hash"
-// (a password hash, never the password). The account is created the first time the owner signs in.
-function ownerSeed() {
-  const m = /^([^:]+):(scrypt\$[0-9a-f]+\$[0-9a-f]+)$/.exec(String(process.env.OWNER_ACCOUNT || "").trim());
-  return m ? { name: normEmail(m[1]), pw: m[2] } : null;
+// Owner accounts can be set up without a database write: OWNER_ACCOUNT / OWNER_ACCOUNTS = "name:scrypt$salt$hash"
+// (password hashes, never passwords), several separated by ";". Each is created the first time its owner signs in.
+function ownerSeeds() {
+  return `${process.env.OWNER_ACCOUNT || ""};${process.env.OWNER_ACCOUNTS || ""}`.split(/[;\n]/).map((x) => x.trim()).filter(Boolean)
+    .map((x) => /^([^:]+):(scrypt\$[0-9a-f]+\$[0-9a-f]+)$/.exec(x)).filter(Boolean).map((m) => ({ name: normEmail(m[1]), pw: m[2] }));
 }
+const ownerSeed = (name) => ownerSeeds().find((o) => o.name === name) || null;
 
 async function login(email, password) {
   email = normEmail(email);
   let u = validEmail(email) ? await getUser(emailId(email)) : null;
-  const seed = ownerSeed();
-  if (!u && seed && seed.name === email && checkPassword(String(password || ""), seed.pw)) {
+  const seed = ownerSeed(email);
+  if (!u && seed && checkPassword(String(password || ""), seed.pw)) {
     u = { id: emailId(email), email, pw: seed.pw, created: Date.now(), trialEnds: null, subId: null, ai: null, prefs: null };
     await saveUser(u);
   }
@@ -118,7 +119,7 @@ async function userFromRequest(req) {
   return id ? getUser(id) : null;
 }
 
-const owners = () => [...String(process.env.OWNER_EMAILS || "").split(",").map(normEmail).filter(Boolean), ...(ownerSeed() ? [ownerSeed().name] : [])];
+const owners = () => [...String(process.env.OWNER_EMAILS || "").split(",").map(normEmail).filter(Boolean), ...ownerSeeds().map((o) => o.name)];
 
 // What the account can use right now.
 async function planOf(u) {

@@ -94,7 +94,12 @@ async function call(action, { method = "GET", body, cookie, headers = {} } = {})
   assert.strictEqual(r.body.user.plan.kind, "owner");
   assert.ok(!JSON.stringify(r.body).includes("scrypt"), "hash never sent to the browser");
   assert.strictEqual((await call("login", { method: "POST", body: { email: "colin", password: "owner-secret-9" } })).body.user.plan.kind, "owner", "second sign-in uses the saved account");
-  delete process.env.OWNER_ACCOUNT;
+  // Several owners: OWNER_ACCOUNTS adds more, separated by ";"
+  process.env.OWNER_ACCOUNTS = "Eason:" + accounts.hashPassword("second-owner-1") + ";Third:" + accounts.hashPassword("third-owner-1");
+  assert.strictEqual((await call("login", { method: "POST", body: { email: "eason", password: "second-owner-1" } })).body.user.plan.kind, "owner");
+  assert.strictEqual((await call("login", { method: "POST", body: { email: "third", password: "third-owner-1" } })).body.user.plan.kind, "owner");
+  assert.strictEqual((await call("login", { method: "POST", body: { email: "colin", password: "owner-secret-9" } })).body.user.plan.kind, "owner", "first owner still works");
+  delete process.env.OWNER_ACCOUNT; delete process.env.OWNER_ACCOUNTS;
 
   // Owner email gets Pro without paying
   r = await call("signup", { method: "POST", body: { email: "boss@example.com", password: "owner-pass-1" } });
