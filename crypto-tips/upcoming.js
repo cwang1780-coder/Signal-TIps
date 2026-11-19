@@ -110,4 +110,19 @@ async function getUpcoming() {
   return cache.data;
 }
 
-module.exports = { getUpcoming, candidate, NETWORKS };
+// Hourly price candles for one pool (for the coin page). Newest last, in the app's candle format.
+const chartCache = new Map();
+async function poolCandles(network, pool) {
+  if (!/^[a-z0-9_]{2,30}$/.test(network) || !/^[A-Za-z0-9_-]{20,100}$/.test(pool)) throw Object.assign(new Error("Bad coin"), { status: 400 });
+  const key = network + ":" + pool, hit = chartCache.get(key);
+  if (hit && Date.now() - hit.at < TTL) return hit.data;
+  const d = await getJSON(`${GT}/networks/${network}/pools/${pool}/ohlcv/hour?aggregate=1&limit=500&currency=usd`);
+  const list = d.data?.attributes?.ohlcv_list || [];
+  const candles = list.map(([t, o, h, l, c, v]) => ({ time: t, open: +o, high: +h, low: +l, close: +c, volume: +v })).filter((c) => c.close > 0).sort((a, b) => a.time - b.time);
+  const data = { candles, interval: "1h", source: "GeckoTerminal" };
+  chartCache.set(key, { at: Date.now(), data });
+  if (chartCache.size > 300) chartCache.delete(chartCache.keys().next().value);
+  return data;
+}
+
+module.exports = { getUpcoming, candidate, NETWORKS, poolCandles };

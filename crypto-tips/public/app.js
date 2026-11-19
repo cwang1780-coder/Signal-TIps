@@ -565,6 +565,7 @@ function showTab(name) {
   document.querySelectorAll("#tabs button, .bottomnav [data-go]").forEach((b) => { const on = b.dataset.go === name; b.classList.toggle("on", on); b.setAttribute("aria-current", on ? "page" : "false"); });
   store.set("tab", name);
   document.body.classList.toggle("detailOpen", name === "signals" && $("detail").style.display === "block");
+  if (name !== "trench") window.closeTrenchCoin?.(true);
   if (name === "trench") window.loadTrench?.();
   if (name === "signals") renderDetail(); // the chart needs to be visible to size itself
   window.scrollTo(0, 0);

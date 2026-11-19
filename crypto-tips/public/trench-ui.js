@@ -65,7 +65,7 @@
       const bad = /Thin liquidity|More sellers|Already up|Tiny/;
       const ok = items.filter((x) => !x.flags.some((f) => bad.test(f))).sort((a, b) => b.score - a.score).slice(0, 2);
       if (!ok.length) return head("No standout picks right now", "Upcoming") + `<p class="picks-none">Every coin on the list has a serious warning flag (thin liquidity, more sellers than buyers, or already exploded). The app's suggestion is to wait for a cleaner setup.</p>` + note;
-      return head("Top picks from Upcoming", "Strongest traction with the fewest warning flags") + `<div class="pick-list">${ok.map((x, i) => `<a class="pick" href="#up-${esc(x.address || x.sym)}">
+      return head("Top picks from Upcoming", "Strongest traction with the fewest warning flags") + `<div class="pick-list">${ok.map((x, i) => `<a class="pick" href="#up-${esc(x.address || x.sym)}" data-tkey="up:${esc(x.pool)}">
           <span class="pick-top">${x.image ? `<img src="${esc(x.image)}" alt="" loading="lazy" />` : coinIcon(x.sym.replace(/[^A-Za-z0-9]/g, ""), 32)}<span><b>${esc(x.sym)}</b><span class="muted small">${esc(x.netName)} · ${ageTxt(x.ageH)} old</span></span><span class="badge b-SELL">Risk: ${esc(x.risk)}</span></span>
           <span class="rank">#${i + 1} pick</span>
           <ul><li>${x.buyers.toLocaleString()} buyers in 24h, ${Math.round(x.buyRatio * 100)}% buying</li><li>${money(x.vol24)} traded, ${money(x.liq)} liquidity</li>${x.accel >= 1.5 ? "<li>Busier than usual this hour</li>" : ""}</ul></a>`).join("")}</div>` + note;
@@ -88,7 +88,7 @@
     $("trenchPicks").innerHTML = picksHtml(up.coins, "upcoming");
     $("trenchList").innerHTML = up.coins.length ? up.coins.map((x) => {
       const buy = x.address && SWAP[x.chain] ? SWAP[x.chain](encodeURIComponent(x.address)) : null;
-      return `<article class="tcard" id="up-${esc(x.address || x.sym)}">
+      return `<article class="tcard tc-click" id="up-${esc(x.address || x.sym)}" data-tkey="up:${esc(x.pool)}" tabindex="0" role="button" aria-label="Open ${esc(x.sym)}">
         <div class="row"><span class="up-head">${x.image ? `<img src="${esc(x.image)}" alt="" loading="lazy" onerror="this.replaceWith(document.createRange().createContextualFragment(window.coinIcon('${esc(x.sym.replace(/[^A-Za-z0-9]/g, "").slice(0, 6))}', 36)))" />` : coinIcon(x.sym.replace(/[^A-Za-z0-9]/g, ""), 36)}<span><b>${esc(x.sym)}</b><span class="muted">${esc(x.name)} · ${esc(x.netName)}</span></span></span>
           <span class="badge b-SELL">Risk: ${esc(x.risk)}</span></div>
         <div class="tc-tags"><span class="tag2 up">${esc(x.stage)}</span><span class="tag2">${ageTxt(x.ageH)} old</span>${x.ch1 != null ? `<span class="tag2 ${x.ch1 >= 0 ? "up" : "down"}">Last hour ${pctTxt(x.ch1)}</span>` : ""}${x.accel >= 1.5 ? `<span class="tag2 up">Busier than usual this hour</span>` : ""}</div>
@@ -155,7 +155,7 @@
     const list = data.movers.filter((x) => !onlyCoinbase || x.onCoinbase);
     $("trenchList").innerHTML = list.length ? list.map((x) => {
       const [mc, mt] = momentum(x), b = stats?.buckets?.[x.bucket];
-      return `<article class="tcard">
+      return `<article class="tcard tc-click" data-tkey="mv:${esc(x.id)}" tabindex="0" role="button" aria-label="Open ${esc(x.sym)}">
         <div class="row"><span class="tc-name">${coinIcon(x.sym, 36)}<span><b>${esc(x.sym)}</b><span class="muted">${esc(x.name)}${x.rank ? " · #" + x.rank : ""}</span></span></span>
           <span class="badge ${x.risk === "very high" ? "b-SELL" : "b-HOLD"}">Chase risk: ${x.risk}</span></div>
         <div class="tc-moves"><div><span class="muted">7 days</span><b class="${x.ch7 >= 0 ? "up" : "down"}">${sgn(x.ch7)}</b></div>
@@ -197,6 +197,95 @@
   document.addEventListener("plan-changed", () => { if (!window.isPro?.()) { onlyCoinbase = false; $("trenchCB").checked = false; } data = null; up = null; if (!document.querySelector('[data-tab="trench"]').hidden) load(true); });
   $("trenchRefresh").onclick = () => load(true);
   window.loadTrench = load;
+
+  // ── Coin page for a Trench coin (most aren't on Coinbase, so it has its own page) ──
+  const find = (key) => key.startsWith("up:") ? [up?.coins?.find((c) => "up:" + c.pool === key), "up"] : [data?.movers?.find((c) => "mv:" + c.id === key), "mv"];
+  const kv = (k, v) => `<div><dt>${k}</dt><dd>${v}</dd></div>`;
+  const chg = (v) => (v == null ? "–" : `<span class="${v >= 0 ? "up" : "down"}">${pctTxt(v)}</span>`);
+  function openTrenchCoin(key) {
+    const [x, kind] = find(key);
+    if (!x) return;
+    if (kind === "mv" && x.onCoinbase) { o_open(x.sym); return; } // listed on Coinbase: the full mainstream page
+    if (typeof selected !== "undefined" && selected) { selected = null; render(); } // one chart at a time
+    const el = $("tdetail");
+    el.hidden = false; el.scrollTop = 0;
+    document.body.classList.add("detailOpen");
+    if (!history.state?.tcoin) history.pushState({ tcoin: key }, "");
+    const icon36 = x.image ? `<img class="ah-img" src="${esc(x.image)}" alt="" />` : coinIcon(x.sym.replace(/[^A-Za-z0-9]/g, ""), 32);
+    const swap = x.address && SWAP[x.chain] ? SWAP[x.chain](encodeURIComponent(x.address)) : null;
+    const risk = kind === "up" ? `<span class="badge b-SELL sig-big">Risk: ${esc(x.risk)}</span>` : `<span class="badge ${x.risk === "very high" ? "b-SELL" : "b-HOLD"} sig-big">Chase risk: ${esc(x.risk)}</span>`;
+    const flags = kind === "up" ? x.flags : [momentum(x)[1], x.risk === "very high" ? "A very big or very frantic move: chasing these has gone worst" : "A big move: most of it has usually already happened"];
+    const stats = kind === "up"
+      ? [kv("Price", fmt(x.price)), kv("Last hour", chg(x.ch1)), kv("6 hours", chg(x.ch6)), kv("24 hours", chg(x.ch24)), kv("Valued at", x.fdv != null ? money(x.fdv) : "–"),
+         kv("Liquidity", money(x.liq)), kv("Volume 24h", money(x.vol24)), kv("Volume last hour", money(x.vol1)), kv("Buyers / sellers 24h", `${x.buyers.toLocaleString()} / ${x.sellers.toLocaleString()}`),
+         kv("Age", ageTxt(x.ageH)), kv("Blockchain", esc(x.netName)), kv("Stage", esc(x.stage))]
+      : [kv("Price", fmt(x.price)), kv("24 hours", chg(x.ch24)), kv("7 days", chg(x.ch7)), kv("Volume 24h", money(x.volume)), kv("Market value", money(x.marketCap)),
+         kv("Rank", x.rank ? "#" + x.rank : "–"), kv("Traded vs value", Math.round(x.turnover * 100) + "%"), kv("Trending", x.trendingRank ? "#" + x.trendingRank : "No"), kv("On Coinbase", x.onCoinbase ? "Yes" : "No")];
+    el.innerHTML = `
+      <nav class="dnav"><div class="dnav-top"><button class="dback" data-tclose aria-label="Back to Trench">← <span>Trench</span></button></div></nav>
+      <div class="detailHead">
+        <div class="ah-name">${icon36}<b>${esc(x.name || x.sym)}</b><span class="muted">${esc(x.sym)}${kind === "up" ? " · " + esc(x.netName) : ""}</span></div>
+        <div class="ah-px">${fmt(x.price)}</div>
+        <div class="ah-chg ${(x.ch24 ?? 0) >= 0 ? "up" : "down"}">${(x.ch24 ?? 0) >= 0 ? "↗" : "↘"} ${pctTxt(x.ch24)} <span class="muted">past 24 hours</span></div>
+      </div>
+      <div class="ov-grid">
+        <div class="ov-chart">
+          <div id="tChart"><p class="muted" style="padding:40px 0">Loading the price chart…</p></div>
+          <div class="muted small" id="tChartNote"></div>
+        </div>
+        <aside class="ov-side">
+          <div class="side-box">${risk}${flags.length ? `<ul class="up-flags">${flags.map((f) => `<li>${esc(f)}</li>`).join("")}</ul>` : ""}
+            <span class="muted small">${kind === "up" ? "New coins are the riskiest thing in crypto: most fail and many are scams." : "In our study, buying after a run-up like this lost money about 3 times out of 4."}</span></div>
+          <div class="side-box act-box">
+            ${swap ? `<a class="btn-primary" href="${esc(swap[1])}" target="_blank" rel="noopener">Buy on ${esc(swap[0])} ↗</a>` : ""}
+            ${kind === "mv" ? `<a class="btn-primary${swap ? " alt" : ""}" href="${esc(x.url)}#markets" target="_blank" rel="noopener">Where it trades ↗</a>` : ""}
+            ${safetyLink(x) ? safetyLink(x).replace('class="pill-link"', 'class="side-btn"') : ""}
+            <a class="side-btn" href="${esc(x.url)}" target="_blank" rel="noopener">${kind === "up" ? "Live chart on GeckoTerminal ↗" : "CoinGecko page ↗"}</a>
+            ${x.address ? `<button class="side-btn" data-tcopy="${esc(x.address)}">Copy token address</button><span class="muted small">Token: <code>${esc(x.address.slice(0, 8))}…${esc(x.address.slice(-6))}</code>. Check it matches in your wallet before you swap; copycats are common.</span>` : ""}
+          </div>
+          <div class="side-box stats-box"><h3>Stats</h3><dl class="mstats">${stats.join("")}</dl></div>
+        </aside>
+      </div>`;
+    const q = kind === "up" ? `network=${encodeURIComponent(x.network)}&pool=${encodeURIComponent(x.pool)}` : `id=${encodeURIComponent(x.id)}`;
+    fetch("/api/trench?mode=chart&" + q).then((r) => r.json()).then((d) => {
+      if (el.hidden || history.state?.tcoin !== key) return;
+      const c = d.candles || [];
+      if (c.length < 5) { $("tChart").innerHTML = `<p class="muted" style="padding:40px 0">Not enough price history yet: this coin is very new.</p>`; return; }
+      Draw.mount($("tChart"), "TRENCH:" + x.sym, c, []);
+      let note = `${c.length} ${d.interval === "1h" ? "hourly" : "4-hour"} candles from ${esc(d.source)}.`;
+      if (c.length >= 60 && window.Indicators?.analyze) {
+        try { const a = Indicators.analyze(c); note += ` Trend on this chart: <span class="${actionClass(a.action)}">${a.action}</span> (from the same signals as the main list, on a short history, so treat it lightly).`; } catch {}
+      }
+      $("tChartNote").innerHTML = note;
+    }).catch(() => { $("tChart").innerHTML = `<p class="muted" style="padding:40px 0">Couldn't load the price chart right now.</p>`; });
+  }
+  const o_open = async (sym) => {
+    if (!coins.includes(sym)) { coins.push(sym); store.set("coins", coins); }
+    if (!results[sym]) { try { results[sym] = await analyzeCoin(sym); } catch (err) { results[sym] = { error: err.message }; } }
+    openCoin(sym);
+  };
+  function closeTrenchCoin(fromHistory) {
+    const el = $("tdetail");
+    if (el.hidden) return;
+    el.hidden = true; el.innerHTML = "";
+    document.body.classList.remove("detailOpen");
+    if (!fromHistory && history.state?.tcoin) history.back();
+  }
+  window.closeTrenchCoin = closeTrenchCoin;
+  window.openTrenchCoin = openTrenchCoin;
+  document.addEventListener("click", (e) => {
+    const t = e.target;
+    if (t.closest("[data-tclose]")) return closeTrenchCoin();
+    const cp = t.closest("[data-tcopy]");
+    if (cp) { navigator.clipboard?.writeText(cp.dataset.tcopy).then(() => window.toast?.("Token address copied."), () => window.toast?.(cp.dataset.tcopy)); return; }
+    const k = t.closest("[data-tkey]");
+    if (k && !t.closest("a:not([data-tkey]), button:not([data-tkey]), input, label")) { e.preventDefault(); openTrenchCoin(k.dataset.tkey); }
+  });
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") closeTrenchCoin();
+    if ((e.key === "Enter" || e.key === " ") && e.target.matches?.(".tc-click")) { e.preventDefault(); openTrenchCoin(e.target.dataset.tkey); }
+  });
+  window.addEventListener("popstate", () => { if (!history.state?.tcoin) closeTrenchCoin(true); });
   setInterval(() => { if (!document.querySelector('[data-tab="trench"]').hidden) load(true); }, 5 * 60000);
   document.addEventListener("currency-changed", () => { if (typeof data !== "undefined" && data) render2(); });
 })();

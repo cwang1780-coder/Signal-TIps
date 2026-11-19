@@ -7,8 +7,8 @@ const { getSocial } = require("./social.js");
 const pro = require("./pro.js");
 const { getResearch } = require("./research.js");
 const wallet = require("./wallet.js");
-const { getTrench } = require("./trench.js");
-const { getUpcoming } = require("./upcoming.js");
+const { getTrench, coinCandles } = require("./trench.js");
+const { getUpcoming, poolCandles } = require("./upcoming.js");
 const accounts = require("./accounts.js");
 
 const ON_VERCEL = Boolean(process.env.VERCEL);
@@ -179,6 +179,14 @@ async function trenchHandler(req, res) {
     const wantFull = q.get("full") === "1";
     const full = wantFull && (await isPro(req));
     let out;
+    if (q.get("mode") === "chart") {
+      // Price history for one Trench coin's page: ?mode=chart&network=solana&pool=ADDR (Upcoming) or ?mode=chart&id=coingecko-id (Big movers)
+      try {
+        out = q.get("pool") ? await poolCandles(String(q.get("network") || ""), String(q.get("pool"))) : await coinCandles(String(q.get("id") || ""));
+      } catch (e) { return json(res, e.status || 502, { reason: e.status === 400 ? e.message : "Price history unavailable right now." }); }
+      res.writeHead(200, { "Content-Type": "application/json", "Cache-Control": "public, max-age=120, s-maxage=300" });
+      return res.end(JSON.stringify(out));
+    }
     if (q.get("mode") === "upcoming") {
       const data = await getUpcoming();
       out = full ? { ...data, full: true } : { ...data, full: false, coins: data.coins.slice(0, FREE_TRENCH), locked: Math.max(0, data.coins.length - FREE_TRENCH) };

@@ -95,4 +95,18 @@ async function getTrench() {
   });
 }
 
-module.exports = { getTrench, chaseRisk };
+// 4-hour price candles for the last 30 days of a coin (CoinGecko), for the coin page.
+const chartCache = new Map();
+async function coinCandles(id) {
+  if (!/^[a-z0-9-]{1,80}$/.test(id)) throw Object.assign(new Error("Bad coin"), { status: 400 });
+  const hit = chartCache.get(id);
+  if (hit && Date.now() - hit.at < TTL) return hit.data;
+  const rows = await getJSON(`https://api.coingecko.com/api/v3/coins/${encodeURIComponent(id)}/ohlc?vs_currency=usd&days=30`);
+  const candles = (Array.isArray(rows) ? rows : []).map(([t, o, h, l, c]) => ({ time: Math.floor(t / 1000), open: o, high: h, low: l, close: c, volume: 0 })).filter((c) => c.close > 0);
+  const data = { candles, interval: "4h", source: "CoinGecko" };
+  chartCache.set(id, { at: Date.now(), data });
+  if (chartCache.size > 300) chartCache.delete(chartCache.keys().next().value);
+  return data;
+}
+
+module.exports = { getTrench, chaseRisk, coinCandles };
