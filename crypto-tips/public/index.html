@@ -809,6 +809,27 @@
   .pc-msg { position: absolute; inset: 0; display: grid; place-items: center; color: var(--dim); font-size: 14px; z-index: 4; background: rgba(255,255,255,.7); }
   .pc-msg[hidden] { display: none; }
   @media (max-width: 767px) { .pc-stage { height: 340px; } .pc-legend { font-size: 11px; gap: 2px 8px; } }
+
+  /* Chart drawing tools (pcdraw.js) */
+  .pc-stage .pc-chart { left: 42px; }
+  .pc-legend { left: 54px; }
+  .pcd-strip { position: absolute; left: 0; top: 0; bottom: 0; width: 42px; z-index: 5; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 0; border-right: 1px solid var(--alt); background: #fff; overflow-y: auto; scrollbar-width: none; }
+  .pcd-strip::-webkit-scrollbar { display: none; }
+  .pcd-strip button { width: 32px; height: 32px; min-height: 0; padding: 0; border-radius: 8px; background: none; color: #4a4f59; display: grid; place-items: center; flex: none; }
+  .pcd-strip button:hover { background: var(--alt); color: var(--text); }
+  .pcd-strip button.on { background: #e8efff; color: var(--accent); }
+  .pcd-sep { width: 22px; height: 1px; background: var(--border); margin: 4px 0; flex: none; } .pcd-sep.h { width: 1px; height: 20px; margin: 0 4px; }
+  .pcd-canvas { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 2; }
+  .pcd-opts { position: absolute; top: 36px; left: 54px; z-index: 6; display: flex; align-items: center; gap: 4px; background: #fff; border: 1px solid var(--border); border-radius: 10px; padding: 4px 6px; box-shadow: 0 4px 14px rgba(10,11,13,.1); max-width: calc(100% - 120px); flex-wrap: wrap; }
+  .pcd-opts[hidden] { display: none; }
+  .pcd-sw { width: 18px; height: 18px; min-height: 0; padding: 0; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 0 0 1px var(--border); }
+  .pcd-sw.on { box-shadow: 0 0 0 2px var(--text); }
+  .pcd-w { width: 26px; height: 22px; min-height: 0; padding: 0 4px; border-radius: 6px; background: none; display: flex; align-items: center; } .pcd-w i { display: block; width: 100%; background: var(--text); border-radius: 2px; }
+  .pcd-w.on { background: var(--alt); }
+  .pcd-txt { min-height: 26px; padding: 0 10px; font-size: 12px; border-radius: 7px; background: var(--alt); } .pcd-txt.danger { color: var(--sell); }
+  .pcd-hint { font-size: 12px; color: var(--dim); padding: 0 6px; }
+  .pc-stage.pcd-drawing { cursor: crosshair; touch-action: none; }
+  @media (max-width: 767px) { .pcd-strip { width: 38px; } .pc-stage .pc-chart { left: 38px; } .pcd-strip button { width: 30px; height: 30px; } .pc-legend { left: 46px; } .pcd-opts { left: 46px; } }
 </style>
 </head>
 <body>
@@ -1232,6 +1253,7 @@
 <script src="indicators.js"></script>
 <script src="draw.js"></script>
 <script src="vendor/lightweight-charts.js"></script>
+<script src="pcdraw.js"></script>
 <script src="prochart.js"></script>
 <script src="app.js"></script>
 <script src="extras.js"></script>

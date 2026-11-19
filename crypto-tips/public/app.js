@@ -349,11 +349,10 @@ function renderDetail() {
     <section class="dsec" data-sec="overview">
     <div class="ov-grid">
       <div class="ov-chart">
-        <div class="chart-modes" role="group" aria-label="Chart"><button data-cmode="candles" class="${chartMode() === "candles" ? "on" : ""}">Candles</button><button data-cmode="draw" class="${chartMode() === "draw" ? "on" : ""}">Line + drawing</button></div>
         <div id="proChart" ${chartMode() === "draw" ? "hidden" : ""}></div>
         <div id="d-chart"></div>
         <div id="chartWrap" ${chartMode() === "draw" ? "" : "hidden"}></div>
-        ${chartMode() === "draw" ? `<div class="muted small">Price (black) · 50-period avg (blue) · 200-period avg (orange) · Pick a tool above the chart to draw. Drawings are saved for this coin.</div>` : `<div class="muted small">Live from Coinbase. Drag to scroll, pinch or scroll to zoom, hover for each candle's open, high, low and close. Switch to "Line + drawing" to draw on the chart.</div>`}
+        ${chartMode() === "draw" ? `<div class="muted small">Price (black) · 50-period avg (blue) · 200-period avg (orange) · Pick a tool above the chart to draw. Drawings are saved for this coin.</div>` : `<div class="muted small">Live from Coinbase. Drag to scroll, pinch or scroll to zoom, hover for each candle's open, high, low and close. Pick a drawing tool on the left: trend lines, Fibonacci, channels, long/short positions and more. Select a horizontal line to set a price alert.</div>`}
       </div>
       <aside class="ov-side">
         <div class="side-box sig-box">
@@ -412,14 +411,24 @@ function noAccountBuyHtml(sym) {
 
 // Candlestick chart (prochart.js). One instance per open coin, kept across the minute-by-minute refreshes
 // so the timeframe, zoom and live feed survive.
-const chartMode = () => store.get("chartMode", "candles");
+const chartMode = () => "candles"; // the candle chart has the drawing tools built in now
 let pc = null;
 function mountProChart() {
   const host = $("proChart");
   if (!host || !window.ProChart) return;
   const src = { kind: "coinbase", sym: selected };
   if (pc && pc.sourceKey === JSON.stringify(src)) pc.attach(host);
-  else { pc?.destroy(); pc = ProChart.mount(host, src, { theme: "light" }); }
+  else {
+    pc?.destroy();
+    const sym = selected;
+    pc = ProChart.mount(host, src, {
+      theme: "light",
+      onAlert: (priceUsd) => { // "Set alert" on a horizontal line
+        const now = results[sym]?.price || priceUsd;
+        if (window.addAlert?.(sym, priceUsd >= now ? "above" : "below", +priceUsd.toPrecision(6)) !== false) window.toast?.(`Alert set: ${sym} ${priceUsd >= now ? "above" : "below"} ${fmt(priceUsd)}`);
+      },
+    });
+  }
 }
 
 // Market stats for the coin view, from the candles already loaded.

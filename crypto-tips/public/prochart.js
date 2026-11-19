@@ -103,6 +103,11 @@
     const volSeries = chart.addHistogramSeries({ priceFormat: { type: "volume" }, priceScaleId: "vol", lastValueVisible: false, priceLineVisible: false });
     chart.priceScale("vol").applyOptions({ scaleMargins: { top: 0.82, bottom: 0 } });
 
+    // Drawing tools (pcdraw.js): saved per coin, anchored to time and price
+    const draw = window.PCDraw?.attach({
+      chart, series: () => (type === "line" ? lineSeries : candleSeries), stage: root.querySelector(".pc-stage"), candles: () => candles, tz, rate,
+      key: "pcDraw:" + source.kind + ":" + (source.sym || source.id || source.pool), sym: source.sym, fmtP, onAlert: opts.onAlert,
+    });
     const toBar = (c) => { const k = rate(); return { time: c.time + tz, open: c.open * k, high: c.high * k, low: c.low * k, close: c.close * k }; };
     const toVol = (c) => ({ time: c.time + tz, value: c.volume || 0, color: c.close >= c.open ? hexA(th.up, 0.35) : hexA(th.down, 0.35) });
     const toLine = (c) => ({ time: c.time + tz, value: c.close * rate() });
@@ -206,7 +211,7 @@
     return {
       root, sourceKey: JSON.stringify(source),
       attach(c) { if (root.parentNode !== c) { c.innerHTML = ""; c.appendChild(root); } },
-      destroy() { dead = true; stopLive(); document.removeEventListener("currency-changed", onCur); try { chart.remove(); } catch {} root.remove(); },
+      destroy() { dead = true; draw?.destroy(); stopLive(); document.removeEventListener("currency-changed", onCur); try { chart.remove(); } catch {} root.remove(); },
       candles: () => candles, tf: () => tf,
     };
   }
