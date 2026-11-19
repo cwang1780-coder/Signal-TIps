@@ -64,13 +64,13 @@
       <button type="button" class="x sheet-x" data-close-sheet aria-label="Close">✕</button>
       <h2>${mode === "signup" ? "Create your free account" : "Welcome back"}</h2>
       ${why ? `<p class="muted">${esc(why)}</p>` : `<p class="muted">${mode === "signup" ? `Keep your watchlist, alerts and settings on every device, and try Pro free for ${cfg?.trialDays || 7} days. No card needed.` : "Sign in to get your watchlist, alerts and Pro on this device."}</p>`}
-      <label>Email<input name="email" type="email" autocomplete="email" required inputmode="email" /></label>
+      <label>Email or username<input name="email" type="text" autocomplete="username" autocapitalize="none" spellcheck="false" required /></label>
       <label>Password<input name="password" type="password" autocomplete="${mode === "signup" ? "new-password" : "current-password"}" required minlength="8" /></label>
       ${mode === "signup" ? `<span class="muted small">At least 8 characters. We only store a scrambled (hashed) version of it.</span>` : ""}
       <p class="auth-err" role="alert"></p>
       <button class="primary pill lg" type="submit">${mode === "signup" ? "Create account" : "Sign in"}</button>
       <p class="muted small">${mode === "signup" ? `Already have an account? <button type="button" class="linkbtn" data-auth="login">Sign in</button>` : `New here? <button type="button" class="linkbtn" data-auth="signup">Create an account</button>`}</p>
-      ${mode === "login" ? `<p class="muted small">Forgot your password? Email support from the address you signed up with and we'll reset it.</p>` : ""}
+      ${mode === "login" ? `<p class="muted small">Forgot your password? Contact the site owner to reset it.</p>` : ""}
       <p class="muted small">By creating an account you agree that Signal Tips gives general information, not financial advice.</p>
     </form>`;
     if (!d.open) d.showModal();
@@ -80,7 +80,7 @@
   async function submitAuth(form) {
     const err = form.querySelector(".auth-err"), btn = form.querySelector("button[type=submit]");
     const email = form.email.value.trim(), password = form.password.value;
-    if (!email || !password) { err.textContent = "Enter your email and a password."; return; }
+    if (!email || !password) { err.textContent = "Enter your email or username and a password."; return; }
     btn.disabled = true; err.textContent = "";
     try {
       const d = await api(mode, { method: "POST", body: { email, password } });

@@ -27,7 +27,10 @@ function secret() {
 
 const b64url = (buf) => Buffer.from(buf).toString("base64").replace(/=+$/, "").replace(/\+/g, "-").replace(/\//g, "_");
 const normEmail = (e) => String(e || "").trim().toLowerCase();
-const validEmail = (e) => /^[^\s@]{1,64}@[^\s@]{1,190}\.[a-z]{2,24}$/i.test(e) && e.length <= 254;
+// An account name is an email address or a username (3-30 letters, numbers, dots, dashes, underscores).
+const isEmail = (e) => /^[^\s@]{1,64}@[^\s@]{1,190}\.[a-z]{2,24}$/i.test(e) && e.length <= 254;
+const isUsername = (e) => /^[a-z0-9][a-z0-9._-]{2,29}$/i.test(e);
+const validEmail = (e) => isEmail(e) || isUsername(e);
 const emailId = (e) => crypto.createHash("sha256").update("acct-v1:" + normEmail(e)).digest("hex").slice(0, 40);
 const userKey = (id) => `users/${id}.json`;
 const err = (status, message) => Object.assign(new Error(message), { status });
@@ -79,19 +82,31 @@ const saveUser = (u) => db.putJSON(userKey(u.id), u);
 
 async function signup(email, password) {
   email = normEmail(email);
-  if (!validEmail(email)) throw err(400, "Enter a valid email address.");
+  if (!validEmail(email)) throw err(400, "Enter an email address, or a username of 3 to 30 letters and numbers.");
   const bad = passwordProblem(password);
   if (bad) throw err(400, bad);
   const id = emailId(email);
-  if (await getUser(id)) throw err(409, "There's already an account with that email. Sign in instead.");
+  if (await getUser(id) || (ownerSeed() && ownerSeed().name === email)) throw err(409, "That name is already taken. Sign in instead.");
   const u = { id, email, pw: hashPassword(password), created: Date.now(), trialEnds: null, subId: null, ai: null, prefs: null };
   await saveUser(u);
   return u;
 }
 
+// The site owner's account can be set up without a database write: OWNER_ACCOUNT = "name:scrypt$salt$hash"
+// (a password hash, never the password). The account is created the first time the owner signs in.
+function ownerSeed() {
+  const m = /^([^:]+):(scrypt\$[0-9a-f]+\$[0-9a-f]+)$/.exec(String(process.env.OWNER_ACCOUNT || "").trim());
+  return m ? { name: normEmail(m[1]), pw: m[2] } : null;
+}
+
 async function login(email, password) {
   email = normEmail(email);
-  const u = validEmail(email) ? await getUser(emailId(email)) : null;
+  let u = validEmail(email) ? await getUser(emailId(email)) : null;
+  const seed = ownerSeed();
+  if (!u && seed && seed.name === email && checkPassword(String(password || ""), seed.pw)) {
+    u = { id: emailId(email), email, pw: seed.pw, created: Date.now(), trialEnds: null, subId: null, ai: null, prefs: null };
+    await saveUser(u);
+  }
   // Same message and similar timing whether or not the account exists.
   const ok = u ? checkPassword(String(password || ""), u.pw) : (checkPassword("x", hashPassword("y")), false);
   if (!ok) throw err(401, "Wrong email or password.");
@@ -103,7 +118,7 @@ async function userFromRequest(req) {
   return id ? getUser(id) : null;
 }
 
-const owners = () => String(process.env.OWNER_EMAILS || "").split(",").map(normEmail).filter(Boolean);
+const owners = () => [...String(process.env.OWNER_EMAILS || "").split(",").map(normEmail).filter(Boolean), ...(ownerSeed() ? [ownerSeed().name] : [])];
 
 // What the account can use right now.
 async function planOf(u) {

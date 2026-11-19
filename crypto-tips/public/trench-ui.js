@@ -8,6 +8,26 @@
   const money = (n) => Currency.compact(n);
   const BUCKET_TXT = { surge30to60: "Coins that rose 30–60% in a week", surge60to100: "Coins that rose 60–100% in a week", surgeOver100: "Coins that more than doubled in a week" };
 
+  // Where to buy a mover: Coinbase if it's listed, else a swap site on the coin's own blockchain, plus "where it trades".
+  const SWAP = {
+    ethereum: (a) => ["Uniswap", `https://app.uniswap.org/swap?chain=mainnet&outputCurrency=${a}`],
+    base: (a) => ["Uniswap (Base)", `https://app.uniswap.org/swap?chain=base&outputCurrency=${a}`],
+    "arbitrum-one": (a) => ["Uniswap (Arbitrum)", `https://app.uniswap.org/swap?chain=arbitrum&outputCurrency=${a}`],
+    "polygon-pos": (a) => ["Uniswap (Polygon)", `https://app.uniswap.org/swap?chain=polygon&outputCurrency=${a}`],
+    "optimistic-ethereum": (a) => ["Uniswap (Optimism)", `https://app.uniswap.org/swap?chain=optimism&outputCurrency=${a}`],
+    solana: (a) => ["Jupiter", `https://jup.ag/swap/SOL-${a}`],
+    "binance-smart-chain": (a) => ["PancakeSwap", `https://pancakeswap.finance/swap?outputCurrency=${a}`],
+    "the-open-network": (a) => ["STON.fi", `https://app.ston.fi/swap?ft=TON&tt=${a}`],
+  };
+  function buyLinks(x) {
+    const out = [];
+    if (x.onCoinbase) out.push(`<a class="pill dark" href="https://www.coinbase.com/advanced-trade/spot/${encodeURIComponent(x.sym)}-USD" target="_blank" rel="noopener">Buy on Coinbase ↗</a>`);
+    const sw = x.address && SWAP[x.chain] ? SWAP[x.chain](encodeURIComponent(x.address)) : null;
+    if (sw) out.push(`<a class="pill dark" href="${esc(sw[1])}" target="_blank" rel="noopener" title="Opens the swap with this exact token (${esc(x.address)})">Buy on ${esc(sw[0])} ↗</a>`);
+    out.push(`<a class="pill-link" href="${esc(x.url)}#markets" target="_blank" rel="noopener">Where it trades ↗</a>`);
+    return out.join("");
+  }
+
   function momentum(x) {
     if (x.ch24 <= -20) return ["down", "Crashing now"];
     if (x.ch24 < -5) return ["down", "Dropping back"];
@@ -59,8 +79,9 @@
           ${x.onCoinbase ? `<span class="tag2 cb">On Coinbase</span>` : `<span class="tag2">Not on Coinbase</span>`}</div>
         ${b ? `<p class="tc-hist">${BUCKET_TXT[x.bucket]}: <b>${pc(b.higher7)}</b> were higher a week later (typical ${sgn(b.median7 * 100)}).</p>` : ""}
         <div class="tc-actions">
-          ${x.onCoinbase ? `<button class="pill dark" data-trench-open="${esc(x.sym)}">Look closer in Signal Tips</button>` : ""}
-          <a class="pill-link" href="${esc(x.url)}" target="_blank" rel="noopener">CoinGecko ↗</a></div>
+          ${buyLinks(x)}
+          ${x.onCoinbase ? `<button class="pill" data-trench-open="${esc(x.sym)}">Look closer</button>` : ""}</div>
+        ${x.address ? `<p class="muted small tc-addr">Token: <code>${esc(x.address.slice(0, 6))}…${esc(x.address.slice(-4))}</code> on ${esc(x.chain)}. Check it matches before you swap; copycat tokens with the same name are common.</p>` : ""}
       </article>`;
     }).join("") + (data.locked ? `<article class="tcard tc-locked">${icon("lock")}<b>${data.locked} more coin${data.locked === 1 ? " is" : "s are"} making a big move</b>
         <span class="muted">Pro shows the full list, refreshed every 5 minutes, plus the Coinbase-only filter.</span><button class="primary pill" data-pw="show">See all movers with Pro</button></article>` : "")

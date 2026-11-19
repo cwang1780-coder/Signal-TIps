@@ -41,6 +41,19 @@ function chaseRisk(ch7, ch24, turnover) {
 }
 const bucketOf = (ch7, vol) => (vol > 5e6 * 30 && ch7 < 100 ? null : ch7 >= 100 ? "surgeOver100" : ch7 >= 60 ? "surge60to100" : "surge30to60");
 
+// A coin's home blockchain and token address (CoinGecko). Cached for a day: these don't change.
+const contractCache = new Map();
+async function contractOf(id) {
+  const hit = contractCache.get(id);
+  if (hit && Date.now() - hit.at < 864e5) return hit.data;
+  const d = await getJSON(`https://api.coingecko.com/api/v3/coins/${encodeURIComponent(id)}?localization=false&tickers=false&market_data=false&community_data=false&developer_data=false&sparkline=false`);
+  const platforms = d.platforms || {};
+  const chain = d.asset_platform_id || Object.keys(platforms).find((k) => k && platforms[k]) || null;
+  const data = chain && platforms[chain] ? { chain, address: platforms[chain] } : { chain: null, address: null }; // null = the coin has its own blockchain
+  contractCache.set(id, { at: Date.now(), data });
+  return data;
+}
+
 async function getTrench() {
   return cached("trench", TTL, async () => {
     const [m, tr, cb] = await Promise.all([markets(), trending().catch(() => new Map()), coinbaseList().catch(() => new Set())]);
@@ -62,6 +75,12 @@ async function getTrench() {
         url: `https://www.coingecko.com/en/coins/${encodeURIComponent(c.id)}`,
       };
     }).sort((a, b) => b.ch7 - a.ch7).slice(0, 24);
+
+    // Token addresses for the coins people might want to buy (small batches to stay under CoinGecko's free limit)
+    const need = movers.filter((x) => !x.onCoinbase).slice(0, 16);
+    for (let i = 0; i < need.length; i += 4) {
+      await Promise.all(need.slice(i, i + 4).map(async (x) => { try { Object.assign(x, await contractOf(x.id)); } catch {} }));
+    }
 
     // Social buzz for the top movers (StockTwits covers the better-known coins)
     const top = movers.slice(0, 12).map((x) => x.sym).filter((s) => /^[A-Z0-9]{1,15}$/.test(s));

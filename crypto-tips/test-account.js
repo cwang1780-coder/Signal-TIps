@@ -28,8 +28,10 @@ async function call(action, { method = "GET", body, cookie, headers = {} } = {})
   // Sign up
   let r = await call("signup", { method: "POST", body: { email: "Sam@Example.com ", password: "short" } });
   assert.strictEqual(r.status, 400, "short password refused");
-  r = await call("signup", { method: "POST", body: { email: "not-an-email", password: "longenough1" } });
-  assert.strictEqual(r.status, 400, "bad email refused");
+  r = await call("signup", { method: "POST", body: { email: "no spaces allowed", password: "longenough1" } });
+  assert.strictEqual(r.status, 400, "bad name refused");
+  r = await call("signup", { method: "POST", body: { email: "x", password: "longenough1" } });
+  assert.strictEqual(r.status, 400, "too-short username refused");
   r = await call("signup", { method: "POST", body: { email: "Sam@Example.com ", password: "longenough1" } });
   assert.strictEqual(r.status, 200);
   assert.strictEqual(r.body.user.email, "sam@example.com");
@@ -76,6 +78,23 @@ async function call(action, { method = "GET", body, cookie, headers = {} } = {})
   r = await call("sync", { cookie: sam });
   assert.deepStrictEqual(r.body.prefs, { coins: ["BTC", "SOL"], currency: "CAD" });
   assert.strictEqual((await call("sync", { method: "PUT", body: { prefs: { big: "x".repeat(70000) } }, cookie: sam })).status, 413);
+
+  // Usernames work as well as emails
+  r = await call("signup", { method: "POST", body: { email: "Trader_Joe", password: "joe-pass-123" } });
+  assert.strictEqual(r.status, 200);
+  assert.strictEqual(r.body.user.email, "trader_joe");
+  assert.strictEqual((await call("login", { method: "POST", body: { email: "TRADER_JOE", password: "joe-pass-123" } })).status, 200);
+
+  // Owner account from a password hash (OWNER_ACCOUNT): created on first sign-in, gets Pro, name can't be taken
+  process.env.OWNER_ACCOUNT = "Colin:" + accounts.hashPassword("owner-secret-9");
+  assert.strictEqual((await call("signup", { method: "POST", body: { email: "colin", password: "someone-else-1" } })).status, 409, "owner name reserved");
+  assert.strictEqual((await call("login", { method: "POST", body: { email: "colin", password: "wrong-guess-1" } })).status, 401);
+  r = await call("login", { method: "POST", body: { email: "Colin", password: "owner-secret-9" } });
+  assert.strictEqual(r.status, 200);
+  assert.strictEqual(r.body.user.plan.kind, "owner");
+  assert.ok(!JSON.stringify(r.body).includes("scrypt"), "hash never sent to the browser");
+  assert.strictEqual((await call("login", { method: "POST", body: { email: "colin", password: "owner-secret-9" } })).body.user.plan.kind, "owner", "second sign-in uses the saved account");
+  delete process.env.OWNER_ACCOUNT;
 
   // Owner email gets Pro without paying
   r = await call("signup", { method: "POST", body: { email: "boss@example.com", password: "owner-pass-1" } });
