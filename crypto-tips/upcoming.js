@@ -29,9 +29,12 @@ const PATHS = [
 ];
 
 async function getJSON(url) {
-  const r = await fetch(url, { headers: UA, signal: AbortSignal.timeout(12000) });
-  if (!r.ok) throw new Error("HTTP " + r.status);
-  return r.json();
+  for (let attempt = 0; ; attempt++) {
+    const r = await fetch(url, { headers: UA, signal: AbortSignal.timeout(12000) });
+    if (r.status === 429 && attempt < 2) { await new Promise((ok) => setTimeout(ok, 1500 * (attempt + 1))); continue; }
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    return r.json();
+  }
 }
 
 const num = (v) => (v == null || v === "" ? null : +v);

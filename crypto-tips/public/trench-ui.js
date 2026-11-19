@@ -247,7 +247,18 @@
         </aside>
       </div>`;
     const q = kind === "up" ? `network=${encodeURIComponent(x.network)}&pool=${encodeURIComponent(x.pool)}` : `id=${encodeURIComponent(x.id)}`;
-    fetch("/api/trench?mode=chart&" + q).then((r) => r.json()).then((d) => {
+    const direct = async () => {
+      const r = await fetch(`https://api.geckoterminal.com/api/v2/networks/${encodeURIComponent(x.network)}/pools/${encodeURIComponent(x.pool)}/ohlcv/hour?aggregate=1&limit=500&currency=usd`, { headers: { Accept: "application/json" } });
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      const list = (await r.json()).data?.attributes?.ohlcv_list || [];
+      return { candles: list.map(([t, o, h, l, c, v]) => ({ time: t, open: +o, high: +h, low: +l, close: +c, volume: +v })).filter((c) => c.close > 0).sort((a, b) => a.time - b.time), interval: "1h", source: "GeckoTerminal" };
+    };
+    fetch("/api/trench?mode=chart&" + q).then(async (r) => {
+      const d = await r.json().catch(() => ({}));
+      if (r.ok && d.candles?.length) return d;
+      if (kind === "up") return direct(); // our server was rate-limited or blocked: try from this device
+      throw new Error(d.reason || "HTTP " + r.status);
+    }).then((d) => {
       if (el.hidden || history.state?.tcoin !== key) return;
       const c = d.candles || [];
       if (c.length < 5) { $("tChart").innerHTML = `<p class="muted" style="padding:40px 0">Not enough price history yet: this coin is very new.</p>`; return; }
