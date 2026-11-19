@@ -56,15 +56,39 @@
     if (["eth", "bsc", "base"].includes(x.network)) return `<a class="pill-link" href="https://honeypot.is/?address=${encodeURIComponent(x.address)}" target="_blank" rel="noopener">Safety check ↗</a>`;
     return "";
   }
+  // Picks: the coins on this list with the best mix of traction and fewest red flags.
+  function picksHtml(items, kind) {
+    if (!items.length) return "";
+    const head = (t, sub) => `<div class="picks-head"><h2>${icon("star")} ${t}</h2><span class="muted">${sub}</span></div>`;
+    const note = `<p class="picks-note">Chosen automatically from this list. These are still very high-risk bets, not recommendations; most fail. Only use money you can lose.</p>`;
+    if (kind === "upcoming") {
+      const bad = /Thin liquidity|More sellers|Already up|Tiny/;
+      const ok = items.filter((x) => !x.flags.some((f) => bad.test(f))).sort((a, b) => b.score - a.score).slice(0, 2);
+      if (!ok.length) return head("No standout picks right now", "Upcoming") + `<p class="picks-none">Every coin on the list has a serious warning flag (thin liquidity, more sellers than buyers, or already exploded). The app's suggestion is to wait for a cleaner setup.</p>` + note;
+      return head("Top picks from Upcoming", "Strongest traction with the fewest warning flags") + `<div class="pick-list">${ok.map((x, i) => `<a class="pick" href="#up-${esc(x.address || x.sym)}">
+          <span class="pick-top">${x.image ? `<img src="${esc(x.image)}" alt="" loading="lazy" />` : coinIcon(x.sym.replace(/[^A-Za-z0-9]/g, ""), 32)}<span><b>${esc(x.sym)}</b><span class="muted small">${esc(x.netName)} · ${ageTxt(x.ageH)} old</span></span><span class="badge b-SELL">Risk: ${esc(x.risk)}</span></span>
+          <span class="rank">#${i + 1} pick</span>
+          <ul><li>${x.buyers.toLocaleString()} buyers in 24h, ${Math.round(x.buyRatio * 100)}% buying</li><li>${money(x.vol24)} traded, ${money(x.liq)} liquidity</li>${x.accel >= 1.5 ? "<li>Busier than usual this hour</li>" : ""}</ul></a>`).join("")}</div>` + note;
+    }
+    // Big movers: our study says chasing loses on average, so only coins on Coinbase, not "very high" risk, not crashing.
+    const ok = items.filter((x) => x.onCoinbase && x.risk !== "very high" && x.ch24 > -5).sort((a, b) => a.ch7 - b.ch7).slice(0, 2);
+    if (!ok.length) return head("No standout picks right now", "Big movers") + `<p class="picks-none">Every big mover is either very high chase risk, not on Coinbase, or falling today. In our study, buying coins after a run-up like this lost money about 3 times out of 4, so the app's suggestion is to wait.</p>` + note;
+    return head("Least risky big movers", "On Coinbase, smaller run-ups, not falling today") + `<div class="pick-list">${ok.map((x, i) => `<button class="pick" data-trench-open="${esc(x.sym)}">
+        <span class="pick-top">${coinIcon(x.sym, 32)}<span><b>${esc(x.sym)}</b><span class="muted small">${esc(x.name)}</span></span><span class="badge b-HOLD">Chase risk: ${esc(x.risk)}</span></span>
+        <span class="rank">#${i + 1} pick</span>
+        <ul><li>Up ${x.ch7.toFixed(0)}% in 7 days, ${x.ch24 >= 0 ? "+" : ""}${x.ch24.toFixed(1)}% today</li><li>On Coinbase: tap to see its full signal</li></ul></button>`).join("")}</div>` + note;
+  }
+
   function renderUp() {
     $("trenchStudy").innerHTML = `<div class="ts-head"><b>Upcoming coins: early, and very risky</b>
         <span class="muted">New coins (under 3 weeks old) that are starting to get real traction: enough cash in the pool to trade, real volume, hundreds of different buyers, and not already dumping. Found earlier than the "Big movers" list.</span></div>
       <p class="muted small" style="margin:0">Most new coins lose most of their value within weeks, and many are scams: the creators sell everything, or the token can't be sold at all. This list shows coins with early traction; it can't tell you which will last. Run the safety check, only use money you can lose, and expect most picks to fail.</p>`;
     const cb = $("trenchCB")?.closest("label"); if (cb) cb.hidden = true;
     if (!up) return;
+    $("trenchPicks").innerHTML = picksHtml(up.coins, "upcoming");
     $("trenchList").innerHTML = up.coins.length ? up.coins.map((x) => {
       const buy = x.address && SWAP[x.chain] ? SWAP[x.chain](encodeURIComponent(x.address)) : null;
-      return `<article class="tcard">
+      return `<article class="tcard" id="up-${esc(x.address || x.sym)}">
         <div class="row"><span class="up-head">${x.image ? `<img src="${esc(x.image)}" alt="" loading="lazy" onerror="this.replaceWith(document.createRange().createContextualFragment(window.coinIcon('${esc(x.sym.replace(/[^A-Za-z0-9]/g, "").slice(0, 6))}', 36)))" />` : coinIcon(x.sym.replace(/[^A-Za-z0-9]/g, ""), 36)}<span><b>${esc(x.sym)}</b><span class="muted">${esc(x.name)} · ${esc(x.netName)}</span></span></span>
           <span class="badge b-SELL">Risk: ${esc(x.risk)}</span></div>
         <div class="tc-tags"><span class="tag2 up">${esc(x.stage)}</span><span class="tag2">${ageTxt(x.ageH)} old</span>${x.ch1 != null ? `<span class="tag2 ${x.ch1 >= 0 ? "up" : "down"}">Last hour ${pctTxt(x.ch1)}</span>` : ""}${x.accel >= 1.5 ? `<span class="tag2 up">Busier than usual this hour</span>` : ""}</div>
@@ -92,7 +116,7 @@
     mode = m; store.set("trenchMode", m);
     document.querySelectorAll("[data-tmode]").forEach((b) => b.classList.toggle("on", b.dataset.tmode === m));
     const cb = $("trenchCB")?.closest("label"); if (cb) cb.hidden = m === "upcoming";
-    $("trenchList").innerHTML = "";
+    $("trenchList").innerHTML = ""; $("trenchPicks").innerHTML = "";
     load();
   }
   document.addEventListener("click", (e) => { const b = e.target.closest("[data-tmode]"); if (b) setMode(b.dataset.tmode); });
@@ -127,6 +151,7 @@
         <p class="muted small" style="margin-top:8px">In plain words: by the time a coin is visibly "coming up", most of the move has usually happened, and buying then has lost money about 3 times out of 4. Bigger hype did worse. Trench shows you what's moving and the risk, not sure winners: no tool can honestly promise those.</p>`;
     }
     if (!data) return;
+    $("trenchPicks").innerHTML = picksHtml(data.movers, "movers");
     const list = data.movers.filter((x) => !onlyCoinbase || x.onCoinbase);
     $("trenchList").innerHTML = list.length ? list.map((x) => {
       const [mc, mt] = momentum(x), b = stats?.buckets?.[x.bucket];

@@ -758,6 +758,22 @@
   .bs-bar { height: 8px; border-radius: 8px; background: #fbe7e9; overflow: hidden; } .bs-bar i { display: block; height: 100%; background: var(--buy); }
   .up-flags { margin: 0; padding-left: 18px; font-size: 13px; color: #8a3b00; } .up-flags li { margin: 2px 0; }
   .up-traction { font-size: 13px; color: var(--dim); margin: 0; }
+
+  /* Top picks */
+  .picks:empty { display: none; }
+  .picks { border: 1px solid var(--border); border-radius: var(--r-xl); padding: 18px 20px; margin: 18px 0 8px; background: linear-gradient(180deg, #f5f8ff, #fff 60%); }
+  .picks-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
+  .picks-head h2 { margin: 0; font-size: 20px; } .picks-head .muted { font-size: 13px; }
+  .pick-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 10px; }
+  .pick { display: flex; flex-direction: column; gap: 6px; background: #fff; border: 1px solid var(--border); border-radius: 14px; padding: 12px 14px; text-align: left; min-height: 0; font-weight: 400; cursor: pointer; }
+  .pick:hover { box-shadow: 0 0 0 2px var(--accent); background: #fff; }
+  a.pick { text-decoration: none; color: var(--text); }
+  .pick-top { display: flex; align-items: center; gap: 10px; } .pick-top > span:nth-child(2) { flex: 1; display: flex; flex-direction: column; line-height: 1.2; }
+  .pick-top img { width: 32px; height: 32px; border-radius: 50%; }
+  .pick ul { margin: 0; padding-left: 18px; font-size: 13px; color: var(--dim); } .pick li { margin: 2px 0; }
+  .pick .rank { font-size: 12px; font-weight: 800; color: var(--accent); }
+  .picks-none { margin: 0 0 10px; }
+  .picks-note { margin: 10px 0 0; font-size: 12px; color: var(--dim); }
 </style>
 </head>
 <body>
@@ -845,6 +861,7 @@
               <h1 class="summary" id="summary">Loading live prices…</h1>
               <div class="marketBar" id="marketBar" hidden></div>
             </div>
+            <div class="picks" id="picks"></div>
             <div class="sec-head"><h2>Top movers</h2><span class="muted">Biggest 24-hour moves among your coins</span></div>
             <div class="movers" id="movers"></div>
             <div class="sec-head"><h2>Watchlist</h2><span class="muted" id="status">Loading…</span></div>
@@ -901,6 +918,7 @@
         <div class="trench-study panel" id="trenchStudy"></div>
         <div class="row trench-bar"><span class="muted" id="trenchStatus">Open this page to scan the market.</span>
           <span class="trench-ctl"><label class="chk"><input type="checkbox" id="trenchCB" /> Only coins on Coinbase</label><button id="trenchRefresh">↻ Rescan</button></span></div>
+        <div class="picks" id="trenchPicks"></div>
         <div class="tgrid" id="trenchList"></div>
         <p class="muted small" style="margin-top:14px">Sources: CoinGecko (top 500 coins by trading volume, and trending searches), Coinbase listings, StockTwits posts. A coin appears when it's up 30%+ in 7 days or 20%+ in 24 hours. Not financial advice.</p>
       </div>

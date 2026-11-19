@@ -67,7 +67,7 @@ const $ = (id) => document.getElementById(id);
 // Prices are USD internally; shown in the visitor's chosen currency (currency.js).
 const fmt = (n) => Currency.fmt(n);
 const pct = (n) => (n >= 0 ? "+" : "") + (n * 100).toFixed(2) + "%";
-const actionClass = (a) => "badge b-" + a.replace(" ", ".");
+const actionClass = (a) => "badge b-" + a.replace(" ", " "); // "STRONG BUY" -> classes b-STRONG + BUY (styled as .b-STRONG.BUY)
 
 // One page = up to 300 candles. `end` (unix seconds) fetches an older page; without it, the newest.
 // Goes through our own server first (shared cache, works on networks that block Coinbase), then straight to Coinbase.
@@ -252,6 +252,29 @@ function sparkline(candles, secs, w, h) {
   return `<svg class="spark" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" aria-hidden="true"><polyline points="${d}" fill="none" stroke="${up ? "#098551" : "#cf202f"}" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/></svg>`;
 }
 
+// Top picks: the coins the signals like most right now, with the reasons. Honest when nothing qualifies.
+function renderPicks() {
+  const el = $("picks");
+  if (!el) return;
+  const rs = allSyms().map((s) => [s, results[s]]).filter(([, r]) => r && !r.error);
+  if (rs.length < 3) { el.innerHTML = ""; return; }
+  const worked = (sym, r) => { const bt = trackRecord(sym, r.candles); return bt ? bt.strategyReturn - bt.holdReturn : 0; };
+  // Rank by signal score, with a small nudge for coins where the signals have beaten holding in the past.
+  const ranked = rs.map(([sym, r]) => ({ sym, r, rank: r.score + Math.max(-1, Math.min(1, worked(sym, r) * 2)) })).sort((a, b) => b.rank - a.rank);
+  const buys = ranked.filter((x) => x.r.action.includes("BUY")).slice(0, 3);
+  const list = buys.length ? buys : ranked.slice(0, 2);
+  const why = (r) => r.reasons.filter((x) => x.pts > 0).sort((a, b) => b.pts - a.pts).slice(0, 2).map((x) => x.text.replace(/<[^>]+>/g, ""));
+  const card = (x, i) => `<button class="pick" data-sym="${x.sym}">
+      <span class="pick-top">${coinIcon(x.sym, 32)}<span><b>${coinName(x.sym) || x.sym}</b><span class="muted small">${x.sym} · ${fmt(x.r.price)} · <span class="${x.r.change24 >= 0 ? "up" : "down"}">${pct(x.r.change24)}</span></span></span><span class="${actionClass(x.r.action)}">${x.r.action}</span></span>
+      ${buys.length ? `<span class="rank">#${i + 1} pick</span>` : ""}
+      ${why(x.r).length ? `<ul>${why(x.r).map((t) => `<li>${t}</li>`).join("")}</ul>` : `<span class="muted small">${PLAIN[x.r.action]}</span>`}
+    </button>`;
+  el.innerHTML = `<div class="picks-head"><h2>${icon("star")} ${buys.length ? "Top picks right now" : "No buy signals right now"}</h2><span class="muted">From the ${rs.length} coins in your watchlist</span></div>
+    ${buys.length ? "" : `<p class="picks-none">None of your coins has a BUY signal, so the app's suggestion is to <b>wait</b>. These are the closest to turning positive:</p>`}
+    <div class="pick-list">${list.map(card).join("")}</div>
+    <p class="picks-note">Picked by the app's trend and momentum signals${buys.length ? ", strongest first" : ""}. Signals are often wrong and this isn't financial advice. Tap a coin for the full reasons and risks. Search for more coins to widen the pool.</p>`;
+}
+
 // Top movers: the biggest 24-hour moves among your coins.
 function renderMovers() {
   const el = $("movers");
@@ -269,6 +292,7 @@ function render() {
   renderSummary();
   renderHeroList();
   renderMovers();
+  renderPicks();
   // Watchlist table. Keep your own order (no reshuffling on every refresh), so coins stay where you expect them.
   const pro = level() === "pro";
   $("grid").innerHTML = `<thead><tr><th>Name</th><th class="num">Price</th><th class="num a-col-chg">24h change</th><th class="a-col-spark">7 days</th><th class="a-col-sig">Signal</th>${pro ? `<th class="num a-col-pro">RSI</th><th class="num a-col-pro">Score</th>` : ""}<th class="num"><span class="sr-only">Watchlist</span></th></tr></thead><tbody>` +
@@ -474,6 +498,7 @@ $("grid").addEventListener("click", (e) => {
   const card = e.target.closest("[data-sym]");
   if (card) { selected = card.dataset.sym; render(); $("detail").scrollTop = 0; }
 });
+$("picks").addEventListener("click", (e) => { const m = e.target.closest("[data-sym]"); if (m) { selected = m.dataset.sym; render(); $("detail").scrollTop = 0; } });
 $("movers").addEventListener("click", (e) => { const m = e.target.closest("[data-sym]"); if (m) { selected = m.dataset.sym; render(); $("detail").scrollTop = 0; } });
 $("grid").addEventListener("keydown", (e) => { if ((e.key === "Enter" || e.key === " ") && e.target.dataset.sym) { e.preventDefault(); e.target.click(); } });
 $("detail").addEventListener("click", (e) => {
