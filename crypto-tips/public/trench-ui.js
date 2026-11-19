@@ -80,6 +80,7 @@
   }
 
   function renderUp() {
+    if (mode !== "upcoming") return; // the list was switched while this one was loading
     $("trenchStudy").innerHTML = `<div class="ts-head"><b>Upcoming coins: early, and very risky</b>
         <span class="muted">New coins (under 3 weeks old) that are starting to get real traction: enough cash in the pool to trade, real volume, hundreds of different buyers, and not already dumping. Found earlier than the "Big movers" list.</span></div>
       <p class="muted small" style="margin:0">Most new coins lose most of their value within weeks, and many are scams: the creators sell everything, or the token can't be sold at all. This list shows coins with early traction; it can't tell you which will last. Run the safety check, only use money you can lose, and expect most picks to fail.</p>`;
@@ -150,7 +151,7 @@
         </div>
         <p class="muted small" style="margin-top:8px">In plain words: by the time a coin is visibly "coming up", most of the move has usually happened, and buying then has lost money about 3 times out of 4. Bigger hype did worse. Trench shows you what's moving and the risk, not sure winners: no tool can honestly promise those.</p>`;
     }
-    if (!data) return;
+    if (!data || mode !== "movers") return;
     $("trenchPicks").innerHTML = picksHtml(data.movers, "movers");
     const list = data.movers.filter((x) => !onlyCoinbase || x.onCoinbase);
     $("trenchList").innerHTML = list.length ? list.map((x) => {
@@ -199,6 +200,7 @@
   window.loadTrench = load;
 
   // ── Coin page for a Trench coin (most aren't on Coinbase, so it has its own page) ──
+  let tpc = null;
   const find = (key) => key.startsWith("up:") ? [up?.coins?.find((c) => "up:" + c.pool === key), "up"] : [data?.movers?.find((c) => "mv:" + c.id === key), "mv"];
   const kv = (k, v) => `<div><dt>${k}</dt><dd>${v}</dd></div>`;
   const chg = (v) => (v == null ? "–" : `<span class="${v >= 0 ? "up" : "down"}">${pctTxt(v)}</span>`);
@@ -211,7 +213,7 @@
     el.hidden = false; el.scrollTop = 0;
     document.body.classList.add("detailOpen");
     if (!history.state?.tcoin) history.pushState({ tcoin: key }, "");
-    const icon36 = x.image ? `<img class="ah-img" src="${esc(x.image)}" alt="" />` : coinIcon(x.sym.replace(/[^A-Za-z0-9]/g, ""), 32);
+    const icon36 = x.image ? `<img class="ah-img" src="${esc(x.image)}" alt="" onerror="this.replaceWith(document.createRange().createContextualFragment(window.coinIcon('${esc(x.sym.replace(/[^A-Za-z0-9]/g, "").slice(0, 6))}', 32)))" />` : coinIcon(x.sym.replace(/[^A-Za-z0-9]/g, ""), 32);
     const swap = x.address && SWAP[x.chain] ? SWAP[x.chain](encodeURIComponent(x.address)) : null;
     const risk = kind === "up" ? `<span class="badge b-SELL sig-big">Risk: ${esc(x.risk)}</span>` : `<span class="badge ${x.risk === "very high" ? "b-SELL" : "b-HOLD"} sig-big">Chase risk: ${esc(x.risk)}</span>`;
     const flags = kind === "up" ? x.flags : [momentum(x)[1], x.risk === "very high" ? "A very big or very frantic move: chasing these has gone worst" : "A big move: most of it has usually already happened"];
@@ -246,29 +248,19 @@
           <div class="side-box stats-box"><h3>Stats</h3><dl class="mstats">${stats.join("")}</dl></div>
         </aside>
       </div>`;
-    const q = kind === "up" ? `network=${encodeURIComponent(x.network)}&pool=${encodeURIComponent(x.pool)}` : `id=${encodeURIComponent(x.id)}`;
-    const direct = async () => {
-      const r = await fetch(`https://api.geckoterminal.com/api/v2/networks/${encodeURIComponent(x.network)}/pools/${encodeURIComponent(x.pool)}/ohlcv/hour?aggregate=1&limit=500&currency=usd`, { headers: { Accept: "application/json" } });
-      if (!r.ok) throw new Error("HTTP " + r.status);
-      const list = (await r.json()).data?.attributes?.ohlcv_list || [];
-      return { candles: list.map(([t, o, h, l, c, v]) => ({ time: t, open: +o, high: +h, low: +l, close: +c, volume: +v })).filter((c) => c.close > 0).sort((a, b) => a.time - b.time), interval: "1h", source: "GeckoTerminal" };
-    };
-    fetch("/api/trench?mode=chart&" + q).then(async (r) => {
-      const d = await r.json().catch(() => ({}));
-      if (r.ok && d.candles?.length) return d;
-      if (kind === "up") return direct(); // our server was rate-limited or blocked: try from this device
-      throw new Error(d.reason || "HTTP " + r.status);
-    }).then((d) => {
-      if (el.hidden || history.state?.tcoin !== key) return;
-      const c = d.candles || [];
-      if (c.length < 5) { $("tChart").innerHTML = `<p class="muted" style="padding:40px 0">Not enough price history yet: this coin is very new.</p>`; return; }
-      Draw.mount($("tChart"), "TRENCH:" + x.sym, c, []);
-      let note = `${c.length} ${d.interval === "1h" ? "hourly" : "4-hour"} candles from ${esc(d.source)}.`;
-      if (c.length >= 60 && window.Indicators?.analyze) {
-        try { const a = Indicators.analyze(c); note += ` Trend on this chart: <span class="${actionClass(a.action)}">${a.action}</span> (from the same signals as the main list, on a short history, so treat it lightly).`; } catch {}
-      }
-      $("tChartNote").innerHTML = note;
-    }).catch(() => { $("tChart").innerHTML = `<p class="muted" style="padding:40px 0">Couldn't load the price chart right now.</p>`; });
+    // Candlestick chart: GeckoTerminal for Upcoming coins (1m to 1D), CoinGecko for Big movers (30m or 4h)
+    tpc?.destroy();
+    const src = kind === "up" ? { kind: "gecko", network: x.network, pool: x.pool, sym: x.sym } : { kind: "coingecko", id: x.id, sym: x.sym };
+    tpc = ProChart.mount($("tChart"), src, {
+      theme: "light",
+      onCandles: (c, tf) => {
+        let note = `${c.length} candles from ${kind === "up" ? "GeckoTerminal" : "CoinGecko"} · ${tf}.`;
+        if (c.length >= 60 && window.Indicators?.analyze) {
+          try { const a = Indicators.analyze(c); note += ` Trend on this chart: <span class="${actionClass(a.action)}">${a.action}</span> (the main list's signals on a short history: treat it lightly).`; } catch {}
+        }
+        if ($("tChartNote")) $("tChartNote").innerHTML = note;
+      },
+    });
   }
   const o_open = async (sym) => {
     if (!coins.includes(sym)) { coins.push(sym); store.set("coins", coins); }
@@ -278,6 +270,7 @@
   function closeTrenchCoin(fromHistory) {
     const el = $("tdetail");
     if (el.hidden) return;
+    tpc?.destroy(); tpc = null;
     el.hidden = true; el.innerHTML = "";
     document.body.classList.remove("detailOpen");
     if (!fromHistory && history.state?.tcoin) history.back();

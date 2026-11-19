@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Signal Tips · Market Farm (draft)</title>
+<link rel="icon" href="icon-192.png" type="image/png" />
+<meta name="theme-color" content="#121d14" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+<meta name="description" content="Design draft: Signal Tips as a dark glass market dashboard with live signals. Not financial advice." />
+<style>
+  /* Draft design: dark forest-green glass dashboard with gold accents, laid over a "market map" of coin fields. */
+  :root {
+    --bg: #101a12; --bg2: #16241a; --glass: rgba(20, 32, 22, .66); --glass2: rgba(34, 50, 36, .55); --line: rgba(232, 240, 226, .09);
+    --text: #eaf0e6; --dim: #9fb09c; --faint: #6f826d; --gold: #e8c46c; --gold2: #c9a24b; --leaf: #8fcf86; --red: #e0786c;
+    --r: 22px; --font: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body { background: var(--bg); color: var(--text); font: 15px/1.45 var(--font); -webkit-font-smoothing: antialiased; overflow-x: hidden; }
+  a { color: inherit; text-decoration: none; }
+  button { font: inherit; color: inherit; border: 0; background: none; cursor: pointer; }
+  .glass { background: var(--glass); backdrop-filter: blur(18px) saturate(1.2); -webkit-backdrop-filter: blur(18px) saturate(1.2); border: 1px solid var(--line); border-radius: var(--r); box-shadow: 0 20px 60px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.04); }
+  .muted { color: var(--dim); } .faint { color: var(--faint); }
+  .up { color: var(--leaf); } .down { color: var(--red); }
+  .draft-tag { position: fixed; top: 12px; left: 50%; transform: translateX(-50%); z-index: 50; font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: var(--gold); background: rgba(16,26,18,.8); border: 1px solid rgba(232,196,108,.3); border-radius: 999px; padding: 5px 14px; }
+
+  /* ── App frame ── */
+  .app { position: relative; min-height: 100vh; display: grid; grid-template-columns: minmax(0, 1fr) 420px; grid-template-rows: auto 1fr auto; gap: 18px; padding: 18px; }
+  .map { position: absolute; inset: 0 438px 0 0; overflow: hidden; }   /* the market map sits behind the left side */
+  .top { grid-column: 1 / -1; display: flex; align-items: center; gap: 16px; position: relative; z-index: 5; }
+  .logo { display: flex; align-items: center; gap: 10px; font-size: 24px; font-weight: 600; letter-spacing: -.02em; padding: 10px 16px 10px 12px; }
+  .logo .mark { width: 34px; height: 34px; border-radius: 10px; background: linear-gradient(145deg, #f2d48a, #c9a24b); display: grid; place-items: center; box-shadow: 0 6px 18px rgba(232,196,108,.35); }
+  .logo .mark svg { width: 20px; height: 20px; }
+  .logo .dot { color: var(--gold); }
+  .search { flex: 0 1 420px; display: flex; align-items: center; gap: 10px; padding: 0 16px; height: 46px; border-radius: 999px; }
+  .search input { flex: 1; background: none; border: 0; color: var(--text); font: inherit; outline: none; min-width: 0; } .search input::placeholder { color: var(--dim); }
+  .top-right { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+  .icon-btn { width: 46px; height: 46px; border-radius: 50%; display: grid; place-items: center; position: relative; }
+  .icon-btn .pip { position: absolute; top: 11px; right: 12px; width: 8px; height: 8px; border-radius: 50%; background: var(--gold); }
+  .me { display: flex; align-items: center; gap: 10px; padding: 5px 16px 5px 5px; border-radius: 999px; }
+  .avatar { width: 36px; height: 36px; border-radius: 50%; background: linear-gradient(145deg, #f2d48a, #c9a24b); color: #2b2410; font-weight: 700; display: grid; place-items: center; font-size: 13px; flex: none; }
+  .me b { display: block; font-size: 14px; font-weight: 500; } .me span { font-size: 12px; color: var(--dim); }
+  svg.i { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+
+  /* Floating sidebar */
+  .side { position: absolute; left: 18px; top: 100px; z-index: 6; width: 220px; padding: 10px; }
+  .side a { display: flex; align-items: center; gap: 12px; padding: 13px 14px; border-radius: 16px; color: var(--dim); font-weight: 500; transition: background .2s, color .2s; }
+  .side a:hover { color: var(--text); background: rgba(255,255,255,.04); }
+  .side a.on { color: var(--text); background: linear-gradient(180deg, rgba(255,255,255,.12), rgba(255,255,255,.05)); box-shadow: inset 0 1px 0 rgba(255,255,255,.08); }
+  .side a .pip { width: 7px; height: 7px; border-radius: 50%; background: var(--gold); margin-left: auto; }
+
+  /* ── Market map: coins as fields ── */
+  .terrain { position: absolute; inset: 0; background:
+      radial-gradient(1200px 600px at 30% 30%, rgba(60, 96, 58, .35), transparent 70%),
+      radial-gradient(800px 500px at 70% 80%, rgba(40, 70, 44, .45), transparent 70%),
+      repeating-linear-gradient(115deg, rgba(255,255,255,.018) 0 2px, transparent 2px 14px), var(--bg2); }
+  .road { position: absolute; background: linear-gradient(90deg, rgba(160, 196, 150, .12), rgba(200, 220, 190, .2), rgba(160, 196, 150, .12)); border-radius: 40px; }
+  .grove { position: absolute; border-radius: 50%; background: radial-gradient(circle at 35% 35%, rgba(170, 210, 140, .55), rgba(60, 100, 56, .55) 55%, rgba(20, 40, 22, 0) 72%); filter: blur(.3px); }
+  .fields-unused { position: absolute; left: 270px; right: 180px; top: 110px; bottom: 350px; display: grid; grid-template-columns: repeat(4, 1fr); grid-template-rows: 1fr 1fr; gap: 26px; }
+  .field { position: relative; border-radius: 18px; overflow: visible; cursor: pointer; transition: transform .25s, filter .25s; }
+  .field .crop { position: absolute; inset: 0; border-radius: 18px; border: 1px solid rgba(255,255,255,.06); box-shadow: inset 0 0 40px rgba(0,0,0,.35); }
+  .field:hover { transform: translateY(-3px); filter: brightness(1.12); }
+  .field.sel .crop { box-shadow: 0 0 0 2px var(--gold), inset 0 0 40px rgba(0,0,0,.3); }
+  .pin { position: absolute; left: 50%; top: 34%; transform: translate(-50%, -100%); display: flex; flex-direction: column; align-items: center; pointer-events: none; z-index: 2; }
+  .tag { display: inline-flex; align-items: center; gap: 7px; white-space: nowrap; font-size: 13px; padding: 7px 13px; border-radius: 999px; background: rgba(16,26,18,.78); border: 1px solid var(--line); backdrop-filter: blur(10px); }
+  .tag b { font-weight: 600; } .tag .muted { font-size: 12px; }
+  .tag .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--leaf); }
+  .tag.gold { background: linear-gradient(180deg, #f3d891, #e2bb5d); color: #2a220c; border-color: transparent; } .tag.gold .muted { color: #5e4c19; } .tag.gold .dot { background: #5e4c19; }
+  .tag.red .dot { background: var(--red); }
+  .stem { width: 1px; height: 22px; background: rgba(255,255,255,.4); } .knob { width: 12px; height: 12px; border-radius: 50%; background: #fff; box-shadow: 0 0 0 5px rgba(255,255,255,.18); }
+  .tag.gold + .stem + .knob { background: var(--gold); box-shadow: 0 0 0 5px rgba(232,196,108,.25); }
+  .layers { position: absolute; right: 36px; top: 110px; display: flex; flex-direction: column; gap: 8px; z-index: 3; }
+  .layers button { padding: 8px 16px; border-radius: 999px; background: rgba(16,26,18,.72); border: 1px solid var(--line); color: var(--dim); font-size: 13px; text-align: left; backdrop-filter: blur(8px); }
+  .layers button.on { background: linear-gradient(180deg, #f3d891, #e2bb5d); color: #2a220c; border-color: transparent; font-weight: 600; }
+  .scale { position: absolute; left: 290px; bottom: 322px; display: flex; align-items: center; gap: 10px; font-size: 12px; color: var(--dim); z-index: 3; }
+  .scale i { display: block; width: 90px; height: 1px; background: var(--dim); position: relative; } .scale i::before, .scale i::after { content: ""; position: absolute; top: -4px; width: 1px; height: 9px; background: var(--dim); } .scale i::before { left: 0; } .scale i::after { right: 0; }
+
+  #farm { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+  #farm .fld { cursor: pointer; transition: filter .25s; } #farm .fld:hover { filter: brightness(1.15) saturate(1.1); }
+  #farm .fld.sel path.edge { stroke: #e8c46c; stroke-width: 3; }
+  #farm text { font-family: var(--font); }
+  .key { position: absolute; right: 30px; top: 296px; z-index: 3; display: flex; flex-direction: column; gap: 6px; font-size: 12px; color: var(--dim); background: rgba(16,26,18,.6); border: 1px solid var(--line); border-radius: 14px; padding: 8px 12px; backdrop-filter: blur(8px); }
+  .key i { display: inline-block; width: 9px; height: 9px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; }
+
+  /* ── Right column ── */
+  .right { grid-column: 2; grid-row: 2 / 4; display: flex; flex-direction: column; gap: 18px; position: relative; z-index: 5; }
+  .panel { padding: 20px; }
+  .ph { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+  .ph h2 { font-size: 19px; font-weight: 400; letter-spacing: -.01em; } .ph h2 small { display: block; font-size: 12px; color: var(--dim); margin-top: 2px; }
+  .ph .arrow { width: 32px; height: 32px; border-radius: 50%; background: rgba(255,255,255,.06); display: grid; place-items: center; }
+  .tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .tile { background: var(--glass2); border: 1px solid var(--line); border-radius: 18px; padding: 14px; min-height: 150px; display: flex; flex-direction: column; position: relative; overflow: hidden; }
+  .tile .lab { display: flex; justify-content: space-between; color: var(--dim); font-size: 13px; }
+  .tile .big { font-size: 30px; font-weight: 300; letter-spacing: -.02em; margin-top: 6px; display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap; }
+  .tile .big small { font-size: 14px; color: var(--dim); }
+  .chip { white-space: nowrap; font-size: 12px; padding: 3px 10px; border-radius: 999px; background: rgba(232,196,108,.14); color: var(--gold); border: 1px solid rgba(232,196,108,.2); font-weight: 500; }
+  .chip.green { background: rgba(143,207,134,.12); color: var(--leaf); border-color: rgba(143,207,134,.2); } .chip.red { background: rgba(224,120,108,.12); color: var(--red); border-color: rgba(224,120,108,.2); }
+  .tile svg.viz { position: absolute; left: 0; right: 0; bottom: 0; width: 100%; height: 62px; }
+  .order { display: flex; align-items: center; gap: 12px; margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--line); cursor: pointer; }
+  .order > div:first-child { flex: 1; min-width: 0; } .order .muted { font-size: 12px; } .order b { display: block; font-weight: 400; font-size: 17px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .segs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-top: 10px; } .segs i { height: 18px; border-radius: 6px; background: rgba(255,255,255,.06); } .segs i.on { background: linear-gradient(180deg, #f0d184, #cfa64e); }
+  .msgs { display: flex; flex-direction: column; gap: 12px; }
+  .msg { display: flex; gap: 10px; align-items: flex-start; } .msg .avatar { width: 30px; height: 30px; font-size: 11px; background: linear-gradient(145deg, #3c5a3e, #2a3f2c); color: var(--text); border: 1px solid var(--line); }
+  .msg b { font-size: 13px; font-weight: 500; } .msg p { font-size: 12px; color: var(--dim); display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; }
+
+  /* ── Bottom row (over the map) ── */
+  .bottom { grid-column: 1; grid-row: 3; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr); gap: 18px; position: relative; z-index: 5; margin-left: 252px; }
+  .mix { display: flex; align-items: center; gap: 22px; }
+  .legend { display: flex; flex-direction: column; gap: 10px; } .legend div { font-size: 13px; color: var(--dim); } .legend b { display: block; font-size: 22px; font-weight: 300; color: var(--text); }
+  .legend i { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 6px; }
+  .bars { display: grid; grid-template-columns: 34px 1fr; gap: 10px; height: 170px; }
+  .axis { display: flex; flex-direction: column; justify-content: space-between; font-size: 11px; color: var(--faint); text-align: right; padding-bottom: 20px; }
+  .cols { display: flex; align-items: stretch; gap: 8px; }
+  .col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 6px; cursor: pointer; }
+  .col .track { flex: 1; width: 100%; max-width: 26px; border-radius: 999px; background: rgba(255,255,255,.045); position: relative; overflow: hidden; }
+  .col .fill { position: absolute; left: 0; right: 0; bottom: 0; border-radius: 999px; background: linear-gradient(180deg, #f4f6f1, #bfc7bb); transition: height .8s cubic-bezier(.2,.8,.2,1); }
+  .col .fill.gold { background: linear-gradient(180deg, #f3d891, #c9a24b); } .col .fill.neg { background: linear-gradient(180deg, rgba(224,120,108,.75), rgba(224,120,108,.35)); }
+  .col span { font-size: 11px; color: var(--faint); }
+  .note { font-size: 11px; color: var(--faint); margin-top: 10px; }
+  .footer-note { grid-column: 1 / -1; text-align: center; font-size: 12px; color: var(--faint); padding: 6px 0 4px; position: relative; z-index: 5; }
+  .footer-note a { color: var(--gold); }
+
+  .fade-in { animation: fade .7s ease both; } @keyframes fade { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+  .loading { color: var(--faint); font-size: 13px; }
+
+  /* ── Smaller screens: stack everything ── */
+  @media (max-width: 1180px) {
+    .app { grid-template-columns: minmax(0, 1fr); padding: 14px; }
+    .map { position: relative; inset: auto; height: 520px; border-radius: var(--r); grid-column: 1; order: 2; }
+    .side { position: static; width: auto; display: flex; overflow-x: auto; gap: 4px; grid-column: 1; order: 1; padding: 6px; scrollbar-width: none; }
+    .side a { white-space: nowrap; padding: 10px 14px; }
+    .fields { left: 24px; right: 110px; top: 70px; bottom: 50px; }
+    .scale { left: 30px; bottom: 18px; } .layers { right: 14px; } .key { right: 14px; top: 250px; }
+    .right { grid-column: 1; grid-row: auto; order: 3; }
+    .bottom { grid-column: 1; grid-row: auto; margin-left: 0; order: 4; }
+    .top { order: 0; } .footer-note { order: 5; }
+  }
+  @media (max-width: 640px) {
+    .top { flex-wrap: wrap; } .search { order: 3; flex: 1 1 100%; } .me span, .me b { display: none; } .me { padding: 5px; }
+    .logo { font-size: 20px; }
+    .map { height: 560px; } .fields { grid-template-columns: repeat(2, 1fr); grid-template-rows: repeat(4, 1fr); gap: 16px; right: 16px; left: 16px; top: 64px; bottom: 44px; }
+    .layers { top: 12px; right: 12px; transform: none; flex-direction: row; flex-wrap: wrap; justify-content: flex-end; left: 12px; } .layers button { padding: 6px 12px; font-size: 12px; }
+    .bottom { grid-template-columns: minmax(0, 1fr); }
+    .tile .big { font-size: 26px; }
+    .key, .scale { display: none; } .draft-tag { top: auto; bottom: 10px; font-size: 10px; }
+  }
+</style>
+</head>
+<body>
+<div class="draft-tag">Design draft · live data</div>
+
+<div class="app">
+  <!-- Market map: each coin is a "field" -->
+  <div class="map" id="map" aria-label="The market as a farm: each coin is a field">
+    <svg id="farm" role="img" aria-label="Aerial view of the market farm"></svg>
+    <div class="layers" id="layers" role="tablist" aria-label="Map layer">
+      <button class="on" data-layer="signal">Ripeness</button><button data-layer="d1">24h</button><button data-layer="d7">7-day</button><button data-layer="mom">Momentum</button>
+    </div>
+    <div class="scale"><i></i><span id="scaleLabel">Signal ripeness</span></div>
+    <div class="key"><span><i style="background:#e2bf62"></i>Ready = BUY</span><span><i style="background:#5f9446"></i>Growing = HOLD</span><span><i style="background:#7a5c3e"></i>Fallow = SELL</span></div>
+  </div>
+
+  <header class="top">
+    <a class="logo glass" href="/" aria-label="Signal Tips home"><span class="mark"><svg viewBox="0 0 24 24"><path d="M4 16l4.5-4.5 3.5 3 7-7" fill="none" stroke="#2b2410" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span>Signal Tips<span class="dot">.</span></a>
+    <label class="search glass"><svg class="i" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg><input id="q" placeholder="Search coins, signals, trench…" autocomplete="off" /></label>
+    <div class="top-right">
+      <a class="icon-btn glass" href="/?tab=alerts" aria-label="Alerts"><svg class="i" viewBox="0 0 24 24"><path d="M6 16v-5a6 6 0 0 1 12 0v5l2 2H4l2-2z"/><path d="M10 20.5a2 2 0 0 0 4 0"/></svg><span class="pip"></span></a>
+      <a class="me glass" href="/?tab=me"><span class="avatar">ST</span><span><b>Signal Tips</b><span>Market Farm · draft</span></span></a>
+    </div>
+  </header>
+
+  <nav class="side glass" aria-label="Sections">
+    <a class="on" href="#"><svg class="i" viewBox="0 0 24 24"><rect x="4" y="4" width="7" height="7" rx="2"/><rect x="13" y="4" width="7" height="7" rx="2"/><rect x="4" y="13" width="7" height="7" rx="2"/><rect x="13" y="13" width="7" height="7" rx="2"/></svg>Overview</a>
+    <a href="/?tab=signals"><svg class="i" viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 5-6"/></svg>Signals</a>
+    <a href="/?tab=trench"><svg class="i" viewBox="0 0 24 24"><path d="M12 3c.8 3.2 4.5 5 4.5 9.5a4.5 4.5 0 0 1-9 0c0-2.2 1-3.6 2.2-4.6.1 1.8.9 2.9 2 3.2-.3-3 .2-5.6.3-8.1z"/></svg>Trench<span class="pip"></span></a>
+    <a href="/?tab=buzz"><svg class="i" viewBox="0 0 24 24"><path d="M3 10v4h3l8 4.5V5.5L6 10H3z"/><path d="M18 9a4 4 0 0 1 0 6"/></svg>Buzz</a>
+    <a href="/?tab=alerts"><svg class="i" viewBox="0 0 24 24"><path d="M6 16v-5a6 6 0 0 1 12 0v5l2 2H4l2-2z"/><path d="M10 20.5a2 2 0 0 0 4 0"/></svg>Alerts</a>
+    <a href="/?tab=sim"><svg class="i" viewBox="0 0 24 24"><rect x="2.5" y="7" width="19" height="11" rx="4"/><path d="M7.5 10.5v4M5.5 12.5h4"/></svg>Practice</a>
+    <a href="/?tab=ai"><svg class="i" viewBox="0 0 24 24"><path d="M11 3l1.9 5.1L18 10l-5.1 1.9L11 17l-1.9-5.1L4 10l5.1-1.9z"/></svg>Ask AI</a>
+  </nav>
+
+  <!-- Right column -->
+  <aside class="right">
+    <section class="panel glass fade-in">
+      <div class="ph"><h2>Farm Overview<small>The whole market, field by field</small></h2><a class="arrow" href="/?tab=signals" aria-label="Open signals"><svg class="i" viewBox="0 0 24 24"><path d="M7 17L17 7M9 7h8v8"/></svg></a></div>
+      <div class="tiles">
+        <div class="tile"><div class="lab"><span>Bitcoin</span><span id="btcChip"></span></div><div class="big" id="btcPx">–</div><svg class="viz" id="btcViz" viewBox="0 0 200 62" preserveAspectRatio="none"></svg></div>
+        <div class="tile"><div class="lab"><span>Ready fields</span><span id="upChip"></span></div><div class="big" id="upN">–</div><svg class="viz" id="upViz" viewBox="0 0 200 62" preserveAspectRatio="none"></svg></div>
+        <div class="tile"><div class="lab"><span>Mood</span><span id="moodChip"></span></div><div class="big" id="mood">–</div><svg class="viz" id="moodViz" viewBox="0 0 200 62" preserveAspectRatio="none"></svg></div>
+        <div class="tile"><div class="lab"><span>Ripeness</span></div><svg id="gauge" viewBox="0 0 200 120" style="width:100%;height:110px;margin-top:4px"></svg></div>
+      </div>
+      <div class="order" id="pick"><div><span class="muted">Harvest order · best field today</span><b>Loading…</b></div><span class="avatar" id="pickAv">–</span><div style="flex:0 0 auto"><span class="muted">Signal</span><b id="pickSig" style="font-size:15px">–</b></div></div>
+      <div class="segs" id="pickSegs"><i></i><i></i><i></i><i></i></div>
+      <p class="note" id="pickNote"></p>
+    </section>
+    <section class="panel glass fade-in" style="animation-delay:.1s">
+      <div class="ph"><h2>Field Notes<small>What traders are saying on StockTwits</small></h2><a class="muted" href="/?tab=buzz" style="font-size:13px">View all</a></div>
+      <div class="msgs" id="msgs"><p class="loading">Loading posts…</p></div>
+    </section>
+  </aside>
+
+  <!-- Bottom row -->
+  <div class="bottom">
+    <section class="panel glass fade-in" style="animation-delay:.15s">
+      <div class="ph"><h2>Crop Mix<small>Fields by ripeness</small></h2></div>
+      <div class="mix"><svg id="rings" viewBox="0 0 160 160" style="width:150px;height:150px;flex:none"></svg><div class="legend" id="legend"></div></div>
+    </section>
+    <section class="panel glass fade-in" style="animation-delay:.2s">
+      <div class="ph"><h2>Harvest Forecast<small>Signal score by field · the ripest highlighted</small></h2><a class="arrow" href="/?tab=signals" aria-label="Open signals"><svg class="i" viewBox="0 0 24 24"><path d="M7 17L17 7M9 7h8v8"/></svg></a></div>
+      <div class="bars"><div class="axis"><span>+6</span><span>+3</span><span>0</span><span>−3</span><span>−6</span></div><div class="cols" id="cols"></div></div>
+    </section>
+  </div>
+
+  <p class="footer-note">Design draft: the market as a farm. Ready fields are BUY signals, growing fields HOLD, fallow fields SELL. Live Coinbase prices and the app's own signals. Not financial advice. <a href="/">Back to the current app →</a></p>
+</div>
+
+<script src="indicators.js"></script>
+<script>
+// Draft dashboard: live prices from the app's own /api/candles, signals from indicators.js, mood and posts from the app's APIs.
+(function () {
+  const COINS = ["BTC", "ETH", "SOL", "XRP", "DOGE", "ADA", "AVAX", "LINK"];
+  const NAMES = { BTC: "Bitcoin", ETH: "Ethereum", SOL: "Solana", XRP: "XRP", DOGE: "Dogecoin", ADA: "Cardano", AVAX: "Avalanche", LINK: "Chainlink" };
+  const $ = (id) => document.getElementById(id);
+  const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const money = (n) => n == null ? "–" : "$" + (n >= 1000 ? n.toLocaleString(undefined, { maximumFractionDigits: 0 }) : n >= 1 ? n.toFixed(2) : n.toPrecision(4));
+  const pct = (v) => (v >= 0 ? "+" : "") + (v * 100).toFixed(1) + "%";
+  const data = {};
+  let layer = "signal", sel = null;
+
+  async function load(sym) {
+    const r = await fetch(`/api/candles?sym=${sym}&gran=86400`);
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    const raw = await r.json();
+    const c = raw.reverse().map(([time, low, high, open, close, volume]) => ({ time, low, high, open, close, volume }));
+    const a = Indicators.analyze(c);
+    const last = c[c.length - 1].close;
+    return { sym, c, a, price: last, d1: last / c[c.length - 2].close - 1, d7: last / c[c.length - 8].close - 1, d30: last / c[c.length - 31].close - 1 };
+  }
+
+  // ── The farm: each coin is a crop field, seen from above ──
+  // Ready (golden, ripe) = BUY · Growing (green rows) = HOLD · Fallow (bare soil) = SELL.
+  function metric(x) {
+    return layer === "signal" ? x.a.score / 6 : layer === "d1" ? x.d1 * 12 : layer === "d7" ? x.d7 * 4 : ((x.a.rsi ?? 50) - 50) / 25;
+  }
+  function stage(x) {
+    if (layer === "signal") return x.a.action.includes("BUY") ? ["ripe", "Ready"] : x.a.action.includes("SELL") ? ["soil", "Fallow"] : ["green", "Growing"];
+    const t = metric(x);
+    return t > 0.3 ? ["ripe", "Ready"] : t > -0.3 ? ["green", "Growing"] : ["soil", "Fallow"];
+  }
+  function pinText(x) {
+    const [, st] = stage(x);
+    if (layer === "signal") return [x.sym, st];
+    if (layer === "d1") return [x.sym, pct(x.d1)];
+    if (layer === "d7") return [x.sym, pct(x.d7)];
+    return [x.sym, "RSI " + (x.a.rsi != null ? x.a.rsi.toFixed(0) : "–")];
+  }
+  let seed = 11; const rnd = () => (seed = (seed * 9301 + 49297) % 233280) / 233280;
+  const defs = () => `<defs>
+    <filter id="grain" x="0" y="0" width="100%" height="100%"><feTurbulence type="fractalNoise" baseFrequency=".9" numOctaves="2" seed="4"/><feColorMatrix values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 .22 0"/><feComposite in2="SourceGraphic" operator="in"/><feBlend in="SourceGraphic" mode="multiply"/></filter>
+    <filter id="soft"><feGaussianBlur stdDeviation="4"/></filter>
+    <radialGradient id="tree" cx="38%" cy="35%" r="70%"><stop offset="0" stop-color="#b9d98a"/><stop offset=".45" stop-color="#6f9a4c"/><stop offset="1" stop-color="#2c4a27"/></radialGradient>
+    <radialGradient id="tree2" cx="38%" cy="35%" r="70%"><stop offset="0" stop-color="#d7e7a6"/><stop offset=".5" stop-color="#8db35e"/><stop offset="1" stop-color="#3e5f30"/></radialGradient>
+    <linearGradient id="pond" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#4f8592"/><stop offset="1" stop-color="#1f3f48"/></linearGradient>
+    ${[["ripe", "#d9b55c", "#a98436", "#f1d892"], ["green", "#4d7f3c", "#2f5628", "#7fb25e"], ["soil", "#6e5236", "#4f3a26", "#8a6a47"]].map(([id, base, dark, light]) =>
+      `<pattern id="p-${id}" width="12" height="12" patternUnits="userSpaceOnUse"><rect width="12" height="12" fill="${base}"/><rect width="12" height="4" y="0" fill="${dark}"/><rect width="12" height="2" y="6" fill="${light}" opacity=".7"/>${id === "green" ? '<circle cx="3" cy="7" r="1.6" fill="#94c46f"/><circle cx="9" cy="7" r="1.6" fill="#94c46f"/>' : ""}${id === "ripe" ? '<rect x="0" y="7" width="12" height="1" fill="#fbe7a8" opacity=".6"/>' : ""}</pattern>`).join("")}
+  </defs>`;
+
+  function renderMap() {
+    const list = COINS.map((s) => data[s]).filter(Boolean);
+    const map = $("map"), svg = $("farm");
+    if (!list.length || !map) return;
+    const W = map.clientWidth, H = map.clientHeight, phone = W < 640, desk = innerWidth > 1180;
+    seed = 11;
+    // The part of the map not covered by the floating panels
+    const safe = desk ? { x: 262, y: 100, w: W - 262 - 170, h: H - 100 - 330 } : phone ? { x: 14, y: 70, w: W - 28, h: H - 178 } : { x: 20, y: 64, w: W - 150, h: H - 110 };
+    const cols = phone ? 2 : 4, rows = Math.ceil(list.length / cols), gap = phone ? 18 : 26;
+    const fw = (safe.w - gap * (cols - 1)) / cols, fh = (safe.h - gap * (rows - 1)) / rows;
+    const fields = list.map((x, i) => {
+      const c = i % cols, r = Math.floor(i / cols), x0 = safe.x + c * (fw + gap), y0 = safe.y + r * (fh + gap), j = () => (rnd() - 0.5) * 12;
+      const pts = [[x0 + j(), y0 + j()], [x0 + fw + j(), y0 + j()], [x0 + fw + j(), y0 + fh + j()], [x0 + j(), y0 + fh + j()]];
+      return { x, i, pts, cx: x0 + fw / 2, cy: y0 + fh / 2, x0, y0, angle: [0, 90, 35, 0, 120, 90, 60, 0][i % 8] };
+    });
+    const inField = (px, py, m = 8) => fields.some((f) => px > f.x0 - m && px < f.x0 + fw + m && py > f.y0 - m && py < f.y0 + fh + m);
+    let out = defs();
+    // Grass and soil texture over the whole farm
+    out += `<rect width="${W}" height="${H}" fill="#2b4628"/><rect width="${W}" height="${H}" fill="#3b5d33" filter="url(#grain)" opacity=".9"/>`;
+    // Big background fields outside the play area, for the aerial look
+    for (let k = 0; k < 7; k++) {
+      const bx = rnd() * W, by = rnd() * H, bw = 160 + rnd() * 260, bh = 120 + rnd() * 200;
+      out += `<rect x="${bx}" y="${by}" width="${bw}" height="${bh}" rx="10" fill="url(#p-${["green", "soil", "green"][k % 3]})" opacity=".35" transform="rotate(${(rnd() - 0.5) * 30} ${bx} ${by})"/>`;
+    }
+    // Dirt roads along the gaps between fields, and one across the farm
+    const road = (d, w) => `<path d="${d}" fill="none" stroke="#5c4a33" stroke-width="${w + 4}" stroke-linecap="round" opacity=".55"/><path d="${d}" fill="none" stroke="#b7a272" stroke-width="${w}" stroke-linecap="round" opacity=".75"/><path d="${d}" fill="none" stroke="#d6c493" stroke-width="${w * 0.25}" stroke-dasharray="2 9" stroke-linecap="round" opacity=".5"/>`;
+    for (let c = 1; c < cols; c++) { const xx = safe.x + c * (fw + gap) - gap / 2; out += road(`M ${xx} ${safe.y - 60} L ${xx + 6} ${safe.y + safe.h + 60}`, 9); }
+    for (let r = 1; r < rows; r++) { const yy = safe.y + r * (fh + gap) - gap / 2; out += road(`M ${safe.x - 80} ${yy} L ${safe.x + safe.w + 80} ${yy + 5}`, 9); }
+    out += road(`M -20 ${H * 0.92} C ${W * 0.3} ${H * 0.82}, ${W * 0.55} ${H * 0.98}, ${W + 20} ${H * 0.86}`, 14);
+    // Pond
+    const pdx = desk ? safe.x + safe.w + 96 : W - 70, pdy = desk ? safe.y + safe.h * 1.02 : H - 40;
+    out += `<ellipse cx="${pdx}" cy="${pdy}" rx="70" ry="42" fill="#203a24" opacity=".6" filter="url(#soft)"/><ellipse cx="${pdx}" cy="${pdy}" rx="62" ry="36" fill="url(#pond)"/><ellipse cx="${pdx - 18}" cy="${pdy - 10}" rx="22" ry="6" fill="#9cc6cf" opacity=".35"/>`;
+    // Crop fields (the coins)
+    for (const f of fields) {
+      const [kind] = stage(f.x), d = "M" + f.pts.map((p) => p.join(",")).join(" L") + " Z";
+      out += `<a href="/?coin=${f.x.sym}" class="fld ${sel === f.x.sym ? "sel" : ""}" data-sym="${f.x.sym}">
+        <path d="${d}" transform="translate(4 6)" fill="#000" opacity=".28" filter="url(#soft)"/>
+        <path d="${d}" fill="url(#p-${kind})" style="transform-box: fill-box"/>
+        <path d="${d}" fill="url(#p-${kind})" opacity=".0"/>
+        <path class="edge" d="${d}" fill="none" stroke="rgba(30,40,20,.55)" stroke-width="2" stroke-linejoin="round"/>
+        <path d="${d}" fill="#fff" opacity="${kind === "ripe" ? 0.06 : 0.02}"/>
+      </a>`;
+    }
+    // Rotate each field's rows: re-draw with a rotated pattern clip (keeps the field shape)
+    out = out.replace(/<path d="([^"]+)" fill="url\(#p-(\w+)\)" style="transform-box: fill-box"\/>/g, (m, d, k) => {
+      const f = fields.find((ff) => "M" + ff.pts.map((p) => p.join(",")).join(" L") + " Z" === d);
+      const id = "clip" + f.i;
+      return `<clipPath id="${id}"><path d="${d}"/></clipPath><g clip-path="url(#${id})"><rect x="${f.cx - fw}" y="${f.cy - fh * 1.4}" width="${fw * 2}" height="${fh * 2.8}" fill="url(#p-${k})" transform="rotate(${f.angle} ${f.cx} ${f.cy})"/></g>`;
+    });
+    // Trees: clusters along the roads and around the farm, never on a field
+    for (let k = 0, placed = 0; k < 900 && placed < (phone ? 60 : 130); k++) {
+      const tx = rnd() * W, ty = rnd() * H;
+      if (inField(tx, ty)) continue;
+      const r = 6 + rnd() * 15, g = rnd() < 0.5 ? "tree" : "tree2"; placed++;
+      out += `<ellipse cx="${tx + r * 0.6}" cy="${ty + r * 0.7}" rx="${r}" ry="${r * 0.8}" fill="#0d1a0d" opacity=".45" filter="url(#soft)"/><circle cx="${tx}" cy="${ty}" r="${r}" fill="url(#${g})"/>`;
+    }
+    // Market barn and silo, with the mood pin
+    const bx = desk ? safe.x + safe.w + 24 : phone ? W / 2 - 52 : safe.x + 10, by = desk ? safe.y + safe.h * 0.76 : H - 48;
+    out += `<g transform="translate(${bx} ${by})"><rect x="4" y="6" width="74" height="44" fill="#000" opacity=".35" filter="url(#soft)"/>
+      <rect x="0" y="0" width="70" height="40" rx="3" fill="#8b2f25"/><path d="M0 20 L70 20" stroke="#5e1d17" stroke-width="3"/><rect x="0" y="0" width="70" height="40" rx="3" fill="none" stroke="#c9b48a" stroke-width="2"/>
+      <circle cx="96" cy="20" r="16" fill="#9aa3a6"/><circle cx="96" cy="20" r="10" fill="#c4cbcd"/><circle cx="96" cy="20" r="3" fill="#7d8588"/></g>`;
+    out += pinSvg(bx + 35, by - 4, "Market barn", moodTxt, false, null);
+    // Field pins
+    for (const f of fields) { const [kind] = stage(f.x), [a, b] = pinText(f.x); out += pinSvg(f.cx, f.y0 + fh * 0.42, a, b, kind === "ripe", f.x.sym, kind === "soil"); }
+    svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+    svg.innerHTML = out;
+    $("scaleLabel").textContent = { signal: "Signal ripeness", d1: "Last 24 hours", d7: "Last 7 days", mom: "Momentum (RSI)" }[layer];
+  }
+  let moodTxt = "Mood –";
+  // A map pin: pill label, stem and knob (gold when the field is ready to harvest)
+  function pinSvg(x, y, a, b, gold, sym, red) {
+    const text = `${a}  ·  ${b}`, w = 22 + text.length * 6.6, h = 28;
+    return `<g ${sym ? `class="pinG" data-sym="${sym}"` : ""} pointer-events="none">
+      <rect x="${x - w / 2 + 2}" y="${y - h - 26}" width="${w}" height="${h}" rx="14" fill="#000" opacity=".3" filter="url(#soft)"/>
+      <rect x="${x - w / 2}" y="${y - h - 28}" width="${w}" height="${h}" rx="14" fill="${gold ? "#ecca74" : "rgba(14,24,15,.82)"}" stroke="${gold ? "none" : "rgba(255,255,255,.12)"}"/>
+      <circle cx="${x - w / 2 + 14}" cy="${y - h / 2 - 28}" r="3.5" fill="${gold ? "#5e4c19" : red ? "#e0786c" : "#8fcf86"}"/>
+      <text x="${x - w / 2 + 24}" y="${y - h / 2 - 23.5}" font-size="12.5" fill="${gold ? "#2a220c" : "#eaf0e6"}"><tspan font-weight="600">${esc(a)}</tspan><tspan fill="${gold ? "#5e4c19" : "#9fb09c"}"> · ${esc(b)}</tspan></text>
+      <line x1="${x}" y1="${y - 28}" x2="${x}" y2="${y - 6}" stroke="rgba(255,255,255,.55)"/>
+      <circle cx="${x}" cy="${y}" r="10" fill="${gold ? "rgba(232,196,108,.3)" : "rgba(255,255,255,.2)"}"/><circle cx="${x}" cy="${y}" r="5" fill="${gold ? "#ecca74" : "#fff"}"/></g>`;
+  }
+  $("layers").addEventListener("click", (e) => { const b = e.target.closest("[data-layer]"); if (!b) return; layer = b.dataset.layer; document.querySelectorAll("[data-layer]").forEach((x) => x.classList.toggle("on", x === b)); renderMap(); });
+  $("farm").addEventListener("mouseover", (e) => { const f = e.target.closest(".fld"); if (f && f.dataset.sym !== sel) { sel = f.dataset.sym; document.querySelectorAll(".fld").forEach((x) => x.classList.toggle("sel", x.dataset.sym === sel)); renderPick(data[sel]); } });
+  let rz; addEventListener("resize", () => { clearTimeout(rz); rz = setTimeout(renderMap, 150); });
+
+  // ── Tiles ──
+  function area(vals, gold = true) {
+    const lo = Math.min(...vals), hi = Math.max(...vals), X = (i) => (i / (vals.length - 1)) * 200, Y = (v) => 58 - ((v - lo) / (hi - lo || 1)) * 46;
+    const line = vals.map((v, i) => `${X(i).toFixed(1)},${Y(v).toFixed(1)}`).join(" ");
+    return `<defs><linearGradient id="g${vals.length}${gold}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e8c46c" stop-opacity=".55"/><stop offset="1" stop-color="#e8c46c" stop-opacity="0"/></linearGradient></defs>
+      <polygon points="0,62 ${line} 200,62" fill="url(#g${vals.length}${gold})"/><polyline points="${line}" fill="none" stroke="#e8c46c" stroke-width="2"/>`;
+  }
+  function renderTiles() {
+    const list = COINS.map((s) => data[s]).filter(Boolean), b = data.BTC;
+    if (b) {
+      $("btcPx").innerHTML = `${money(b.price)}`;
+      $("btcChip").innerHTML = `<span class="chip ${b.a.action.includes("BUY") ? "green" : b.a.action.includes("SELL") ? "red" : ""}">${b.a.action}</span>`;
+      $("btcViz").innerHTML = area(b.c.slice(-30).map((x) => x.close));
+    }
+    const ups = list.filter((x) => x.a.action.includes("BUY")).length;
+    $("upN").innerHTML = `${ups}<small>of ${list.length}</small>`;
+    $("upChip").innerHTML = `<span class="chip">${list.filter((x) => x.d1 > 0).length} up 24h</span>`;
+    // Lollipops: each coin's score, with the "max" guide line
+    const n = list.length, X = (i) => 14 + (i / Math.max(1, n - 1)) * 172, Y = (s) => 54 - (Math.max(-6, Math.min(6, s)) + 6) / 12 * 40;
+    const best = list.reduce((m, x) => (x.a.score > (m?.a.score ?? -99) ? x : m), null);
+    $("upViz").innerHTML = `<line x1="8" x2="192" y1="${Y(2)}" y2="${Y(2)}" stroke="rgba(255,255,255,.3)" stroke-dasharray="3 4"/><text x="8" y="${Y(2) - 4}" fill="#9fb09c" font-size="8">BUY line</text>` +
+      list.map((x, i) => `<line x1="${X(i)}" x2="${X(i)}" y1="60" y2="${Y(x.a.score)}" stroke="${x === best ? "#e8c46c" : "#eaf0e6"}" stroke-width="2.4" stroke-linecap="round"/><circle cx="${X(i)}" cy="${Y(x.a.score)}" r="${x === best ? 4.5 : 3.5}" fill="${x === best ? "#e8c46c" : "#eaf0e6"}"/>`).join("");
+    renderGauge(list.length ? list.filter((x) => x.a.score > 0).length / list.length : 0);
+  }
+  function renderGauge(f) {
+    const cx = 100, cy = 100, r = 70, a0 = Math.PI, ticks = [];
+    for (let k = 0; k <= 30; k++) { const a = a0 - (k / 30) * Math.PI, r1 = r + 8, r2 = r + (k % 5 ? 12 : 16); ticks.push(`<line x1="${cx + r1 * Math.cos(a)}" y1="${cy - r1 * Math.sin(a)}" x2="${cx + r2 * Math.cos(a)}" y2="${cy - r2 * Math.sin(a)}" stroke="rgba(255,255,255,.35)" stroke-width="1"/>`); }
+    const arc = (t) => { const a = a0 - t * Math.PI; return `${cx + r * Math.cos(a)} ${cy - r * Math.sin(a)}`; };
+    $("gauge").innerHTML = ticks.join("") + `<path d="M ${arc(0)} A ${r} ${r} 0 0 1 ${arc(1)}" fill="none" stroke="rgba(255,255,255,.08)" stroke-width="12" stroke-linecap="round"/>` +
+      (f > 0.001 ? `<path d="M ${arc(0)} A ${r} ${r} 0 0 1 ${arc(f)}" fill="none" stroke="#e8c46c" stroke-width="12" stroke-linecap="round"/>` : "") +
+      `<text x="100" y="92" text-anchor="middle" fill="#eaf0e6" font-size="30" font-weight="300">${Math.round(f * 100)}%</text><text x="100" y="110" text-anchor="middle" fill="#9fb09c" font-size="9" letter-spacing="2">RIPENING</text>`;
+  }
+
+  // ── Top pick card ──
+  function renderPick(x) {
+    if (!x) return;
+    $("pick").querySelector("b").textContent = `${NAMES[x.sym] || x.sym} · ${money(x.price)} · ${pct(x.d1)} today`;
+    $("pickAv").textContent = x.sym.slice(0, 3);
+    $("pickSig").textContent = x.a.action;
+    $("pickSig").className = x.a.action.includes("BUY") ? "up" : x.a.action.includes("SELL") ? "down" : "";
+    const lit = Math.max(0, Math.min(4, Math.round((x.a.score + 6) / 3)));
+    $("pickSegs").innerHTML = [0, 1, 2, 3].map((i) => `<i class="${i < lit ? "on" : ""}"></i>`).join("");
+    $("pickNote").textContent = `Ripeness ${lit} of 4 · signal score ${x.a.score > 0 ? "+" : ""}${x.a.score.toFixed(1)} · ${stage(x)[1]} · tap a field to check another crop.`;
+    $("pick").onclick = () => (location.href = "/?coin=" + x.sym);
+  }
+
+  // ── Bottom: rings and bars ──
+  function renderMix() {
+    const list = COINS.map((s) => data[s]).filter(Boolean), n = list.length || 1;
+    const groups = [["Ready", list.filter((x) => x.a.action.includes("BUY")).length, "#e8c46c"], ["Growing", list.filter((x) => x.a.action === "HOLD").length, "#8fcf86"], ["Fallow", list.filter((x) => x.a.action.includes("SELL")).length, "#b08a5e"]];
+    const ring = (r, f, col) => { const C = 2 * Math.PI * r; return `<circle cx="80" cy="80" r="${r}" fill="none" stroke="rgba(255,255,255,.06)" stroke-width="9"/><circle cx="80" cy="80" r="${r}" fill="none" stroke="${col}" stroke-width="9" stroke-linecap="round" stroke-dasharray="${Math.max(0.001, f) * C * 0.75} ${C}" transform="rotate(135 80 80)"/>`; };
+    $("rings").innerHTML = ring(68, groups[0][1] / n, groups[0][2]) + ring(54, groups[1][1] / n, groups[1][2]) + ring(40, groups[2][1] / n, groups[2][2]) +
+      `<text x="80" y="82" text-anchor="middle" fill="#eaf0e6" font-size="22" font-weight="300">${list.length}</text><text x="80" y="96" text-anchor="middle" fill="#9fb09c" font-size="8" letter-spacing="1.5">FIELDS</text>`;
+    $("legend").innerHTML = groups.map(([t, k, col]) => `<div><i style="background:${col}"></i>${t}<b>${Math.round((k / n) * 100)}%</b></div>`).join("");
+    const best = list.reduce((m, x) => (x.a.score > (m?.a.score ?? -99) ? x : m), null);
+    $("cols").innerHTML = list.map((x) => { const h = Math.min(100, (Math.abs(x.a.score) / 6) * 100); return `<a class="col" href="/?coin=${x.sym}" title="${x.sym}: score ${x.a.score.toFixed(1)}"><span class="track"><span class="fill ${x === best ? "gold" : x.a.score < 0 ? "neg" : ""}" style="height:0%" data-h="${Math.max(6, h)}"></span></span><span>${x.sym}</span></a>`; }).join("");
+    requestAnimationFrame(() => document.querySelectorAll(".fill[data-h]").forEach((f) => (f.style.height = f.dataset.h + "%")));
+  }
+
+  // ── Mood and posts ──
+  async function loadMood() {
+    try {
+      const d = await (await fetch("/api/research")).json(), f = d.fearGreed;
+      if (f?.value != null) {
+        $("mood").innerHTML = `${f.value}<small>/100</small>`;
+        moodTxt = `Mood ${f.value}/100`; renderMap();
+        $("moodChip").innerHTML = `<span class="chip ${f.value <= 25 ? "red" : f.value >= 60 ? "green" : ""}">${esc(f.label)}</span>`;
+        const pts = [f.monthAgo, f.weekAgo, f.yesterday, f.value].filter((v) => v != null);
+        const X = (i) => (i / Math.max(1, pts.length - 1)) * 190 + 5, Y = (v) => 56 - (v / 100) * 50;
+        $("moodViz").innerHTML = Array.from({ length: 12 }, (_, i) => Array.from({ length: 5 }, (_, j) => `<circle cx="${8 + i * 16.5}" cy="${10 + j * 11}" r=".9" fill="rgba(255,255,255,.18)"/>`).join("")).join("") +
+          `<polyline points="${pts.map((v, i) => `${X(i)},${Y(v)}`).join(" ")}" fill="none" stroke="#e8c46c" stroke-width="2" stroke-linecap="round"/>`;
+      }
+    } catch {}
+  }
+  async function loadPosts() {
+    try {
+      const d = await (await fetch("/api/social?coins=BTC,ETH,SOL")).json();
+      const posts = ["BTC", "ETH", "SOL"].flatMap((s) => (d.coins?.[s]?.posts || []).slice(0, 2).map((p) => ({ ...p, sym: s }))).slice(0, 4);
+      $("msgs").innerHTML = posts.length ? posts.map((p) => `<a class="msg" href="${esc(p.url || "/?tab=buzz")}" target="_blank" rel="noopener"><span class="avatar">${esc((p.user || "?").slice(0, 2).toUpperCase())}</span>
+        <span><b>${esc(p.user)}</b> <span class="faint" style="font-size:12px">· ${p.sym}${p.sentiment ? " · " + esc(p.sentiment) : ""}</span><p>${esc(p.text)}</p></span></a>`).join("") : `<p class="loading">No posts right now.</p>`;
+    } catch { $("msgs").innerHTML = `<p class="loading">Posts unavailable right now.</p>`; }
+  }
+
+  // Search: jump to a coin in the real app
+  $("q").addEventListener("keydown", (e) => { if (e.key === "Enter" && e.target.value.trim()) location.href = "/?coin=" + encodeURIComponent(e.target.value.trim().toUpperCase().replace(/[^A-Z0-9]/g, "")); });
+
+  (async () => {
+    await Promise.all(COINS.map(async (s) => { try { data[s] = await load(s); } catch {} }));
+    const list = COINS.map((s) => data[s]).filter(Boolean);
+    if (!list.length) { $("farm").innerHTML = `<text x="40" y="160" fill="#9fb09c" font-size="14">Live prices didn't load. Try again shortly.</text>`; return; }
+    renderMap(); renderTiles(); renderMix();
+    const best = list.reduce((m, x) => (x.a.score > (m?.a.score ?? -99) ? x : m), null);
+    sel = best.sym; renderPick(best); renderMap();
+  })();
+  loadMood(); loadPosts();
+})();
+</script>
+</body>
+</html>

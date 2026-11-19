@@ -118,6 +118,23 @@ The site is an installable web app. It has a manifest, PNG icons (including mask
 
 The Me tab shows these steps, and phones get an install banner.
 
+## Candlestick chart
+
+Every coin page has a **Candles** chart, built on TradingView's open-source Lightweight Charts (`public/vendor/`, Apache 2.0, licence included):
+
+- **Timeframes:** 1s, 1m, 5m, 15m, 1H, 6H and 1D from Coinbase. 1-second candles are built live from Coinbase's public trade feed, starting from the latest 1,000 trades, and fall back to polling if the feed is blocked.
+- **Controls:** candles or line, live updates, a crosshair readout of each candle's open/high/low/close and volume, and drag and zoom.
+- **Trench coins:** Upcoming coins get 1m to 1D candles from GeckoTerminal; Big movers get 30m or 4H from CoinGecko.
+- **Drawing:** "Line + drawing" switches to the drawing chart.
+
+## Design draft: the Market Farm
+
+`/draft.html` is a separate draft dashboard with live data, in a dark glass "farm" style. Each coin is a crop field seen from above:
+
+- **Ready** (golden) = BUY, **Growing** (green) = HOLD, **Fallow** (bare soil) = SELL.
+- Layer chips switch the fields to show 24h change, 7-day change or momentum.
+- The panels: Farm Overview, a Harvest order (best field), Field Notes (buzz), Crop Mix and Harvest Forecast.
+
 ## Layout
 
 The layout follows a trading app (Signal Tips' own branding, not Coinbase's):

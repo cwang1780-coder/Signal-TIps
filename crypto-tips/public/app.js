@@ -324,7 +324,7 @@ function renderDetail() {
     el.innerHTML = `<nav class="dnav"><div class="dnav-top"><button class="dback" data-close aria-label="Back to all coins">← <span>All coins</span></button></div></nav><p class="muted" style="padding:40px 0">Loading ${coinName(selected) || selected}…</p>`;
     return;
   }
-  if (!r || r.error) { el.style.display = "none"; document.body.classList.remove("detailOpen"); return; }
+  if (!r || r.error) { el.style.display = "none"; document.body.classList.remove("detailOpen"); pc?.destroy(); pc = null; return; }
   // The coin view is a panel beside the list (a full sheet on phones), placed just under the pinned header.
   document.documentElement.style.setProperty("--top-h", $("top").getBoundingClientRect().bottom + "px");
   document.body.classList.add("detailOpen");
@@ -349,10 +349,11 @@ function renderDetail() {
     <section class="dsec" data-sec="overview">
     <div class="ov-grid">
       <div class="ov-chart">
-        ${level() === "pro" ? `<div class="tfpills" role="group" aria-label="Candle size">${[["86400", "1D"], ["21600", "6H"], ["3600", "1H"]].map(([v, t]) => `<button data-tfset="${v}" class="${$("tf").value === v ? "on" : ""}" aria-pressed="${$("tf").value === v}">${t}</button>`).join("")}<span class="muted small">candles</span></div>` : ""}
+        <div class="chart-modes" role="group" aria-label="Chart"><button data-cmode="candles" class="${chartMode() === "candles" ? "on" : ""}">Candles</button><button data-cmode="draw" class="${chartMode() === "draw" ? "on" : ""}">Line + drawing</button></div>
+        <div id="proChart" ${chartMode() === "draw" ? "hidden" : ""}></div>
         <div id="d-chart"></div>
-        <div id="chartWrap"></div>
-        <div class="muted small">Price (black) · 50-period avg (blue) · 200-period avg (orange) · Pick a tool above the chart to draw. Drawings are saved for this coin.</div>
+        <div id="chartWrap" ${chartMode() === "draw" ? "" : "hidden"}></div>
+        ${chartMode() === "draw" ? `<div class="muted small">Price (black) · 50-period avg (blue) · 200-period avg (orange) · Pick a tool above the chart to draw. Drawings are saved for this coin.</div>` : `<div class="muted small">Live from Coinbase. Drag to scroll, pinch or scroll to zoom, hover for each candle's open, high, low and close. Switch to "Line + drawing" to draw on the chart.</div>`}
       </div>
       <aside class="ov-side">
         <div class="side-box sig-box">
@@ -388,7 +389,8 @@ function renderDetail() {
     <section class="dsec" data-sec="history" id="dr-history"></section>
     <section class="dsec" data-sec="track">${trackRecordHtml(bt)}</section>
     <section class="dsec" data-sec="news"><div id="dr-news"></div><div id="detailSocial"></div></section>`;
-  Draw.mount($("chartWrap"), selected, r.candles, bt?.markers);
+  if (chartMode() === "draw") Draw.mount($("chartWrap"), selected, r.candles, bt?.markers);
+  else mountProChart();
   window.renderDetailSocial?.(selected);
   window.renderResearch?.(selected);
   syncJump();
@@ -406,6 +408,18 @@ function noAccountBuyHtml(sym) {
   if (sym === "ETH" || ETH_TOKENS[sym]) links.push(`<a class="buy-link" href="https://app.uniswap.org/swap?chain=mainnet&outputCurrency=${sym === "ETH" ? "ETH" : ETH_TOKENS[sym]}" target="_blank" rel="noopener"><b>Swap on Uniswap ↗</b><span class="muted small">Swap Ethereum tokens for ${sym} from any wallet (Exodus, MetaMask…). Pays an Ethereum network fee.</span></a>`);
   if (SOL_TOKENS[sym]) links.push(`<a class="buy-link" href="https://jup.ag/swap/${sym === "SOL" ? "USDC-SOL" : "SOL-" + SOL_TOKENS[sym]}" target="_blank" rel="noopener"><b>Swap on Jupiter ↗</b><span class="muted small">Swap Solana tokens for ${sym} from a Solana wallet (Exodus, Phantom…). Very low fees.</span></a>`);
   return links.join("") + `<p class="muted small">Swaps only work with crypto you already have. Buying with a card or bank anywhere (including inside Exodus) asks for ID, because payment providers are required to by law. Double-check you're getting the right coin before you swap.</p>`;
+}
+
+// Candlestick chart (prochart.js). One instance per open coin, kept across the minute-by-minute refreshes
+// so the timeframe, zoom and live feed survive.
+const chartMode = () => store.get("chartMode", "candles");
+let pc = null;
+function mountProChart() {
+  const host = $("proChart");
+  if (!host || !window.ProChart) return;
+  const src = { kind: "coinbase", sym: selected };
+  if (pc && pc.sourceKey === JSON.stringify(src)) pc.attach(host);
+  else { pc?.destroy(); pc = ProChart.mount(host, src, { theme: "light" }); }
 }
 
 // Market stats for the coin view, from the candles already loaded.
@@ -434,7 +448,7 @@ function showDTab(name) {
   $("detail").scrollTop = 0;
   syncJump();
   // A chart drawn while its tab was hidden has no size: redraw it now that it's visible.
-  if (name === "overview" && $("chartWrap")?.querySelector("canvas")?.width === 0) renderDetail();
+  if (name === "overview" && chartMode() === "draw" && $("chartWrap")?.querySelector("canvas")?.width === 0) renderDetail();
 }
 
 async function syncCoinbase(force) {
@@ -503,6 +517,8 @@ $("movers").addEventListener("click", (e) => { const m = e.target.closest("[data
 $("grid").addEventListener("keydown", (e) => { if ((e.key === "Enter" || e.key === " ") && e.target.dataset.sym) { e.preventDefault(); e.target.click(); } });
 $("detail").addEventListener("click", (e) => {
   if (e.target.id === "detailClose" || e.target.closest("[data-close]")) return closeDetail();
+  const cm = e.target.closest("[data-cmode]");
+  if (cm) { store.set("chartMode", cm.dataset.cmode); if (cm.dataset.cmode === "draw") { pc?.destroy(); pc = null; } renderDetail(); return; }
   const tfb = e.target.closest("[data-tfset]");
   if (tfb) { $("tf").value = tfb.dataset.tfset; $("tf").dispatchEvent(new Event("change")); return; }
   const al = e.target.closest("[data-alertfor]");
@@ -688,6 +704,8 @@ if (location.protocol !== "file:") {
 }
 const startQ = new URLSearchParams(location.search);
 showTab(startQ.has("pro_session") ? "me" : startQ.get("tab") || store.get("tab", "signals"));
+// Links like /?coin=SOL open that coin (used by the draft dashboard and shared links)
+if (/^[A-Z0-9]{1,15}$/.test(startQ.get("coin") || "")) { const c = startQ.get("coin"); setTimeout(async () => { if (!coins.includes(c)) await addCoin(c); window.openCoin(c); }, 0); }
 applyLevel();
 refresh(); // prices don't wait for the owner-only Coinbase check
 syncCoinbase();

@@ -182,7 +182,7 @@ async function trenchHandler(req, res) {
     if (q.get("mode") === "chart") {
       // Price history for one Trench coin's page: ?mode=chart&network=solana&pool=ADDR (Upcoming) or ?mode=chart&id=coingecko-id (Big movers)
       try {
-        out = q.get("pool") ? await poolCandles(String(q.get("network") || ""), String(q.get("pool"))) : await coinCandles(String(q.get("id") || ""));
+        out = q.get("pool") ? await poolCandles(String(q.get("network") || ""), String(q.get("pool")), String(q.get("tf") || "hour:1")) : await coinCandles(String(q.get("id") || ""), q.get("days") || 30);
       } catch (e) { return json(res, e.status || 502, { reason: e.status === 400 ? e.message : "Price history unavailable right now." }); }
       res.writeHead(200, { "Content-Type": "application/json", "Cache-Control": "public, max-age=120, s-maxage=300" });
       return res.end(JSON.stringify(out));

@@ -97,14 +97,16 @@ async function getTrench() {
 
 // 4-hour price candles for the last 30 days of a coin (CoinGecko), for the coin page.
 const chartCache = new Map();
-async function coinCandles(id) {
+// days: 1 (30-minute candles) or 30 (4-hour candles), as CoinGecko's free OHLC endpoint provides
+async function coinCandles(id, days = 30) {
   if (!/^[a-z0-9-]{1,80}$/.test(id)) throw Object.assign(new Error("Bad coin"), { status: 400 });
-  const hit = chartCache.get(id);
+  days = [1, 7, 14, 30].includes(+days) ? +days : 30;
+  const key = id + ":" + days, hit = chartCache.get(key);
   if (hit && Date.now() - hit.at < TTL) return hit.data;
-  const rows = await getJSON(`https://api.coingecko.com/api/v3/coins/${encodeURIComponent(id)}/ohlc?vs_currency=usd&days=30`);
+  const rows = await getJSON(`https://api.coingecko.com/api/v3/coins/${encodeURIComponent(id)}/ohlc?vs_currency=usd&days=${days}`);
   const candles = (Array.isArray(rows) ? rows : []).map(([t, o, h, l, c]) => ({ time: Math.floor(t / 1000), open: o, high: h, low: l, close: c, volume: 0 })).filter((c) => c.close > 0);
-  const data = { candles, interval: "4h", source: "CoinGecko" };
-  chartCache.set(id, { at: Date.now(), data });
+  const data = { candles, interval: days <= 2 ? "30m" : "4h", source: "CoinGecko" };
+  chartCache.set(key, { at: Date.now(), data });
   if (chartCache.size > 300) chartCache.delete(chartCache.keys().next().value);
   return data;
 }

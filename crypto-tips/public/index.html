@@ -787,6 +787,28 @@
   .side-btn:hover { background: #dee1e6; }
   .act-box a.btn-primary.alt { background: var(--text); }
   @media (max-width: 767px) { #tdetail { --dp: 16px; left: 0; } }
+
+  /* Candlestick chart (prochart.js) */
+  .chart-modes { display: inline-flex; background: var(--alt); border-radius: 999px; padding: 3px; margin: 4px 0 10px; }
+  .chart-modes button { min-height: 32px; padding: 0 14px; font-size: 13px; background: none; border-radius: 999px; }
+  .chart-modes button.on { background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.12); }
+  #proChart[hidden], #chartWrap[hidden] { display: none; }
+  .pc { border: 1px solid var(--border); border-radius: 16px; overflow: hidden; background: #fff; }
+  .pc-bar { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-bottom: 1px solid var(--alt); flex-wrap: wrap; }
+  .pc-tfs, .pc-types { display: inline-flex; gap: 2px; background: var(--panel); border-radius: 10px; padding: 3px; }
+  .pc-tfs button, .pc-types button { min-height: 28px; padding: 0 10px; font-size: 12.5px; font-weight: 600; border-radius: 8px; background: none; color: var(--dim); display: inline-flex; align-items: center; }
+  .pc-tfs button.on, .pc-types button.on { background: #fff; color: var(--text); box-shadow: 0 1px 2px rgba(0,0,0,.1); }
+  .pc-live { margin-left: auto; display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; color: var(--buy); }
+  .pc-live[hidden] { display: none; }
+  .pc-live i { width: 8px; height: 8px; border-radius: 50%; background: var(--buy); box-shadow: 0 0 0 0 rgba(9,133,81,.5); animation: pcpulse 1.6s infinite; }
+  @keyframes pcpulse { 0% { box-shadow: 0 0 0 0 rgba(9,133,81,.45); } 70% { box-shadow: 0 0 0 8px rgba(9,133,81,0); } 100% { box-shadow: 0 0 0 0 rgba(9,133,81,0); } }
+  .pc-stage { position: relative; height: 420px; }
+  .pc-chart { position: absolute; inset: 0; }
+  .pc-legend { position: absolute; left: 12px; top: 8px; z-index: 3; display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 12px; color: var(--dim); pointer-events: none; font-variant-numeric: tabular-nums; background: rgba(255,255,255,.85); border-radius: 8px; padding: 2px 6px; max-width: calc(100% - 90px); }
+  .pc-legend b { color: var(--text); } .pc-legend em { font-style: normal; font-weight: 600; } .pc-legend .pc-tf { background: var(--alt); border-radius: 5px; padding: 0 5px; color: var(--text); font-weight: 600; }
+  .pc-msg { position: absolute; inset: 0; display: grid; place-items: center; color: var(--dim); font-size: 14px; z-index: 4; background: rgba(255,255,255,.7); }
+  .pc-msg[hidden] { display: none; }
+  @media (max-width: 767px) { .pc-stage { height: 340px; } .pc-legend { font-size: 11px; gap: 2px 8px; } }
 </style>
 </head>
 <body>
@@ -1209,6 +1231,8 @@
 <script src="coins/list.js"></script>
 <script src="indicators.js"></script>
 <script src="draw.js"></script>
+<script src="vendor/lightweight-charts.js"></script>
+<script src="prochart.js"></script>
 <script src="app.js"></script>
 <script src="extras.js"></script>
 <script src="research.js"></script>
