@@ -26,7 +26,9 @@ const server = http.createServer(async (req, res) => {
   if (url.pathname === "/api/candles") return candlesHandler(req, res);
   if (url.pathname === "/api/account") return accountHandler(req, res);
 
-  const file = url.pathname === "/" ? "index.html" : url.pathname.slice(1);
+  // Sub-sites: /some-test shows the farm design draft
+  const SUB = { "/some-test": "draft.html", "/some-test/": "draft.html" };
+  const file = url.pathname === "/" ? "index.html" : SUB[url.pathname] || url.pathname.slice(1);
   if (!/^((coins|art|vendor)\/)?[\w.-]+\.(html|js|svg|webmanifest|json|png|txt)$/.test(file) || file.includes("..") || !fs.existsSync(path.join(PUBLIC, file))) { res.writeHead(404); return res.end("Not found"); }
   res.writeHead(200, { "Content-Type": TYPES[path.extname(file)] });
   fs.createReadStream(path.join(PUBLIC, file)).pipe(res);

@@ -12,5 +12,15 @@
     "api/social.js": {
       "maxDuration": 30
     }
-  }
+  },
+  "rewrites": [
+    {
+      "source": "/some-test",
+      "destination": "/draft.html"
+    },
+    {
+      "source": "/some-test/",
+      "destination": "/draft.html"
+    }
+  ]
 }
