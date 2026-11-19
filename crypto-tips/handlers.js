@@ -8,6 +8,7 @@ const pro = require("./pro.js");
 const { getResearch } = require("./research.js");
 const wallet = require("./wallet.js");
 const { getTrench } = require("./trench.js");
+const { getUpcoming } = require("./upcoming.js");
 const accounts = require("./accounts.js");
 
 const ON_VERCEL = Boolean(process.env.VERCEL);
@@ -171,12 +172,20 @@ async function walletHandler(req, res) {
 }
 
 // Public: Trench, coins making big moves right now. GET /api/trench
+// ?mode=upcoming: young coins getting early traction (GeckoTerminal). Default: big movers (CoinGecko).
 async function trenchHandler(req, res) {
   try {
-    const data = await getTrench();
-    const wantFull = new URL(req.url, "http://x").searchParams.get("full") === "1";
+    const q = new URL(req.url, "http://x").searchParams;
+    const wantFull = q.get("full") === "1";
     const full = wantFull && (await isPro(req));
-    const out = full ? { ...data, full: true } : { ...data, full: false, movers: data.movers.slice(0, FREE_TRENCH), locked: Math.max(0, data.movers.length - FREE_TRENCH) };
+    let out;
+    if (q.get("mode") === "upcoming") {
+      const data = await getUpcoming();
+      out = full ? { ...data, full: true } : { ...data, full: false, coins: data.coins.slice(0, FREE_TRENCH), locked: Math.max(0, data.coins.length - FREE_TRENCH) };
+    } else {
+      const data = await getTrench();
+      out = full ? { ...data, full: true } : { ...data, full: false, movers: data.movers.slice(0, FREE_TRENCH), locked: Math.max(0, data.movers.length - FREE_TRENCH) };
+    }
     res.writeHead(200, { "Content-Type": "application/json", "Cache-Control": wantFull ? "private, no-store" : "public, max-age=120, s-maxage=300" });
     res.end(JSON.stringify(out));
   } catch (e) {

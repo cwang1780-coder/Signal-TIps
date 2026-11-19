@@ -746,6 +746,18 @@
   .tc-actions a.pill { display: inline-flex; align-items: center; min-height: 40px; padding: 0 16px; border-radius: 56px; font-weight: 600; font-size: 14px; text-decoration: none; background: var(--alt); color: var(--text); }
   .tc-actions a.pill.dark { background: var(--text); color: #fff; } .tc-actions a.pill.dark:hover { background: #32353d; }
   .tc-addr { margin: 0; } .tc-addr code { font-size: 12px; }
+
+  /* Trench: upcoming */
+  .trench-mode { max-width: 420px; margin-bottom: 14px; } .trench-mode button.on { background: #fff; }
+  .up-head { display: flex; align-items: center; gap: 10px; } .up-head img { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; background: var(--alt); }
+  .up-head > span { display: flex; flex-direction: column; line-height: 1.25; min-width: 0; } .up-head b { font-size: 17px; } .up-head .muted { font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .up-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+  .up-stats div { background: var(--panel); border-radius: 12px; padding: 7px 10px; display: flex; flex-direction: column; min-width: 0; }
+  .up-stats b { font-size: 15px; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; line-height: 1.25; }
+  .chk[hidden] { display: none; } .up-stats .muted { font-size: 12px; }
+  .bs-bar { height: 8px; border-radius: 8px; background: #fbe7e9; overflow: hidden; } .bs-bar i { display: block; height: 100%; background: var(--buy); }
+  .up-flags { margin: 0; padding-left: 18px; font-size: 13px; color: #8a3b00; } .up-flags li { margin: 2px 0; }
+  .up-traction { font-size: 13px; color: var(--dim); margin: 0; }
 </style>
 </head>
 <body>
@@ -882,9 +894,10 @@
     <div class="band alt">
       <div class="wrap">
         <div class="section-head"><div><h2 class="display">Trench</h2>
-          <p class="lead">Coins making big moves right now: price, volume, trending searches and social buzz in one place, with how risky chasing each move has been.</p></div>
+          <p class="lead">Upcoming coins getting early traction, and the big movers that already took off: with the risks, the safety checks and where to buy.</p></div>
           <div class="art-card"><img src="art/trench.svg" alt="" width="480" height="320" /></div></div>
         <div class="tipbox forBeginner"><b><i data-i="bulb"></i> How to use this</b><span>This is a radar, not a shopping list. It shows what's moving fast. Most of these moves have already happened, and history says chasing them usually loses money. Use it to understand the hype, and tap "Look closer" to see a coin's full signal and risks before doing anything.</span></div>
+        <div class="seg trench-mode" id="trenchMode" role="tablist" aria-label="Trench list"><button data-tmode="upcoming" class="on">Upcoming coins</button><button data-tmode="movers">Big movers</button></div>
         <div class="trench-study panel" id="trenchStudy"></div>
         <div class="row trench-bar"><span class="muted" id="trenchStatus">Open this page to scan the market.</span>
           <span class="trench-ctl"><label class="chk"><input type="checkbox" id="trenchCB" /> Only coins on Coinbase</label><button id="trenchRefresh">↻ Rescan</button></span></div>

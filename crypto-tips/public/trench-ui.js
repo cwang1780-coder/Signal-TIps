@@ -35,8 +35,71 @@
     return ["up", "Still climbing"];
   }
 
+  // ── Upcoming: young coins getting early traction ──
+  let mode = store.get("trenchMode", "upcoming"), up = null, upAt = 0;
+  const ageTxt = (h) => (h < 1 ? Math.round(h * 60) + " min" : h < 48 ? Math.round(h) + " h" : Math.round(h / 24) + " days");
+  const pctTxt = (v) => (v == null ? "–" : (v >= 0 ? "+" : "") + (Math.abs(v) >= 100 ? Math.round(v) : v.toFixed(1)) + "%");
+  async function loadUp(force) {
+    if (!force && up && Date.now() - upAt < 4 * 60000) return renderUp();
+    $("trenchStatus").textContent = "Scanning new trading pools on 8 blockchains…";
+    try {
+      const r = await fetch("/api/trench?mode=upcoming" + (window.isPro?.() ? "&full=1" : ""), { credentials: "same-origin" });
+      const d = await r.json(); if (!r.ok) throw new Error(d.reason || "HTTP " + r.status);
+      up = d; upAt = Date.now();
+      $("trenchStatus").textContent = "Updated " + new Date(d.updated).toLocaleTimeString() + " · refreshes every 5 minutes";
+    } catch (e) { $("trenchStatus").textContent = "Scanner unavailable: " + e.message; }
+    renderUp();
+  }
+  function safetyLink(x) {
+    if (!x.address) return "";
+    if (x.network === "solana") return `<a class="pill-link" href="https://rugcheck.xyz/tokens/${encodeURIComponent(x.address)}" target="_blank" rel="noopener">Safety check ↗</a>`;
+    if (["eth", "bsc", "base"].includes(x.network)) return `<a class="pill-link" href="https://honeypot.is/?address=${encodeURIComponent(x.address)}" target="_blank" rel="noopener">Safety check ↗</a>`;
+    return "";
+  }
+  function renderUp() {
+    $("trenchStudy").innerHTML = `<div class="ts-head"><b>Upcoming coins: early, and very risky</b>
+        <span class="muted">New coins (under 3 weeks old) that are starting to get real traction: enough cash in the pool to trade, real volume, hundreds of different buyers, and not already dumping. Found earlier than the "Big movers" list.</span></div>
+      <p class="muted small" style="margin:0">Most new coins lose most of their value within weeks, and many are scams: the creators sell everything, or the token can't be sold at all. This list shows coins with early traction; it can't tell you which will last. Run the safety check, only use money you can lose, and expect most picks to fail.</p>`;
+    const cb = $("trenchCB")?.closest("label"); if (cb) cb.hidden = true;
+    if (!up) return;
+    $("trenchList").innerHTML = up.coins.length ? up.coins.map((x) => {
+      const buy = x.address && SWAP[x.chain] ? SWAP[x.chain](encodeURIComponent(x.address)) : null;
+      return `<article class="tcard">
+        <div class="row"><span class="up-head">${x.image ? `<img src="${esc(x.image)}" alt="" loading="lazy" onerror="this.replaceWith(document.createRange().createContextualFragment(window.coinIcon('${esc(x.sym.replace(/[^A-Za-z0-9]/g, "").slice(0, 6))}', 36)))" />` : coinIcon(x.sym.replace(/[^A-Za-z0-9]/g, ""), 36)}<span><b>${esc(x.sym)}</b><span class="muted">${esc(x.name)} · ${esc(x.netName)}</span></span></span>
+          <span class="badge b-SELL">Risk: ${esc(x.risk)}</span></div>
+        <div class="tc-tags"><span class="tag2 up">${esc(x.stage)}</span><span class="tag2">${ageTxt(x.ageH)} old</span>${x.ch1 != null ? `<span class="tag2 ${x.ch1 >= 0 ? "up" : "down"}">Last hour ${pctTxt(x.ch1)}</span>` : ""}${x.accel >= 1.5 ? `<span class="tag2 up">Busier than usual this hour</span>` : ""}</div>
+        <div class="up-stats">
+          <div><span class="muted">Price</span><b>${fmt(x.price)}</b></div>
+          <div><span class="muted">24h change</span><b class="${(x.ch24 ?? 0) >= 0 ? "up" : "down"}">${pctTxt(x.ch24)}</b></div>
+          <div><span class="muted">Valued at</span><b>${x.fdv != null ? money(x.fdv) : "–"}</b></div>
+          <div><span class="muted">Liquidity</span><b>${money(x.liq)}</b></div>
+          <div><span class="muted">Volume 24h</span><b>${money(x.vol24)}</b></div>
+          <div><span class="muted">Buyers 24h</span><b>${x.buyers.toLocaleString()}</b></div>
+        </div>
+        <div title="${x.buyers} buyers vs ${x.sellers} sellers in 24 hours"><div class="bs-bar"><i style="width:${Math.round(x.buyRatio * 100)}%"></i></div>
+          <p class="up-traction">${Math.round(x.buyRatio * 100)}% of traders in the last 24h were buyers (${x.buyers.toLocaleString()} buyers, ${x.sellers.toLocaleString()} sellers)</p></div>
+        ${x.flags.length ? `<ul class="up-flags">${x.flags.map((f) => `<li>${esc(f)}</li>`).join("")}</ul>` : ""}
+        <div class="tc-actions">
+          ${buy ? `<a class="pill dark" href="${esc(buy[1])}" target="_blank" rel="noopener">Buy on ${esc(buy[0])} ↗</a>` : ""}
+          <a class="pill-link" href="${esc(x.url)}" target="_blank" rel="noopener">Chart ↗</a>${safetyLink(x)}</div>
+        ${x.address ? `<p class="muted small tc-addr">Token: <code>${esc(x.address.slice(0, 6))}…${esc(x.address.slice(-4))}</code>. Check it matches before you swap; copycat tokens are common.</p>` : ""}
+      </article>`;
+    }).join("") + (up.locked ? `<article class="tcard tc-locked">${icon("lock")}<b>${up.locked} more upcoming coin${up.locked === 1 ? "" : "s"}</b>
+        <span class="muted">Pro shows the whole list, rescanned every 5 minutes.</span><button class="primary pill" data-pw="show">See all with Pro</button></article>` : "")
+      : `<p class="muted">No new coins pass the traction checks right now. That happens; it's better than showing junk.</p>`;
+  }
+  function setMode(m) {
+    mode = m; store.set("trenchMode", m);
+    document.querySelectorAll("[data-tmode]").forEach((b) => b.classList.toggle("on", b.dataset.tmode === m));
+    const cb = $("trenchCB")?.closest("label"); if (cb) cb.hidden = m === "upcoming";
+    $("trenchList").innerHTML = "";
+    load();
+  }
+  document.addEventListener("click", (e) => { const b = e.target.closest("[data-tmode]"); if (b) setMode(b.dataset.tmode); });
+
   async function load(force) {
     if (location.protocol === "file:") return;
+    if (mode === "upcoming") return loadUp(force);
     if (!force && data && Date.now() - loadedAt < 4 * 60000) return render2();
     $("trenchStatus").textContent = "Scanning the market…";
     try {
@@ -51,6 +114,7 @@
   }
 
   function render2() {
+    if (mode === "upcoming") return renderUp();
     if (stats) {
       $("trenchStudy").innerHTML = `
         <div class="ts-head"><b>Before you chase: what happened after ${stats.events} big come-ups</b>
@@ -104,7 +168,8 @@
     if ($("trenchCB").checked && !window.proGate?.("The Coinbase-only filter")) { $("trenchCB").checked = false; return; }
     onlyCoinbase = $("trenchCB").checked; store.set("trenchCB", onlyCoinbase); render2();
   };
-  document.addEventListener("plan-changed", () => { if (!window.isPro?.()) { onlyCoinbase = false; $("trenchCB").checked = false; } data = null; if (!document.querySelector('[data-tab="trench"]').hidden) load(true); });
+  document.querySelectorAll("[data-tmode]").forEach((b) => b.classList.toggle("on", b.dataset.tmode === mode));
+  document.addEventListener("plan-changed", () => { if (!window.isPro?.()) { onlyCoinbase = false; $("trenchCB").checked = false; } data = null; up = null; if (!document.querySelector('[data-tab="trench"]').hidden) load(true); });
   $("trenchRefresh").onclick = () => load(true);
   window.loadTrench = load;
   setInterval(() => { if (!document.querySelector('[data-tab="trench"]').hidden) load(true); }, 5 * 60000);
