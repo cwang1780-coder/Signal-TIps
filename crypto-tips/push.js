@@ -1,5 +1,6 @@
 // Push notifications for coins you own, even when the app is closed.
-// The browser gives us a push "subscription" (an address only that browser's push service can deliver to).
+// Two kinds of devices: a browser gives us a web push "subscription" (an address only that browser's push
+// service can deliver to); the iPhone app gives us an Apple push (APNs) device token.
 // We store it with the coins you hold and what you paid (never the amounts), check them on a schedule,
 // and send a notification when a coin's sell plan changes: stop hit, signal turned SELL, take-profit, trend back.
 const crypto = require("crypto");
@@ -7,7 +8,10 @@ const storage = require("./storage.js");
 const SellPlan = require("./public/sellplan.js");
 
 const PUB = () => process.env.VAPID_PUBLIC_KEY || "";
-const configured = () => Boolean(process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY && storage.available());
+const webConfigured = () => Boolean(process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY);
+// Apple push for the iPhone app: a .p8 key from the Apple Developer account (Keys > Apple Push Notifications service)
+const apnsConfigured = () => Boolean(process.env.APNS_KEY_ID && process.env.APNS_TEAM_ID && process.env.APNS_KEY_P8);
+const configured = () => storage.available() && (webConfigured() || apnsConfigured());
 let wp = null;
 function webpush() {
   if (!wp) {
@@ -17,6 +21,9 @@ function webpush() {
   return wp;
 }
 
+const okToken = (t) => typeof t === "string" && /^[0-9a-f]{32,200}$/i.test(t);
+// The storage key for a device: its web push address, or "apns:" + its Apple device token
+const idOf = (body) => (okToken(body.apns) ? "apns:" + body.apns.toLowerCase() : body.endpoint);
 const keyFor = (endpoint) => "push/" + crypto.createHash("sha256").update(String(endpoint)).digest("hex").slice(0, 40) + ".json";
 const okEndpoint = (e) => typeof e === "string" && e.length < 1000 && /^https:\/\/[a-z0-9.-]+(:\d+)?\//i.test(e);
 
@@ -38,27 +45,69 @@ function cleanCoins(list) {
 }
 
 async function subscribe(body) {
-  const sub = cleanSub(body.subscription), coins = cleanCoins(body.coins);
-  const key = keyFor(sub.endpoint), old = (await storage.getJSON(key)) || {};
+  const coins = cleanCoins(body.coins);
+  let sub = null, apns = null;
+  if (okToken(body.apns)) { if (!apnsConfigured()) throw Object.assign(new Error("iPhone app notifications aren't set up yet"), { status: 503 }); apns = body.apns.toLowerCase(); }
+  else { if (!webConfigured()) throw Object.assign(new Error("Push notifications aren't set up yet"), { status: 503 }); sub = cleanSub(body.subscription); }
+  const key = keyFor(apns ? "apns:" + apns : sub.endpoint), old = (await storage.getJSON(key)) || {};
   const states = {};
   for (const c of coins) { const st = old.states?.[c.sym] || c.state; if (st) states[c.sym] = st; delete c.state; }
-  await storage.putJSON(key, { sub, coins, states, created: old.created || Date.now(), updated: Date.now() });
+  await storage.putJSON(key, { ...(apns ? { apns } : { sub }), coins, states, created: old.created || Date.now(), updated: Date.now() });
   return { ok: true, coins: coins.length };
 }
 async function unsubscribe(body) {
-  if (!okEndpoint(body.endpoint)) return { ok: true };
-  await storage.delKey(keyFor(body.endpoint));
+  if (!okToken(body.apns) && !okEndpoint(body.endpoint)) return { ok: true };
+  await storage.delKey(keyFor(idOf(body)));
   return { ok: true };
 }
-async function send(sub, payload) {
-  try { await webpush().sendNotification(sub, JSON.stringify(payload), { TTL: 6 * 3600, urgency: "high" }); return true; }
+// Apple push: a short-lived signed token (ES256) proves the message comes from this app's developer account
+let apnsJwt = { at: 0, token: "" };
+function apnsAuth() {
+  if (Date.now() - apnsJwt.at < 40 * 60_000) return apnsJwt.token;
+  const b64 = (o) => Buffer.from(JSON.stringify(o)).toString("base64url");
+  const data = b64({ alg: "ES256", kid: process.env.APNS_KEY_ID }) + "." + b64({ iss: process.env.APNS_TEAM_ID, iat: Math.floor(Date.now() / 1000) });
+  const key = String(process.env.APNS_KEY_P8).replace(/\\n/g, "\n");
+  const sig = crypto.sign("sha256", Buffer.from(data), { key, dsaEncoding: "ieee-p1363" }).toString("base64url");
+  apnsJwt = { at: Date.now(), token: data + "." + sig };
+  return apnsJwt.token;
+}
+function sendApns(token, payload) {
+  const http2 = require("http2");
+  const host = process.env.APNS_HOST || "https://api.push.apple.com";
+  return new Promise((resolve) => {
+    const client = http2.connect(host);
+    const done = (v) => { try { client.close(); } catch {} resolve(v); };
+    client.on("error", () => done(false));
+    const req = client.request({
+      ":method": "POST", ":path": "/3/device/" + token, authorization: "bearer " + apnsAuth(),
+      "apns-topic": process.env.APNS_BUNDLE_ID || "app.signaltips.ios", "apns-push-type": "alert", "apns-priority": "10",
+      "apns-expiration": String(Math.floor(Date.now() / 1000) + 6 * 3600), ...(payload.tag ? { "apns-collapse-id": payload.tag.slice(0, 64) } : {}),
+      "content-type": "application/json",
+    });
+    let status = 0, body = "";
+    req.setTimeout(10000, () => { req.close(); done(false); });
+    req.on("response", (h) => { status = h[":status"]; });
+    req.on("data", (c) => { body += c; });
+    req.on("end", () => {
+      if (status === 200) return done(true);
+      if (status === 410 || /BadDeviceToken|Unregistered|DeviceTokenNotForTopic/.test(body)) return done("gone");
+      console.error("[apns]", status, body.slice(0, 200));
+      done(false);
+    });
+    req.end(JSON.stringify({ aps: { alert: { title: payload.title, body: payload.body }, sound: "default" }, url: payload.url }));
+  });
+}
+async function send(rec, payload) {
+  if (rec.apns) return apnsConfigured() ? sendApns(rec.apns, payload) : false;
+  if (!webConfigured()) return false;
+  try { await webpush().sendNotification(rec.sub, JSON.stringify(payload), { TTL: 6 * 3600, urgency: "high" }); return true; }
   catch (e) { if (e.statusCode === 404 || e.statusCode === 410) return "gone"; return false; }
 }
 async function test(body) {
-  if (!okEndpoint(body.endpoint)) throw Object.assign(new Error("Bad request"), { status: 400 });
-  const rec = await storage.getJSON(keyFor(body.endpoint));
+  if (!okToken(body.apns) && !okEndpoint(body.endpoint)) throw Object.assign(new Error("Bad request"), { status: 400 });
+  const rec = await storage.getJSON(keyFor(idOf(body)));
   if (!rec) throw Object.assign(new Error("Not subscribed"), { status: 404 });
-  const r = await send(rec.sub, { title: "Signal Tips notifications are on", body: `We'll tell you when to sell or take profit on ${rec.coins.map((c) => c.sym).join(", ") || "your coins"}.`, url: "/?tab=holdings" });
+  const r = await send(rec, { title: "Signal Tips notifications are on", body: `We'll tell you when to sell or take profit on ${rec.coins.map((c) => c.sym).join(", ") || "your coins"}.`, url: "/?tab=coins" });
   return { ok: r === true };
 }
 
@@ -95,7 +144,7 @@ async function run({ force = false } = {}) {
       const msg = prev ? SellPlan.message(c.sym, p, prev) : null; // the first check only records where things stand
       rec.states[c.sym] = p.state; changed = true;
       if (msg) {
-        const r = await send(rec.sub, { ...msg, url: `/?coin=${c.sym}`, tag: "plan-" + c.sym });
+        const r = await send(rec, { ...msg, url: `/?coin=${c.sym}`, tag: "plan-" + c.sym });
         if (r === "gone") { await storage.delKey(key); removed++; changed = false; break; }
         if (r) sent++;
       }
@@ -105,4 +154,4 @@ async function run({ force = false } = {}) {
   return { ok: true, subscriptions: recs.length, coins: syms.length, sent, removed };
 }
 
-module.exports = { configured, publicKey: PUB, subscribe, unsubscribe, test, run };
+module.exports = { configured, webConfigured, apnsConfigured, publicKey: PUB, subscribe, unsubscribe, test, run };

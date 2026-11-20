@@ -3,9 +3,12 @@ const assert = require("assert");
 const fs = require("fs");
 const os = require("os");
 const path = require("path");
+const crypto = require("crypto");
 process.env.ACCOUNTS_DIR = fs.mkdtempSync(path.join(os.tmpdir(), "push-test-"));
 delete process.env.BLOB_READ_WRITE_TOKEN;
 const SellPlan = require("./public/sellplan.js");
+const vapid = require("web-push").generateVAPIDKeys();
+process.env.VAPID_PUBLIC_KEY = vapid.publicKey; process.env.VAPID_PRIVATE_KEY = vapid.privateKey;
 
 // Daily candles following a path of closes
 const series = (closes) => closes.map((c, i) => ({ time: 1.7e9 + i * 86400, open: c, high: c * 1.01, low: c * 0.99, close: c, volume: 100 }));
@@ -50,6 +53,39 @@ const wave = (n, start, drift) => Array.from({ length: n }, (_, i) => start * (1
   assert.strictEqual(rec.states.BTC, "hold");
   await push.unsubscribe({ endpoint: sub.endpoint });
   assert.strictEqual((await storage.listKeys("push/")).length, 0, "unsubscribe deletes the record");
+  delete process.env.VAPID_PUBLIC_KEY; delete process.env.VAPID_PRIVATE_KEY;
   assert.deepStrictEqual(await push.run(), { ok: false, reason: "not configured" }, "no keys: run does nothing");
+  // iPhone app (Apple push): subscribe with a device token, send through a fake Apple server, check the signed request
+  const http2 = require("http2");
+  const { privateKey, publicKey } = crypto.generateKeyPairSync("ec", { namedCurve: "P-256" });
+  const got = [];
+  const fake = http2.createServer();
+  fake.on("stream", (stream, headers) => {
+    let body = ""; stream.on("data", (c) => (body += c));
+    stream.on("end", () => {
+      got.push({ headers, body: JSON.parse(body) });
+      const bad = headers[":path"].endsWith("dead");
+      stream.respond({ ":status": bad ? 410 : 200 }); stream.end(bad ? '{"reason":"Unregistered"}' : "");
+    });
+  });
+  await new Promise((r) => fake.listen(0, r));
+  Object.assign(process.env, { APNS_KEY_ID: "ABC123DEFG", APNS_TEAM_ID: "TEAM123456", APNS_KEY_P8: privateKey.export({ type: "pkcs8", format: "pem" }).replace(/\n/g, "\\n"), APNS_HOST: "http://localhost:" + fake.address().port });
+  assert.ok(push.apnsConfigured() && !push.webConfigured());
+  const tok = "a1".repeat(32);
+  await push.subscribe({ apns: tok, coins: [{ sym: "BTC", cost: 1 }] });
+  assert.deepStrictEqual(await push.test({ apns: tok }), { ok: true });
+  const req = got[0];
+  assert.strictEqual(req.headers[":path"], "/3/device/" + tok);
+  assert.strictEqual(req.headers["apns-topic"], "app.signaltips.ios");
+  assert.strictEqual(req.body.aps.alert.title, "Signal Tips notifications are on");
+  const [h64, c64, sig] = req.headers.authorization.replace("bearer ", "").split(".");
+  assert.deepStrictEqual(JSON.parse(Buffer.from(h64, "base64url")), { alg: "ES256", kid: "ABC123DEFG" });
+  assert.strictEqual(JSON.parse(Buffer.from(c64, "base64url")).iss, "TEAM123456");
+  assert.ok(crypto.verify("sha256", Buffer.from(h64 + "." + c64), { key: publicKey, dsaEncoding: "ieee-p1363" }, Buffer.from(sig, "base64url")), "token signature checks out");
+  // A dead device token gets cleaned up
+  await push.subscribe({ apns: "de".repeat(31) + "dead", coins: [] });
+  assert.deepStrictEqual(await push.test({ apns: "de".repeat(31) + "dead" }), { ok: false });
+  await push.unsubscribe({ apns: tok });
+  fake.close();
   console.log("push tests passed");
 })().catch((e) => { console.error(e); process.exit(1); });

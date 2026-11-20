@@ -101,6 +101,8 @@
   window.fillOwnBox = () => { const b = $("ownBox"); if (b) fillOwnBox(b, b.dataset.sym); };
 
   // ── push notifications (work with the app closed) ──
+  // In a browser: web push. Inside the iPhone app (Capacitor): Apple's own push notifications.
+  const NP = window.Capacitor?.isNativePlatform?.() ? window.Capacitor.Plugins?.PushNotifications : null;
   const pushOk = () => "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;
   const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent), standalone = matchMedia("(display-mode: standalone)").matches || navigator.standalone;
   const b64 = (s) => { const p = "=".repeat((4 - (s.length % 4)) % 4), raw = atob((s + p).replace(/-/g, "+").replace(/_/g, "/")); return Uint8Array.from(raw, (c) => c.charCodeAt(0)); };
@@ -108,20 +110,41 @@
     .then(async (r) => { const d = await r.json().catch(() => ({})); if (!r.ok) throw new Error(d.reason || "Failed"); return d; });
   async function currentSub() { try { const reg = await navigator.serviceWorker.ready; return await reg.pushManager.getSubscription(); } catch { return null; } }
   const payloadCoins = () => owned().map((o) => ({ sym: o.sym, cost: o.cost || 0, state: plans[o.sym]?.state || null }));
+  const supported = () => (NP ? Boolean(siteConfig?.apnsPush) : Boolean(siteConfig?.pushKey) && pushOk());
+  // How the server knows this device: { apns: token } in the app, { endpoint } in a browser
+  async function deviceId() {
+    if (NP) { const t = store.get("apnsToken", null); return t ? { apns: t } : null; }
+    const sub = await currentSub();
+    return sub ? { endpoint: sub.endpoint, sub } : null;
+  }
+
+  if (NP) {
+    // Tapping a notification opens that coin; one arriving while the app is open shows as a message
+    NP.addListener("pushNotificationActionPerformed", (a) => { const u = a?.notification?.data?.url; if (u && u.startsWith("/")) location.href = u; });
+    NP.addListener("pushNotificationReceived", (n) => window.toast?.(`${n.title || ""}. ${n.body || ""}`));
+  }
+  function nativeToken() {
+    return new Promise(async (resolve, reject) => {
+      const timer = setTimeout(() => reject(new Error("no answer from Apple's notification service")), 20000);
+      const ok = await NP.addListener("registration", (t) => { clearTimeout(timer); ok.remove?.(); bad.remove?.(); resolve(t.value); });
+      const bad = await NP.addListener("registrationError", (e) => { clearTimeout(timer); ok.remove?.(); bad.remove?.(); reject(new Error(e?.error || "registration failed")); });
+      NP.register();
+    });
+  }
 
   let pushMsg = "";
   function renderPush() {
     const el = $("pushBox");
     if (!el) return;
-    const on = store.get("pushOn", false), key = siteConfig?.pushKey;
+    const on = store.get("pushOn", false);
     let html;
-    if (!key) html = `<p class="muted small">Push notifications aren't switched on for this site yet. While the app is open you'll still get a notification when the advice for a coin changes.</p>`;
-    else if (!pushOk()) html = isIOS && !standalone
-      ? `<p class="muted small">On iPhone, notifications work once the app is on your Home Screen: tap Share, then <b>Add to Home Screen</b>, open it from there and come back here.</p>`
+    if (!NP && siteConfig?.pushKey && !pushOk()) html = isIOS && !standalone
+      ? `<p class="muted small">On iPhone, notifications work in the Signal Tips app, or once this site is on your Home Screen: tap Share, then <b>Add to Home Screen</b>, open it from there and come back here.</p>`
       : `<p class="muted small">This browser can't receive push notifications.</p>`;
-    else if (on) html = `<p class="pl-on">✓ On. We'll notify this device when to sell or take profit on ${owned().map((o) => esc(o.sym)).join(", ") || "your coins"}, even when the app is closed.</p>
+    else if (!supported()) html = `<p class="muted small">Push notifications aren't switched on ${NP ? "in the app" : "for this site"} yet. While the app is open you'll still get a notification when the advice for a coin changes.</p>`;
+    else if (on) html = `<p class="pl-on">✓ On. We'll notify this ${NP ? "iPhone" : "device"} when to sell or take profit on ${owned().map((o) => esc(o.sym)).join(", ") || "your coins"}, even when the app is closed.</p>
       <div class="pl-acts"><button data-push="test">Send a test</button><button class="linkbtn" data-push="off">Turn off</button></div>`;
-    else html = `<p class="muted small">Get a notification on this device when one of your coins hits its stop, turns SELL, reaches its take-profit or recovers, even when the app is closed.</p>
+    else html = `<p class="muted small">Get a notification on this ${NP ? "iPhone" : "device"} when one of your coins hits its stop, turns SELL, reaches its take-profit or recovers, even when the app is closed.</p>
       <div class="pl-acts"><button class="primary" data-push="on">Turn on notifications</button></div>`;
     el.innerHTML = html + (pushMsg ? `<p class="muted small">${esc(pushMsg)}</p>` : "") +
       `<p class="muted small">To do this, the coins you hold and the price you paid (not how much you hold) are kept on our server with this device's notification address. Turning off deletes them.</p>`;
@@ -129,32 +152,49 @@
 
   let lastSent = "";
   async function syncPush(force) {
-    if (!store.get("pushOn", false) || !siteConfig?.pushKey || !pushOk()) return;
+    if (!store.get("pushOn", false) || !supported()) return;
     const body = payloadCoins(), sig = JSON.stringify(body.map((c) => [c.sym, c.cost]));
     if (!force && sig === lastSent) return;
-    const sub = await currentSub();
-    if (!sub) { store.set("pushOn", false); renderPush(); return; }
-    try { await post("subscribe", { subscription: sub.toJSON(), coins: body }); lastSent = sig; } catch {}
+    const id = await deviceId();
+    if (!id) { store.set("pushOn", false); renderPush(); return; }
+    try { await post("subscribe", { ...(id.apns ? { apns: id.apns } : { subscription: id.sub.toJSON() }), coins: body }); lastSent = sig; } catch {}
   }
 
   async function pushOn() {
     pushMsg = "";
     try {
-      const perm = await Notification.requestPermission();
-      if (perm !== "granted") { pushMsg = "Notifications are blocked for this site. Allow them in your browser or phone settings, then try again."; return renderPush(); }
-      const reg = await navigator.serviceWorker.ready;
-      const sub = (await reg.pushManager.getSubscription()) || (await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64(siteConfig.pushKey) }));
-      await post("subscribe", { subscription: sub.toJSON(), coins: payloadCoins() });
+      let id;
+      if (NP) {
+        const perm = await NP.requestPermissions();
+        if (perm.receive !== "granted") { pushMsg = "Notifications are off for Signal Tips. Turn them on in Settings > Notifications > Signal Tips, then try again."; return renderPush(); }
+        const token = await nativeToken();
+        store.set("apnsToken", token);
+        id = { apns: token };
+        await post("subscribe", { apns: token, coins: payloadCoins() });
+      } else {
+        const perm = await Notification.requestPermission();
+        if (perm !== "granted") { pushMsg = "Notifications are blocked for this site. Allow them in your browser or phone settings, then try again."; return renderPush(); }
+        const reg = await navigator.serviceWorker.ready;
+        const sub = (await reg.pushManager.getSubscription()) || (await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64(siteConfig.pushKey) }));
+        id = { endpoint: sub.endpoint };
+        await post("subscribe", { subscription: sub.toJSON(), coins: payloadCoins() });
+      }
       store.set("pushOn", true); lastSent = "";
-      await post("test", { endpoint: sub.endpoint }).catch(() => {});
+      await post("test", id).catch(() => {});
       pushMsg = "Done. You should get a test notification in a moment.";
     } catch (e) { pushMsg = "Couldn't turn on notifications: " + e.message; }
     renderPush();
   }
   async function pushOff() {
-    const sub = await currentSub();
-    if (sub) { await post("unsubscribe", { endpoint: sub.endpoint }).catch(() => {}); await sub.unsubscribe().catch(() => {}); }
+    const id = await deviceId();
+    if (id) await post("unsubscribe", id.apns ? { apns: id.apns } : { endpoint: id.endpoint }).catch(() => {});
+    if (id?.sub) await id.sub.unsubscribe().catch(() => {});
     store.set("pushOn", false); pushMsg = "Notifications are off and your coins were removed from our server."; renderPush();
+  }
+  async function pushTest() {
+    const id = await deviceId();
+    pushMsg = id ? ((await post("test", id.apns ? { apns: id.apns } : { endpoint: id.endpoint }).catch(() => ({}))).ok ? "Test sent." : "The test didn't go through. Try turning notifications off and on.") : "Not subscribed on this device.";
+    renderPush();
   }
 
   document.addEventListener("click", async (e) => {
@@ -162,7 +202,7 @@
     if (!t) return;
     if (t.dataset.push === "on") return pushOn();
     if (t.dataset.push === "off") return pushOff();
-    if (t.dataset.push === "test") { const sub = await currentSub(); pushMsg = sub ? ((await post("test", { endpoint: sub.endpoint }).catch(() => ({}))).ok ? "Test sent." : "The test didn't go through. Try turning notifications off and on.") : "Not subscribed on this device."; return renderPush(); }
+    if (t.dataset.push === "test") return pushTest();
     const sym = t.dataset.plalert || t.dataset.plopen, p = plans[sym];
     if (t.dataset.plalert && p) {
       const a = window.addAlert?.(sym, "above", +p.target.toPrecision(6)), b = a !== false && window.addAlert?.(sym, "below", +p.stop.toPrecision(6));

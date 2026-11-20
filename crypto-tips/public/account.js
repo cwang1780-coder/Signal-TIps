@@ -278,7 +278,10 @@
 
   // ── Install as an app (phone home screen) ──
   let deferred = null;
-  const standalone = () => matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
+  // Inside the iPhone app (Capacitor) counts as installed too
+  const nativeApp = Boolean(window.Capacitor?.isNativePlatform?.());
+  if (nativeApp) document.documentElement.classList.add("native-app");
+  const standalone = () => nativeApp || matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
   const ios = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
   window.addEventListener("beforeinstallprompt", (e) => { e.preventDefault(); deferred = e; renderInstall(); });
   window.addEventListener("appinstalled", () => { deferred = null; toast("Signal Tips is on your home screen."); renderInstall(); });

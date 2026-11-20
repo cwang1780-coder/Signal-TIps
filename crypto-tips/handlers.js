@@ -325,7 +325,7 @@ async function configHandler(req, res) {
   res.writeHead(200, { "Content-Type": "application/json", "Cache-Control": "public, max-age=300" });
   res.end(JSON.stringify({ coinbaseRef: ref, pro: proInfo, fx: await getFx(), fxUpdated: fxCache.at || null,
     accounts: accounts.available(), trialDays: accounts.TRIAL_DAYS, aiConfigured: ai.hasCredentials(), freeTrench: FREE_TRENCH,
-    pushKey: push.configured() ? push.publicKey() : null }));
+    pushKey: accounts.available() && push.webConfigured() ? push.publicKey() : null, apnsPush: accounts.available() && push.apnsConfigured() }));
 }
 
 // Push notifications: /api/push?action=subscribe|unsubscribe|test (same-site JSON posts) and action=run (the scheduled check)
