@@ -830,6 +830,10 @@
   .pcd-hint { font-size: 12px; color: var(--dim); padding: 0 6px; }
   .pc-stage.pcd-drawing { cursor: crosshair; touch-action: none; }
   @media (max-width: 767px) { .pcd-strip { width: 38px; } .pc-stage .pc-chart { left: 38px; } .pcd-strip button { width: 30px; height: 30px; } .pc-legend { left: 46px; } .pcd-opts { left: 46px; } }
+
+  /* Exodus availability card */
+  .buy-link.exo-off { background: var(--alt); border-style: dashed; } .buy-link.exo-off b { color: var(--sell); }
+  .buy-link.exo-side { margin: 2px 0; text-align: left; }
 </style>
 </head>
 <body>
@@ -1255,6 +1259,7 @@
 <script src="vendor/lightweight-charts.js"></script>
 <script src="pcdraw.js"></script>
 <script src="prochart.js"></script>
+<script src="exodus.js"></script>
 <script src="app.js"></script>
 <script src="extras.js"></script>
 <script src="research.js"></script>

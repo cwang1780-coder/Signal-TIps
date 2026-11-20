@@ -240,6 +240,7 @@
             <span class="muted small">${kind === "up" ? "New coins are the riskiest thing in crypto: most fail and many are scams." : "In our study, buying after a run-up like this lost money about 3 times out of 4."}</span></div>
           <div class="side-box act-box">
             ${swap ? `<a class="btn-primary" href="${esc(swap[1])}" target="_blank" rel="noopener">Buy on ${esc(swap[0])} ↗</a>` : ""}
+            ${window.Exodus ? Exodus.html({ sym: x.sym, chain: x.chain, address: x.address, byName: kind === "mv" && !x.address && (x.rank || 9999) <= 300 }, "buy-link exo-side") : ""}
             ${kind === "mv" ? `<a class="btn-primary${swap ? " alt" : ""}" href="${esc(x.url)}#markets" target="_blank" rel="noopener">Where it trades ↗</a>` : ""}
             ${safetyLink(x) ? safetyLink(x).replace('class="pill-link"', 'class="side-btn"') : ""}
             <a class="side-btn" href="${esc(x.url)}" target="_blank" rel="noopener">${kind === "up" ? "Live chart on GeckoTerminal ↗" : "CoinGecko page ↗"}</a>

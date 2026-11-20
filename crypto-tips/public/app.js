@@ -403,7 +403,9 @@ const ETH_TOKENS = { LINK: "0x514910771AF9Ca656af840dff83E8264EcF986CA", UNI: "0
 const SOL_TOKENS = { SOL: "So11111111111111111111111111111111111111112", BONK: "DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263",
   WIF: "EKpQGSJtjMFqKZ9KQanSqYXRcF8fBopzLHYxdM65zcjm", TRUMP: "6p6xgHyF7AeE6TZkSmFsko444wqoP15icUSqi2jfGiPN" };
 function noAccountBuyHtml(sym) {
-  const links = [`<a class="buy-link" href="https://www.exodus.com/download/" target="_blank" rel="noopener"><b>Exodus wallet ↗</b><span class="muted small">Free self-custody wallet. Swap other crypto into ${sym} inside the app, no account needed.</span></a>`];
+  const tokChain = ETH_TOKENS[sym] ? "ethereum" : SOL_TOKENS[sym] ? "solana" : null;
+  const links = [window.Exodus ? Exodus.html({ sym, byName: true, chain: tokChain, address: tokChain === "ethereum" ? ETH_TOKENS[sym] : tokChain === "solana" ? SOL_TOKENS[sym] : null })
+    : `<a class="buy-link" href="https://www.exodus.com/download/" target="_blank" rel="noopener"><b>Exodus wallet ↗</b></a>`];
   if (sym === "ETH" || ETH_TOKENS[sym]) links.push(`<a class="buy-link" href="https://app.uniswap.org/swap?chain=mainnet&outputCurrency=${sym === "ETH" ? "ETH" : ETH_TOKENS[sym]}" target="_blank" rel="noopener"><b>Swap on Uniswap ↗</b><span class="muted small">Swap Ethereum tokens for ${sym} from any wallet (Exodus, MetaMask…). Pays an Ethereum network fee.</span></a>`);
   if (SOL_TOKENS[sym]) links.push(`<a class="buy-link" href="https://jup.ag/swap/${sym === "SOL" ? "USDC-SOL" : "SOL-" + SOL_TOKENS[sym]}" target="_blank" rel="noopener"><b>Swap on Jupiter ↗</b><span class="muted small">Swap Solana tokens for ${sym} from a Solana wallet (Exodus, Phantom…). Very low fees.</span></a>`);
   return links.join("") + `<p class="muted small">Swaps only work with crypto you already have. Buying with a card or bank anywhere (including inside Exodus) asks for ID, because payment providers are required to by law. Double-check you're getting the right coin before you swap.</p>`;
