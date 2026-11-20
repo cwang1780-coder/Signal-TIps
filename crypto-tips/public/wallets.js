@@ -3,7 +3,7 @@
 // Uses globals from app.js: store, $, results, analyzeCoin, render, fmt.
 (function () {
   const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-  const NETS = { auto: "Detect automatically", btc: "Bitcoin", eth: "Ethereum (+ popular tokens)", sol: "Solana", ltc: "Litecoin", doge: "Dogecoin", xrp: "XRP" };
+  const NETS = { auto: "Detect automatically", btc: "Bitcoin", eth: "Ethereum, Base, Arbitrum, Optimism", sol: "Solana (+ tokens)", ltc: "Litecoin", doge: "Dogecoin", xrp: "XRP" };
   const STABLE = new Set(["USDC", "USDT", "DAI"]); // worth about $1 each: shown as cash, not as coins to trade
   let wallets = store.get("wallets", []);          // [{id, chain, address, label}]
   const balances = {};                              // id -> {balances, checked, error}
@@ -19,7 +19,7 @@
       const d = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(d.reason || "HTTP " + res.status);
       if (w.chain === "auto") { w.chain = d.chain; save(); }
-      balances[w.id] = { balances: d.balances, checked: d.checked, network: d.network };
+      balances[w.id] = { balances: d.balances, checked: d.checked, network: d.network, untracked: d.untracked || [] };
       const missing = d.balances.map((b) => b.sym).filter((s) => !STABLE.has(s) && !results[s]);
       await Promise.all(missing.map(async (s) => { try { results[s] = await analyzeCoin(s); } catch (e) { results[s] = { error: e.message }; } }));
     } catch (e) {
@@ -33,6 +33,7 @@
     await Promise.all(wallets.map(lookup));
     $("walletStatus").textContent = "Updated " + new Date().toLocaleTimeString();
     renderWallets(); render();
+    document.dispatchEvent(new Event("holdings-changed"));
   }
 
   function renderWallets() {
@@ -42,7 +43,8 @@
       const b = balances[w.id];
       const items = b?.error ? `<span class="down">${esc(b.error)}</span>`
         : !b ? `<span class="muted">Checking…</span>`
-        : b.balances.filter((x) => x.amt > 0).map((x) => `${window.coinIcon ? window.coinIcon(x.sym, 20) : ""} ${(+x.amt.toPrecision(8)).toLocaleString(undefined, { maximumFractionDigits: 8 })} ${esc(x.token || x.sym)}`).join(" · ") || `<span class="muted">Empty (0 balance)</span>`;
+        : (b.balances.filter((x) => x.amt > 0).map((x) => `${window.coinIcon ? window.coinIcon(x.sym, 20) : ""} ${(+x.amt.toPrecision(8)).toLocaleString(undefined, { maximumFractionDigits: 8 })} ${esc(x.token || x.sym)}${x.where && x.where !== "Ethereum" ? ` <span class="muted small">(${esc(x.where)})</span>` : ""}`).join(" · ") || `<span class="muted">Empty (0 balance)</span>`)
+          + (b.untracked?.length ? `<div class="muted small">+ ${b.untracked.length} other token${b.untracked.length > 1 ? "s" : ""} we don't track yet (new or small coins), so there's no advice for ${b.untracked.length > 1 ? "them" : "it"}.</div>` : "");
       return `<li><div><b>${esc(w.label || NETS[w.chain] || "Wallet")}</b> <span class="muted">${esc(b?.network || NETS[w.chain] || "")} · <code title="${esc(w.address)}">${esc(short(w.address))}</code></span>
         <div class="wbal">${items}</div></div><button class="x" data-wrm="${w.id}" title="Remove this wallet" aria-label="Remove wallet">✕</button></li>`;
     }).join("") : `<li class="muted">No wallets connected yet.</li>`;
@@ -63,9 +65,12 @@
     await lookup(w);
     if (balances[w.id]?.error) { msg.textContent = balances[w.id].error; delete balances[w.id]; return; }
     wallets.push(w); save();
-    msg.textContent = "Connected (read-only).";
+    const found = (balances[w.id].balances || []).filter((x) => x.amt > 0 && !STABLE.has(x.sym)).map((x) => x.sym);
+    msg.textContent = found.length ? `Connected (read-only). Found ${found.join(", ")}: your sell plan for ${found.length > 1 ? "them" : "it"} is below.` : "Connected (read-only). No coins we track in this wallet yet.";
     $("walletAddr").value = ""; $("walletLabel").value = "";
     renderWallets(); render();
+    document.dispatchEvent(new Event("holdings-changed"));
+    if (found.length) { window.toast?.(`Found ${found.join(", ")} in your wallet. Here's what to do with ${found.length > 1 ? "them" : "it"}.`); setTimeout(() => $("planWrap")?.scrollIntoView({ behavior: "smooth", block: "start" }), 400); }
   }
 
   // Holdings from connected wallets, for the My coins table and the coin list.
@@ -86,10 +91,10 @@
   $("walletForm").addEventListener("submit", (e) => { e.preventDefault(); addWallet($("walletNet").value, $("walletAddr").value, $("walletLabel").value); });
   $("walletList").addEventListener("click", (e) => {
     const id = e.target.dataset.wrm;
-    if (id) { wallets = wallets.filter((w) => w.id !== id); delete balances[id]; save(); renderWallets(); render(); }
+    if (id) { wallets = wallets.filter((w) => w.id !== id); delete balances[id]; save(); renderWallets(); render(); document.dispatchEvent(new Event("holdings-changed")); }
   });
-  // Browser wallets (MetaMask, Coinbase Wallet…): they share only the public address, after the user approves.
-  const eth = window.ethereum;
+  // Browser wallets (MetaMask, Coinbase Wallet, Exodus…): they share only the public address, after the user approves.
+  const eth = window.ethereum || window.exodus?.ethereum;
   if (eth?.request) {
     $("walletBrowser").hidden = false;
     $("walletBrowser").onclick = async () => {
@@ -99,6 +104,20 @@
       } catch { $("walletMsg").textContent = "The wallet didn't share an address. Nothing was connected."; }
     };
   }
+  // Solana wallets (Phantom, Solflare, Exodus, Backpack): same idea, they share only the public address
+  const solWallet = () => window.phantom?.solana || window.solflare || window.exodus?.solana || window.backpack || window.solana;
+  if (solWallet()?.connect) {
+    $("walletSol").hidden = false;
+    $("walletSol").onclick = async () => {
+      try {
+        const p = solWallet(), r = await p.connect();
+        const addr = (r?.publicKey || p.publicKey)?.toString();
+        if (addr) addWallet("sol", addr, "Solana wallet");
+      } catch { $("walletMsg").textContent = "The wallet didn't share an address. Nothing was connected."; }
+    };
+  }
+  // No wallet in this browser (most phones): explain the two easy ways
+  if (!eth?.request && !solWallet()?.connect) $("walletHint").hidden = false;
   renderWallets();
   syncAll();
   setInterval(syncAll, 5 * 60 * 1000);

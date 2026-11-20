@@ -17,7 +17,8 @@
       o.amt += +h.amt || 0;
       if (h.cost > 0) { o.costAmt += +h.amt || 0; o.costSum += h.cost * (+h.amt || 0); }
     }
-    return Object.values(by).map((o) => ({ sym: o.sym, amt: o.amt, cost: o.costAmt ? o.costSum / o.costAmt : 0 }));
+    const paid = store.get("paidPrices", {}); // prices you typed in for coins that came without one (wallets)
+    return Object.values(by).map((o) => ({ sym: o.sym, amt: o.amt, cost: o.costAmt ? o.costSum / o.costAmt : paid[o.sym] || 0, paidByHand: !o.costAmt && paid[o.sym] > 0 }));
   }
 
   async function dailyCandles(sym) {
@@ -70,6 +71,8 @@
         <span class="badge ${cls}">${lab}</span></div>
       <p class="pl-verdict"><b>${esc(p.verdict)}.</b> ${esc(p.detail)}</p>
       <div class="pl-levels">${levelRow("Take profit near", p.target, p.targetWhy, "tp")}${levelRow(p.price <= p.stop ? "Stop, already broken" : "Sell if it drops to", p.stop, p.stopWhy, "sl")}</div>
+      ${!o.cost ? `<form class="pl-paid" data-plpaid="${esc(o.sym)}"><label>What did you pay per ${esc(o.sym)}? <span class="muted small">(adds profit/loss advice)</span></label><span><input type="number" step="any" min="0" placeholder="Price in ${esc(Currency.code)}" aria-label="Price you paid per ${esc(o.sym)}" /><button>Save</button></span></form>`
+        : o.paidByHand ? `<p class="muted small">You paid ${fmt(o.cost)} each · <button class="linkbtn" data-plpaidclear="${esc(o.sym)}">change</button></p>` : ""}
       <details class="pl-ins"><summary>Insights on ${esc(o.sym)}</summary><ul>${p.insights.map((x) => `<li>${esc(x)}</li>`).join("")}</ul></details>
       <div class="pl-acts"><button data-plalert="${esc(o.sym)}">Alert me at these prices</button><button class="linkbtn" data-plopen="${esc(o.sym)}">Open chart →</button></div>
     </div>`;
@@ -79,8 +82,11 @@
     const el = $("planList");
     if (!el) return;
     const mine = owned();
-    $("planWrap").hidden = !mine.length;
-    el.innerHTML = mine.map((o) => card(o, plans[o.sym])).join("") || "";
+    $("planWrap").hidden = false;
+    // Leftover "dust" (worth under $1) doesn't need advice
+    const dust = mine.filter((o) => plans[o.sym] && plans[o.sym].price * o.amt < 1), shown = mine.filter((o) => !dust.includes(o));
+    el.innerHTML = (shown.map((o) => card(o, plans[o.sym])).join("") + (dust.length ? `<p class="muted small pl-dust">Also tiny leftover amounts (under $1) of ${dust.map((o) => esc(o.sym)).join(", ")}, not worth acting on.</p>` : "")) ||
+      `<div class="pl-empty"><b>Nothing to plan yet.</b> Connect your wallet above (paste its public address) or add a coin you own, and you'll get what to do with each coin: when to take profit, when to sell, and what's going on with it.</div>`;
     renderPush();
     const box = $("ownBox");
     if (box) fillOwnBox(box, box.dataset.sym);
@@ -197,7 +203,18 @@
     renderPush();
   }
 
+  document.addEventListener("submit", (e) => {
+    const f = e.target.closest("[data-plpaid]");
+    if (!f) return;
+    e.preventDefault();
+    const v = parseFloat(f.querySelector("input").value);
+    if (!(v > 0)) return f.querySelector("input").focus();
+    const paid = store.get("paidPrices", {}); paid[f.dataset.plpaid] = Currency.toUsd(v); store.set("paidPrices", paid);
+    update();
+  });
   document.addEventListener("click", async (e) => {
+    const clr = e.target.closest("[data-plpaidclear]");
+    if (clr) { const paid = store.get("paidPrices", {}); delete paid[clr.dataset.plpaidclear]; store.set("paidPrices", paid); return update(); }
     const t = e.target.closest("[data-push], [data-plalert], [data-plopen]");
     if (!t) return;
     if (t.dataset.push === "on") return pushOn();

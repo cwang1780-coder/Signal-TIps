@@ -23,6 +23,19 @@ global.fetch = async (url, opts = {}) => {
     const calls = JSON.parse(opts.body);
     return json(calls.map((c) => ({ id: c.id, result: c.id === 0 ? "0xde0b6b3a7640000" /* 1 ETH */ : c.id === 1 ? "0x" + (2500000n).toString(16) /* 2.5 USDC */ : "0x0" })));
   }
+  if (String(url).includes("base-rpc")) {
+    const calls = JSON.parse(opts.body);
+    return json(calls.map((c) => ({ id: c.id, result: c.id === 0 ? "0x6f05b59d3b20000" /* 0.5 ETH */ : "0x" + (10000000n).toString(16) /* 10 USDC */ })));
+  }
+  const body = opts.body ? JSON.parse(opts.body) : {};
+  if (body.method === "getBalance" && String(url).includes("solana-rpc.publicnode")) return json({ result: { value: 3e9 } });
+  if (body.method === "getTokenAccountsByOwner" && String(url).includes("publicnode")) return json({ error: { code: -32602, message: "Request blocked" } });
+  if (body.method === "getTokenAccountsByOwner" && String(url).includes("mainnet-beta")) {
+    const acc = (mint, ui) => ({ account: { data: { parsed: { info: { mint, tokenAmount: { uiAmountString: ui } } } } } });
+    return json({ result: { value: body.params[1].programId.startsWith("Tokenkeg")
+      ? [acc("DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263", "1500000"), acc("EKpQGSJtjMFqKZ9KQanSqYXRcF8fBopzLHYxdM65zcjm", "42.5"), acc("So1MysteryMint111111111111111111111111111", "9"), acc("JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN", "0")]
+      : [] } });
+  }
   return { ok: false, status: 500, json: async () => ({}) };
 };
 
@@ -30,7 +43,12 @@ global.fetch = async (url, opts = {}) => {
   const btc = await w.getWallet("btc", "bc1qm34lsc65zpw79lxes69zkqmk6ee3ewf0j77s3h");
   assert.deepStrictEqual(btc.balances, [{ sym: "BTC", amt: 2 }]);
   const eth = await w.getWallet("eth", "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045");
-  assert.deepStrictEqual(eth.balances, [{ sym: "ETH", amt: 1 }, { sym: "USDC", amt: 2.5, token: "USDC" }]);
+  // Mainnet plus Base (Arbitrum and Optimism are down in this mock and are simply skipped); same coins are added up
+  assert.deepStrictEqual(eth.balances, [{ sym: "ETH", amt: 1.5, where: "Ethereum + Base" }, { sym: "USDC", amt: 12.5, token: "USDC", where: "Ethereum + Base" }]);
+  // Solana: SOL plus tracked tokens; the RPC that refuses token lookups is skipped; unknown tokens are listed
+  const sol = await w.getWallet("sol", "9WzDXwBbmkg8ZTbNMqUxvQRAyrZzDsGYdLVL9zYtAWWM");
+  assert.deepStrictEqual(sol.balances.map((b) => [b.sym, b.amt]), [["SOL", 3], ["BONK", 1500000], ["WIF", 42.5]]);
+  assert.deepStrictEqual(sol.untracked, [{ mint: "So1MysteryMint111111111111111111111111111", amt: 9 }]);
   await assert.rejects(w.getWallet("eth", "0x123"), /an Ethereum address/);
 
   // HTTP endpoint

@@ -851,6 +851,10 @@
   .pl-push { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 10px 14px; margin-top: 10px; }
   .pl-push p { margin: 4px 0; } .pl-on { color: var(--buy); font-weight: 600; }
   .own-box .mstats { margin: 6px 0; }
+  .pl-paid { display: flex; flex-direction: column; gap: 6px; background: #fffbea; border: 1px solid #f3e3a3; border-radius: 10px; padding: 8px 10px; }
+  .pl-paid label { font-size: 14px; font-weight: 600; } .pl-paid span { display: flex; gap: 6px; } .pl-paid input { flex: 1; min-width: 0; } .pl-paid button { min-height: 34px; }
+  .pl-dust { grid-column: 1 / -1; margin: 0; }
+  .pl-empty { grid-column: 1 / -1; background: var(--alt); border-radius: 12px; padding: 14px; line-height: 1.5; }
   @media (max-width: 767px) { .pl-list { grid-template-columns: 1fr; } }
 </style>
 </head>
@@ -1103,10 +1107,12 @@
             <input id="walletLabel" placeholder="Nickname (optional)" aria-label="Nickname" />
             <button class="primary" type="submit">Connect</button>
             <button type="button" id="walletBrowser" hidden><i data-i="link"></i> Connect browser wallet</button>
+            <button type="button" id="walletSol" hidden><i data-i="link"></i> Connect Solana wallet</button>
           </form>
+          <p class="muted small" id="walletHint" hidden>On your phone: copy your <b>receive address</b> in your wallet app (Exodus, Phantom, Coinbase Wallet, Trust…: tap Receive, pick the coin, tap Copy) and paste it above. Or open this site inside your wallet app's own browser to connect with one tap.</p>
           <p class="muted" id="walletMsg" aria-live="polite"></p>
           <ul id="walletList" class="wallets"></ul>
-          <p class="muted small">Supported: Bitcoin, Ethereum (with USDC, USDT, DAI, LINK, UNI, SHIB, PEPE, AAVE, WBTC, POL, ARB), Solana, Litecoin, Dogecoin and XRP. <span id="walletStatus"></span></p>
+          <p class="muted small">Supported: Bitcoin, Ethereum (with USDC, USDT, DAI, LINK, UNI, SHIB, PEPE, AAVE, WBTC, POL, ARB) and the same address on Base, Arbitrum and Optimism, Solana (with BONK, WIF, JUP, TRUMP, PYTH, JTO, RAY, ORCA, RENDER, W, POPCAT, PENGU, FARTCOIN, USDC, USDT), Litecoin, Dogecoin and XRP. <span id="walletStatus"></span></p>
         </div>
         <div class="tipbox forBeginner"><b><i data-i="bulb"></i> How to use this</b><span>Add each coin you own, or a pretend one for practice: the coin, how many, and the price you paid. The table shows what it’s worth now, whether you’re up or down, and the signal for it.</span></div>
         <div class="panel">
