@@ -834,6 +834,24 @@
   /* Exodus availability card */
   .buy-link.exo-off { background: var(--alt); border-style: dashed; } .buy-link.exo-off b { color: var(--sell); }
   .buy-link.exo-side { margin: 2px 0; text-align: left; }
+
+  /* Sell plan (position.js) */
+  .pl-title { margin: 0 0 4px; font-size: 20px; }
+  .pl-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px; margin-top: 12px; }
+  .pl-card { border: 1px solid var(--border); border-radius: 14px; padding: 14px; display: flex; flex-direction: column; gap: 10px; border-left: 4px solid var(--border); }
+  .pl-card.st-stop, .pl-card.st-sell { border-left-color: var(--sell); } .pl-card.st-target { border-left-color: #f5a623; } .pl-card.st-hold { border-left-color: var(--buy); }
+  .pl-head { display: flex; align-items: center; gap: 10px; } .pl-head > div { flex: 1; min-width: 0; } .pl-head .badge { flex: none; }
+  .pl-head .up { color: var(--buy); } .pl-head .down { color: var(--sell); }
+  .pl-verdict { margin: 0; line-height: 1.45; }
+  .pl-levels { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .pl-lv { background: var(--alt); border-radius: 10px; padding: 8px 10px; display: flex; flex-direction: column; gap: 2px; }
+  .pl-lv > span:first-child { font-size: 12px; color: var(--dim); } .pl-lv b { font-size: 16px; } .pl-lv.tp b { color: var(--buy); } .pl-lv.sl b { color: var(--sell); }
+  .pl-ins summary { cursor: pointer; font-weight: 600; font-size: 14px; } .pl-ins ul { margin: 8px 0 0; padding-left: 18px; display: grid; gap: 4px; font-size: 14px; }
+  .pl-acts { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; } .pl-acts button { min-height: 34px; }
+  .pl-push { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 10px 14px; margin-top: 10px; }
+  .pl-push p { margin: 4px 0; } .pl-on { color: var(--buy); font-weight: 600; }
+  .own-box .mstats { margin: 6px 0; }
+  @media (max-width: 767px) { .pl-list { grid-template-columns: 1fr; } }
 </style>
 </head>
 <body>
@@ -1101,6 +1119,12 @@
             <input id="hCost" placeholder="Price you paid $ (optional)" type="number" step="any" aria-label="Average buy price" />
             <button id="hAdd" class="primary">+ Add</button>
           </div>
+        </div>
+        <div class="panel" id="planWrap" hidden>
+          <h2 class="pl-title">Your sell plan</h2>
+          <p class="muted small">For each coin you own: when to take profit, where to sell to limit a loss, and what's going on with it. Worked out from daily prices by fixed rules, so it's a guide, not a promise. Add the price you paid to get advice on your profit or loss.</p>
+          <div class="pl-push" id="pushBox"></div>
+          <div id="planList" class="pl-list"></div>
           <p class="muted" style="margin-top:10px"><i data-i="lock"></i> Your coins, alerts, drawings and wallet addresses are saved only in this browser. To show a wallet’s balance, its public address is looked up on the public blockchain through our server and then forgotten; we never store it.</p>
           <p class="muted" style="margin-top:6px"><i data-i="bot"></i> <b>Coming soon:</b> we’re building a trading bot. It isn’t available yet, and this app never trades for you.</p>
         </div>
@@ -1260,6 +1284,7 @@
 <script src="pcdraw.js"></script>
 <script src="prochart.js"></script>
 <script src="exodus.js"></script>
+<script src="sellplan.js"></script>
 <script src="app.js"></script>
 <script src="extras.js"></script>
 <script src="research.js"></script>
@@ -1268,6 +1293,7 @@
 <script src="learn.js"></script>
 <script src="wallets.js"></script>
 <script src="trench-ui.js"></script>
+<script src="position.js"></script>
 <script src="sim.js"></script>
 <script src="search.js"></script>
 <div id="toasts" aria-live="polite"></div>

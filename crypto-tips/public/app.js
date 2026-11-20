@@ -361,6 +361,7 @@ function renderDetail() {
           <p>${PLAIN[r.action]}</p>
           <span class="muted small">Score ${r.score > 0 ? "+" : ""}${r.score.toFixed(1)} · <button class="linkbtn" data-dtab="score">See why</button></span>
         </div>
+        ${window.ownBoxHtml?.(selected) || ""}
         <div class="side-box act-box">
           ${siteConfig.coinbaseRef
             ? `<a class="btn-primary" href="${siteConfig.coinbaseRef}" target="_blank" rel="noopener sponsored">Sign up for Coinbase ↗</a><span class="muted small">Referral link: we may earn a commission.</span>`
@@ -393,6 +394,7 @@ function renderDetail() {
   window.renderDetailSocial?.(selected);
   window.renderResearch?.(selected);
   syncJump();
+  window.fillOwnBox?.();
 }
 // Ways to get a coin in your own wallet without opening an exchange account.
 // Swapping crypto you already hold needs no account or ID. Paying with a card or bank always needs ID:
@@ -496,7 +498,7 @@ function renderHoldings() {
   const cash = cb.cash.filter((c) => c.amt >= 0.01).map((c) => `${c.amt.toLocaleString(undefined, { maximumFractionDigits: 2 })} ${c.sym}`).join(" · ");
   const wcash = Object.entries(window.walletCash?.() || {}).map(([s, a]) => `${a.toLocaleString(undefined, { maximumFractionDigits: 2 })} ${s}`).join(" · ");
   $("cbCash").textContent = [cash && "Cash on Coinbase: " + cash, wcash && "Stablecoins in your wallets: " + wcash].filter(Boolean).join("  ·  ");
-  const all = [...cb.holdings.map((h) => ({ ...h, src: "Coinbase" })), ...(window.walletHoldings?.() || []), ...holdings.map((h, i) => ({ ...h, src: "Manual", idx: i }))];
+  const all = ownedCoins();
   if (!all.length) { $("holdings").innerHTML = `<tr><td class="muted">Nothing here yet. Add a coin you own below to see what it's worth and the signal for it.</td></tr>`; return; }
   let total = 0, totalCost = 0, costedValue = 0;
   const rows = all.map((h) => {
@@ -515,6 +517,12 @@ function renderHoldings() {
   $("holdings").innerHTML = `<tr><th>Coin</th><th>Amount</th><th>Value</th><th>Profit/Loss</th><th>Tip</th><th></th></tr>${rows}
     <tr><td><b>Total</b></td><td></td><td><b>${fmt(total)}</b></td><td class="chg ${costedValue - totalCost >= 0 ? "up" : "down"}">${totalCost ? pct((costedValue - totalCost) / totalCost) + " on coins with a buy price" : ""}</td><td></td><td></td></tr>`;
 }
+
+// Every coin you've said you own: synced from Coinbase, connected wallets, and typed in by hand
+function ownedCoins() {
+  return [...cb.holdings.map((h) => ({ ...h, src: "Coinbase" })), ...(window.walletHoldings?.() || []), ...holdings.map((h, i) => ({ ...h, src: "Manual", idx: i }))];
+}
+window.ownedCoins = ownedCoins;
 
 // events
 $("grid").addEventListener("click", (e) => {
@@ -658,7 +666,7 @@ for (const id of ["tipsOk", "tipsClose"]) $(id).onclick = () => { $("beginnerTip
 $("detail").addEventListener("toggle", (e) => { if (e.target.id === "techDetails" && level() === "beginner") store.set("techOpen", e.target.open); }, true);
 $("holdings").addEventListener("click", (e) => {
   const i = e.target.dataset.hrm;
-  if (i != null) { holdings.splice(+i, 1); store.set("holdings", holdings); renderHoldings(); }
+  if (i != null) { holdings.splice(+i, 1); store.set("holdings", holdings); renderHoldings(); document.dispatchEvent(new Event("holdings-changed")); }
 });
 async function addCoin(sym) {
   if (!/^[A-Z0-9]{1,15}$/.test(sym) || coins.includes(sym)) return;
@@ -682,6 +690,7 @@ $("hAdd").onclick = async () => {
   $("hSym").value = $("hAmt").value = $("hCost").value = "";
   if (!results[sym]) { try { results[sym] = await analyzeCoin(sym); } catch (e) { results[sym] = { error: e.message }; } }
   render();
+  document.dispatchEvent(new Event("holdings-changed"));
 };
 $("refresh").onclick = () => { refresh(); syncCoinbase(true); };
 $("cbSync").onclick = () => syncCoinbase(true);

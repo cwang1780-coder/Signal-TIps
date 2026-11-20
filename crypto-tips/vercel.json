@@ -11,6 +11,10 @@
     },
     "api/social.js": {
       "maxDuration": 30
+    },
+    "api/push.js": {
+      "maxDuration": 60,
+      "includeFiles": "public/{sellplan,indicators}.js"
     }
   },
   "rewrites": [
@@ -21,6 +25,12 @@
     {
       "source": "/some-test/",
       "destination": "/draft.html"
+    }
+  ],
+  "crons": [
+    {
+      "path": "/api/push?action=run",
+      "schedule": "7 15 * * *"
     }
   ]
 }

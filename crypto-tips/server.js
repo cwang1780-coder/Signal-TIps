@@ -7,7 +7,7 @@ const fs = require("fs");
 const path = require("path");
 const { loadKey } = require("./coinbase.js");
 const ai = require("./ai.js");
-const { holdingsHandler, askHandler, socialHandler, configHandler, proHandler, researchHandler, walletHandler, trenchHandler, candlesHandler, accountHandler } = require("./handlers.js");
+const { holdingsHandler, askHandler, socialHandler, configHandler, proHandler, researchHandler, walletHandler, trenchHandler, candlesHandler, accountHandler, pushHandler } = require("./handlers.js");
 
 const PORT = +process.env.PORT || 8000;
 const PUBLIC = path.join(__dirname, "public");
@@ -25,6 +25,7 @@ const server = http.createServer(async (req, res) => {
   if (url.pathname === "/api/trench") return trenchHandler(req, res);
   if (url.pathname === "/api/candles") return candlesHandler(req, res);
   if (url.pathname === "/api/account") return accountHandler(req, res);
+  if (url.pathname === "/api/push") return pushHandler(req, res);
 
   // Sub-sites: /some-test shows the farm design draft
   const SUB = { "/some-test": "draft.html", "/some-test/": "draft.html" };

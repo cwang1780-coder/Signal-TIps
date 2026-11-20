@@ -39,4 +39,21 @@ async function delKey(key) {
   try { fs.unlinkSync(path.join(LOCAL, key)); } catch {}
 }
 
-module.exports = { getJSON, putJSON, delKey, available };
+// Every key that starts with `prefix` (e.g. "push/")
+async function listKeys(prefix) {
+  if (!/^[a-z0-9_-]+\/$/.test(prefix)) throw new Error("bad prefix");
+  if (useBlob()) {
+    const { list } = require("@vercel/blob");
+    const out = [];
+    let cursor;
+    do {
+      const r = await list({ prefix, cursor, limit: 1000 });
+      out.push(...r.blobs.map((b) => b.pathname));
+      cursor = r.hasMore ? r.cursor : null;
+    } while (cursor && out.length < 10000);
+    return out.filter(okKey);
+  }
+  try { return fs.readdirSync(path.join(LOCAL, prefix)).filter((f) => f.endsWith(".json")).map((f) => prefix + f); } catch { return []; }
+}
+
+module.exports = { getJSON, putJSON, delKey, listKeys, available };

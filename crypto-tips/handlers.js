@@ -10,6 +10,7 @@ const wallet = require("./wallet.js");
 const { getTrench, coinCandles } = require("./trench.js");
 const { getUpcoming, poolCandles } = require("./upcoming.js");
 const accounts = require("./accounts.js");
+const push = require("./push.js");
 
 const ON_VERCEL = Boolean(process.env.VERCEL);
 let cache = { at: 0, data: null };
@@ -323,7 +324,32 @@ async function configHandler(req, res) {
   }
   res.writeHead(200, { "Content-Type": "application/json", "Cache-Control": "public, max-age=300" });
   res.end(JSON.stringify({ coinbaseRef: ref, pro: proInfo, fx: await getFx(), fxUpdated: fxCache.at || null,
-    accounts: accounts.available(), trialDays: accounts.TRIAL_DAYS, aiConfigured: ai.hasCredentials(), freeTrench: FREE_TRENCH }));
+    accounts: accounts.available(), trialDays: accounts.TRIAL_DAYS, aiConfigured: ai.hasCredentials(), freeTrench: FREE_TRENCH,
+    pushKey: push.configured() ? push.publicKey() : null }));
+}
+
+// Push notifications: /api/push?action=subscribe|unsubscribe|test (same-site JSON posts) and action=run (the scheduled check)
+async function pushHandler(req, res) {
+  const action = new URL(req.url, "http://x").searchParams.get("action") || "";
+  try {
+    if (action === "run") {
+      // Called by the schedulers. Harmless to call: throttled, and a coin only notifies when its state changes.
+      const force = Boolean(process.env.CRON_SECRET) && req.headers.authorization === `Bearer ${process.env.CRON_SECRET}`;
+      return json(res, 200, await push.run({ force }));
+    }
+    if (!push.configured()) return json(res, 503, { reason: "Push notifications aren't set up on this site yet." });
+    if (req.method !== "POST") return json(res, 405, { reason: "POST only" });
+    const origin = req.headers.origin;
+    if (!(req.headers["content-type"] || "").startsWith("application/json") || (origin && origin !== originOf(req))) return json(res, 403, { reason: "Forbidden" });
+    const b = await readJson(req);
+    if (action === "subscribe") return json(res, 200, await push.subscribe(b));
+    if (action === "unsubscribe") return json(res, 200, await push.unsubscribe(b));
+    if (action === "test") return json(res, 200, await push.test(b));
+    return json(res, 400, { reason: "Unknown action" });
+  } catch (e) {
+    json(res, e.status || 500, { reason: e.status ? e.message : "Something went wrong" });
+    if (!e.status) console.error("[push]", e.message);
+  }
 }
 
 // Pro subscription endpoints: /api/pro?action=checkout|activate|status|portal
@@ -350,4 +376,4 @@ async function proHandler(req, res) {
   }
 }
 
-module.exports = { holdingsHandler, askHandler, socialHandler, configHandler, proHandler, researchHandler, walletHandler, trenchHandler, candlesHandler, accountHandler, authorize };
+module.exports = { holdingsHandler, askHandler, socialHandler, configHandler, proHandler, researchHandler, walletHandler, trenchHandler, candlesHandler, accountHandler, pushHandler, authorize };
