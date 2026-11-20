@@ -1,0 +1,36 @@
+{
+  "appId": "app.signaltips.ios",
+  "appName": "Signal Tips",
+  "webDir": "www",
+  "server": {
+    "url": "https://signal-tips.vercel.app",
+    "allowNavigation": [
+      "signal-tips.vercel.app"
+    ],
+    "errorPath": "offline.html"
+  },
+  "ios": {
+    "contentInset": "never",
+    "backgroundColor": "#ffffff",
+    "limitsNavigationsToAppBoundDomains": false
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 600,
+      "backgroundColor": "#ffffff",
+      "showSpinner": false
+    },
+    "PushNotifications": {
+      "presentationOptions": [
+        "badge",
+        "sound",
+        "alert"
+      ]
+    },
+    "StatusBar": {
+      "overlaysWebView": false,
+      "style": "LIGHT",
+      "backgroundColor": "#ffffff"
+    }
+  }
+}

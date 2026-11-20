@@ -1,0 +1,73 @@
+# Builds the Signal Tips iPhone app on GitHub's Mac machines (no Mac needed).
+# - Every run: builds the app for the iPhone simulator, to prove it compiles.
+# - Once the Apple secrets below are added in GitHub (Settings > Secrets and variables > Actions),
+#   it also signs the app and uploads it to App Store Connect, so it shows up in TestFlight on your iPhone:
+#     APPLE_TEAM_ID       your 10-character Apple Developer Team ID
+#     ASC_KEY_ID          App Store Connect API key ID
+#     ASC_ISSUER_ID       App Store Connect API issuer ID
+#     ASC_KEY_P8          the contents of the AuthKey_XXXX.p8 file
+name: iPhone app
+on:
+  push:
+    branches: [main]
+    paths: ["mobile/**", ".github/workflows/ios.yml"]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: macos-latest
+    timeout-minutes: 45
+    env:
+      HAS_SIGNING: ${{ secrets.ASC_KEY_P8 != '' && secrets.APPLE_TEAM_ID != '' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Use the newest Xcode
+        run: |
+          sudo xcode-select -s "$(ls -d /Applications/Xcode*.app | sort -V | tail -1)"
+          xcodebuild -version
+      - name: Install and sync the app
+        working-directory: mobile
+        run: |
+          npm ci
+          npx cap sync ios
+      - name: Build for the simulator (checks that it compiles)
+        working-directory: mobile/ios/App
+        run: |
+          xcodebuild -project App.xcodeproj -scheme App -configuration Debug -sdk iphonesimulator \
+            -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO build | tail -30
+      - name: Sign and upload to TestFlight
+        if: env.HAS_SIGNING == 'true'
+        working-directory: mobile/ios/App
+        env:
+          TEAM: ${{ secrets.APPLE_TEAM_ID }}
+          KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ISSUER: ${{ secrets.ASC_ISSUER_ID }}
+          KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+        run: |
+          KEY="$RUNNER_TEMP/AuthKey_$KEY_ID.p8"
+          printf '%s' "$KEY_P8" > "$KEY"
+          AUTH="-allowProvisioningUpdates -authenticationKeyPath $KEY -authenticationKeyID $KEY_ID -authenticationKeyIssuerID $ISSUER"
+          xcodebuild -project App.xcodeproj -scheme App -configuration Release -destination 'generic/platform=iOS' \
+            -archivePath "$RUNNER_TEMP/App.xcarchive" archive $AUTH \
+            DEVELOPMENT_TEAM="$TEAM" CODE_SIGN_STYLE=Automatic CURRENT_PROJECT_VERSION="$GITHUB_RUN_NUMBER" | tail -30
+          cat > "$RUNNER_TEMP/export.plist" <<PLIST
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0"><dict>
+            <key>method</key><string>app-store-connect</string>
+            <key>destination</key><string>upload</string>
+            <key>teamID</key><string>$TEAM</string>
+            <key>signingStyle</key><string>automatic</string>
+          </dict></plist>
+          PLIST
+          xcodebuild -exportArchive -archivePath "$RUNNER_TEMP/App.xcarchive" -exportOptionsPlist "$RUNNER_TEMP/export.plist" \
+            -exportPath "$RUNNER_TEMP/export" $AUTH | tail -30
+          rm -f "$KEY"
+          echo "Uploaded build $GITHUB_RUN_NUMBER. It appears in TestFlight after Apple finishes processing (usually 5 to 30 minutes)."
+      - name: Next step
+        if: env.HAS_SIGNING != 'true'
+        run: echo "Built for the simulator. Add the Apple secrets (see the top of this file) to also send it to TestFlight."

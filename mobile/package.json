@@ -1,0 +1,20 @@
+{
+  "name": "signal-tips-mobile",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Signal Tips for iPhone: a native shell around signal-tips.vercel.app with native push notifications",
+  "scripts": {
+    "sync": "cap sync ios"
+  },
+  "dependencies": {
+    "@capacitor/core": "8.6.2",
+    "@capacitor/ios": "8.6.2",
+    "@capacitor/push-notifications": "8.1.3",
+    "@capacitor/splash-screen": "8.0.2",
+    "@capacitor/status-bar": "8.0.4",
+    "@capacitor/app": "8.1.2"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "8.6.2"
+  }
+}
