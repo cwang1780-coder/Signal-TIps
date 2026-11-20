@@ -1,0 +1,14 @@
+# Checks the coins people own every 15 minutes and sends push notifications when the advice changes
+# (stop hit, signal turned SELL, take profit, trend back). The site does the work; this just wakes it up.
+name: Sell plan notifications
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+permissions: {}
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - run: curl -fsS --max-time 90 "https://signal-tips.vercel.app/api/push?action=run"
