@@ -26,6 +26,7 @@
   const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   const THEMES = {
     light: { bg: "#ffffff", text: "#5b616e", grid: "rgba(10,11,13,.05)", up: "#098551", down: "#cf202f", line: "#0052ff", area: "rgba(0,82,255,.18)", cross: "rgba(10,11,13,.35)" },
+    night: { bg: "#141519", text: "#8a919e", grid: "rgba(255,255,255,.05)", up: "#27ad75", down: "#f0616d", line: "#3b78ff", area: "rgba(59,120,255,.2)", cross: "rgba(255,255,255,.35)" },
     dark: { bg: "#101a12", text: "#9fb09c", grid: "rgba(255,255,255,.05)", up: "#8fcf86", down: "#e0786c", line: "#e8c46c", area: "rgba(232,196,108,.22)", cross: "rgba(255,255,255,.35)" },
   };
 

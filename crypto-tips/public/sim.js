@@ -4,6 +4,9 @@
 // - Each day's candle builds live; buyers pay the ask, sellers get the bid; market orders slip a little and pay the
 //   taker fee, limit orders wait for your price and pay the lower maker fee; stop-loss and take-profit orders.
 // Uses globals from app.js: store, fetchPage. Icons from icons.js.
+// Theme colours from the page (light or dark)
+const cssv = (name, fallback) => getComputedStyle(document.documentElement).getPropertyValue(name).trim() || fallback;
+const dark = () => document.documentElement.dataset.theme === "dark";
 (function () {
   const root = document.getElementById("simGame");
   if (!root) return;
@@ -251,10 +254,10 @@
     const R = 64, volH = H * 0.16, top = 10, bot = H - 18 - volH;
     const X = (i) => 8 + ((i + 0.5) / n) * (W - 8 - R), Y = (v) => top + (1 - (v - lo) / (hi - lo || 1)) * (bot - top);
     ctx.font = "11px Inter, sans-serif"; ctx.lineWidth = 1;
-    for (let k = 0; k <= 4; k++) { const v = lo + ((hi - lo) * k) / 4, y = Y(v); ctx.strokeStyle = "#eef0f3"; ctx.beginPath(); ctx.moveTo(8, y); ctx.lineTo(W - R, y); ctx.stroke(); ctx.fillStyle = "#8a919e"; ctx.fillText(pxf(v), W - R + 6, y + 4); }
+    for (let k = 0; k <= 4; k++) { const v = lo + ((hi - lo) * k) / 4, y = Y(v); ctx.strokeStyle = cssv("--alt", "#eef0f3"); ctx.beginPath(); ctx.moveTo(8, y); ctx.lineTo(W - R, y); ctx.stroke(); ctx.fillStyle = "#8a919e"; ctx.fillText(pxf(v), W - R + 6, y + 4); }
     // the days before trading starts
-    ctx.fillStyle = "rgba(10,11,13,.035)"; ctx.fillRect(8, top, X(CONTEXT) - 4 - 8, H - 18 - top);
-    ctx.strokeStyle = "#c9ced6"; ctx.setLineDash([2, 3]); ctx.beginPath(); ctx.moveTo(X(CONTEXT) - 4, top); ctx.lineTo(X(CONTEXT) - 4, H - 18); ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle = dark() ? "rgba(255,255,255,.04)" : "rgba(10,11,13,.035)"; ctx.fillRect(8, top, X(CONTEXT) - 4 - 8, H - 18 - top);
+    ctx.strokeStyle = cssv("--line", "#c9ced6"); ctx.setLineDash([2, 3]); ctx.beginPath(); ctx.moveTo(X(CONTEXT) - 4, top); ctx.lineTo(X(CONTEXT) - 4, H - 18); ctx.stroke(); ctx.setLineDash([]);
     ctx.fillStyle = "#8a919e"; ctx.fillText("Day 1", X(CONTEXT), H - 4);
     // volume
     const vmax = Math.max(...g.market.slice(0, g.day + 1).map((c) => c.volume || 0)) || 1, cw = Math.max(2, ((W - 8 - R) / n) * 0.62);
@@ -272,10 +275,10 @@
     // order and position lines
     for (const [v, col, label] of lines) { ctx.strokeStyle = ctx.fillStyle = col; ctx.setLineDash([5, 4]); ctx.beginPath(); ctx.moveTo(8, Y(v)); ctx.lineTo(W - R, Y(v)); ctx.stroke(); ctx.setLineDash([]); ctx.fillText(label, 12, Y(v) - 4); }
     // live price tag
-    if (!g.over) { const p = price(), y = Y(p); ctx.fillStyle = "#0a0b0d"; ctx.fillRect(W - R + 2, y - 9, R - 2, 18); ctx.fillStyle = "#fff"; ctx.fillText(pxf(p), W - R + 6, y + 4); }
+    if (!g.over) { const p = price(), y = Y(p); ctx.fillStyle = cssv("--text", "#0a0b0d"); ctx.fillRect(W - R + 2, y - 9, R - 2, 18); ctx.fillStyle = cssv("--bg", "#fff"); ctx.fillText(pxf(p), W - R + 6, y + 4); }
     // your trades
     ctx.font = "bold 12px Inter, sans-serif";
-    for (const t of g.trades) { const c = shown[t.day]; if (!c) continue; ctx.fillStyle = t.side === "buy" ? "#0052ff" : "#0a0b0d"; ctx.fillText(t.side === "buy" ? "▲" : "▼", X(t.day) - 5, t.side === "buy" ? Y(c.low) + 15 : Y(c.high) - 5); }
+    for (const t of g.trades) { const c = shown[t.day]; if (!c) continue; ctx.fillStyle = t.side === "buy" ? cssv("--accent", "#0052ff") : cssv("--text", "#0a0b0d"); ctx.fillText(t.side === "buy" ? "▲" : "▼", X(t.day) - 5, t.side === "buy" ? Y(c.low) + 15 : Y(c.high) - 5); }
   }
 
   // ── UI ──

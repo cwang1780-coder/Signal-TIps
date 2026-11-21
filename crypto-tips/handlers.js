@@ -260,8 +260,27 @@ async function trenchHandler(req, res) {
 // Public: price candles from Coinbase, passed through so every visitor shares one cache (and isn't
 // rate-limited or blocked talking to Coinbase directly). GET /api/candles?sym=BTC&gran=86400[&end=unix]
 const GRANS = new Set([60, 300, 900, 3600, 21600, 86400]);
+// Order book, recent trades and 24h stats for the trading panel: GET /api/candles?sym=BTC&kind=book|trades|stats
+async function marketData(res, sym, kind) {
+  const path = { book: "/book?level=2", trades: "/trades?limit=40", stats: "/stats" }[kind];
+  try {
+    const r = await fetch(`https://api.exchange.coinbase.com/products/${sym}-USD${path}`, { headers: { "User-Agent": "signal-tips/1.0" }, signal: AbortSignal.timeout(8000) });
+    if (r.status === 404 || r.status === 400) return json(res, 404, { reason: "not on Coinbase" });
+    if (!r.ok) return json(res, 502, { reason: "Coinbase returned " + r.status });
+    let d = await r.json();
+    if (kind === "book") d = { bids: (d.bids || []).slice(0, 40), asks: (d.asks || []).slice(0, 40), time: d.time };
+    const ttl = kind === "stats" ? 10 : 2;
+    res.writeHead(200, { "Content-Type": "application/json", "Cache-Control": `public, max-age=${ttl}, s-maxage=${ttl}, stale-while-revalidate=10` });
+    res.end(JSON.stringify(d));
+  } catch { json(res, 504, { reason: "Coinbase didn't answer in time" }); }
+}
 async function candlesHandler(req, res) {
   const q = new URL(req.url, "http://x").searchParams;
+  if (q.get("kind")) {
+    const sym = String(q.get("sym") || "").toUpperCase(), kind = q.get("kind");
+    if (!/^[A-Z0-9]{1,15}$/.test(sym) || !["book", "trades", "stats"].includes(kind)) return json(res, 400, { reason: "Bad request" });
+    return marketData(res, sym, kind);
+  }
   const sym = String(q.get("sym") || "").toUpperCase(), gran = +q.get("gran"), end = q.get("end") ? +q.get("end") : null;
   if (!/^[A-Z0-9]{1,15}$/.test(sym) || !GRANS.has(gran) || (end != null && !(end > 1e9 && end < 4e9))) return json(res, 400, { reason: "Bad request" });
   const range = end ? `&start=${new Date((end - 299 * gran) * 1000).toISOString()}&end=${new Date(end * 1000).toISOString()}` : "";

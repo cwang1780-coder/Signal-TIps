@@ -346,6 +346,7 @@ function renderDetail() {
       <div class="ah-px">${fmt(r.price)}</div>
       <div class="ah-chg ${r.change24 >= 0 ? "up" : "down"}">${r.change24 >= 0 ? "↗" : "↘"} ${fmt(Math.abs(r.price - r.price / (1 + r.change24)))} (${pct(Math.abs(r.change24)).replace("+", "")}) <span class="muted">past 24 hours</span></div>
     </div>
+    ${window.marketBarHtml?.(selected) || ""}
     <section class="dsec" data-sec="overview">
     <div class="ov-grid">
       <div class="ov-chart">
@@ -362,6 +363,7 @@ function renderDetail() {
           <p>${PLAIN[r.action]}</p>
           <span class="muted small">Score ${r.score > 0 ? "+" : ""}${r.score.toFixed(1)} · <button class="linkbtn" data-dtab="score">See why</button></span>
         </div>
+        ${window.bookHtml?.(selected) || ""}
         ${window.reviewBoxHtml?.(selected) || ""}
         ${window.ownBoxHtml?.(selected) || ""}
         <div class="side-box act-box">
@@ -419,6 +421,9 @@ function noAccountBuyHtml(sym) {
 // so the timeframe, zoom and live feed survive.
 const chartMode = () => "candles"; // the candle chart has the drawing tools built in now
 let pc = null;
+// Rebuild the chart in the new colours after the theme changes (Settings)
+window.remountChart = () => { pc?.destroy(); pc = null; if (selected) renderDetail(); };
+window.chooseLevelFromSettings = (lv) => chooseLevel(lv);
 function mountProChart() {
   const host = $("proChart");
   if (!host || !window.ProChart) return;
@@ -428,7 +433,7 @@ function mountProChart() {
     pc?.destroy();
     const sym = selected;
     pc = ProChart.mount(host, src, {
-      theme: "light",
+      theme: window.chartTheme?.() || "light",
       onAlert: (priceUsd) => { // "Set alert" on a horizontal line
         const now = results[sym]?.price || priceUsd;
         if (window.addAlert?.(sym, priceUsd >= now ? "above" : "below", +priceUsd.toPrecision(6)) !== false) window.toast?.(`Alert set: ${sym} ${priceUsd >= now ? "above" : "below"} ${fmt(priceUsd)}`);
@@ -551,7 +556,7 @@ $("detailScrim").addEventListener("click", closeDetail);
 document.addEventListener("keydown", (e) => { if (e.key === "Escape" && selected && document.body.classList.contains("detailOpen")) closeDetail(); });
 
 // ── Tabs ──
-const TABS = ["signals", "trench", "buzz", "alerts", "ai", "coins", "sim", "learn", "me"];
+const TABS = ["signals", "trench", "buzz", "alerts", "ai", "coins", "sim", "learn", "me", "settings"];
 // Show the chosen section; hide tabs whose section is empty (depends on mode and loaded data).
 // Deep research tabs are Pro: free accounts see what's inside, and an upgrade card instead of the content.
 const PRO_SECS = { pattern: "Chart patterns", history: "Similar past moments", track: "Signal track record" };
@@ -725,7 +730,7 @@ if (location.protocol !== "file:") {
   fetch("/api/config").then((r) => (r.ok ? r.json() : null)).then((c) => { if (c) { siteConfig = c; renderDetail(); window.onSiteConfig?.(c); } }).catch(() => {});
 }
 const startQ = new URLSearchParams(location.search);
-showTab(startQ.has("pro_session") ? "me" : startQ.get("tab") || store.get("tab", "signals"));
+showTab(startQ.has("pro_session") ? "me" : startQ.get("tab") || window.startTabSetting?.() || store.get("tab", "signals"));
 // Links like /?coin=SOL open that coin (used by the draft dashboard and shared links)
 if (/^[A-Z0-9]{1,15}$/.test(startQ.get("coin") || "")) { const c = startQ.get("coin"); setTimeout(async () => { if (!coins.includes(c)) await addCoin(c); window.openCoin(c); }, 0); }
 applyLevel();

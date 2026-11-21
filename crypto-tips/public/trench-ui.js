@@ -253,7 +253,7 @@
     tpc?.destroy();
     const src = kind === "up" ? { kind: "gecko", network: x.network, pool: x.pool, sym: x.sym } : { kind: "coingecko", id: x.id, sym: x.sym };
     tpc = ProChart.mount($("tChart"), src, {
-      theme: "light",
+      theme: window.chartTheme?.() || "light",
       onCandles: (c, tf) => {
         let note = `${c.length} candles from ${kind === "up" ? "GeckoTerminal" : "CoinGecko"} · ${tf}.`;
         if (c.length >= 60 && window.Indicators?.analyze) {
