@@ -39,7 +39,8 @@
   function setUser(u) {
     const wasPro = window.isPro();
     user = u;
-    try { if (u) localStorage.setItem("seenSignedIn", "1"); } catch {}
+    // Remember whether this browser is signed in right now, so the next load knows whether to show the app or the sign-in page first
+    try { if (u) localStorage.setItem("signedInNow", "1"); else if (loaded) localStorage.removeItem("signedInNow"); } catch {}
     document.body.classList.toggle("signedIn", Boolean(u));
     document.body.classList.toggle("isPro", window.isPro());
     renderHeader(); renderPanel(); renderProBox(); renderGate(); renderFinish();
@@ -348,10 +349,24 @@
   }
 
   // ── Sign-in wall: like Coinbase, the app is for account holders. Visitors see this page until they sign in. ──
+  const socialHtml = () => ["google", ...(cfg?.oauth?.apple ? ["apple"] : [])].map((p) => `<a class="lg-social-btn" href="/api/account?action=oauth&provider=${p}">Continue with ${p === "google" ? "Google" : "Apple"}</a>`).join("");
+  function patchGate() {
+    const g = $("gate");
+    if (!g || !cfg) return;
+    const t = cfg.trial || {}, set = (k, v) => g.querySelectorAll(`[data-g="${k}"]`).forEach((el) => { if (el.innerHTML !== v) el.innerHTML = v; });
+    set("social", socialHtml());
+    set("free", String(t.freeDays || 3));
+    set("deposit", `Or ${t.depositDays || 7} days for a $${t.depositUsd || 1} deposit that comes off your first month.`);
+    set("price", `$${cfg.cryptoPay?.priceUsd || 5}<small>/month</small>`);
+  }
   function renderGate() {
     let g = $("gate");
     const show = loaded && accountsOn && !user;
     document.body.classList.toggle("gated", show);
+    document.documentElement.classList.toggle("gated-html", show);
+    if (show) try { localStorage.removeItem("signedInNow"); } catch {}
+    const tc = document.querySelector('meta[name="theme-color"]');
+    if (tc) tc.setAttribute("content", show ? "#ffffff" : document.documentElement.dataset.theme === "dark" ? "#0a0b0d" : "#ffffff");
     document.documentElement.classList.remove("gate-wait");
     if (!show) { g?.remove(); return; }
     if (g) return;
@@ -369,9 +384,9 @@
       <section class="lg-hero"><div class="lg-wrap lg-hero-grid">
         <div>
           <h1>Know when to buy, hold or sell crypto.</h1>
-          <p class="lg-lead">Live signals for every coin, a sell plan for what's in your wallet, price predictions and an AI you can ask anything. Sign up and try Pro free for ${t.freeDays} days.</p>
+          <p class="lg-lead">Live signals for every coin, a sell plan for what's in your wallet, price predictions and an AI you can ask anything. Sign up and try Pro free for <span data-g="free">${t.freeDays}</span> days.</p>
           <form class="lg-email" data-lg-signup><input type="email" placeholder="you@example.com" aria-label="Email address" autocomplete="email" /><button class="lg-btn blue lg">Sign up</button></form>
-          ${social.length ? `<div class="lg-social">${social.map((p) => `<a class="lg-social-btn" href="/api/account?action=oauth&provider=${p}">Continue with ${p === "google" ? "Google" : "Apple"}</a>`).join("")}</div>` : ""}
+          <div class="lg-social" data-g="social">${socialHtml()}</div>
           <p class="lg-fine">Not financial advice: signals are automated and often wrong.</p>
         </div>
         <div class="lg-phone" aria-hidden="true"><div class="lg-screen">
@@ -402,8 +417,8 @@
         <h2>Simple pricing</h2>
         <div class="lg-plans">
           <div><b>Free</b><strong>$0</strong><span>Signals, charts, alerts and the practice simulator.</span><button class="lg-btn ghost" data-auth="signup">Sign up</button></div>
-          <div class="hl"><b>Pro trial</b><strong>${t.freeDays} days free</strong><span>Or ${t.depositDays} days for a $${t.depositUsd} deposit that comes off your first month.</span><button class="lg-btn blue" data-auth="signup">Start free</button></div>
-          <div><b>Pro</b><strong>$${price}<small>/month</small></strong><span>Ask AI, wallet sell plans, predictions, buzz from 7 sources and more. Pay with card or crypto.</span><button class="lg-btn ghost" data-auth="signup">Get Pro</button></div>
+          <div class="hl"><b>Pro trial</b><strong><span data-g="free">${t.freeDays}</span> days free</strong><span data-g="deposit">Or ${t.depositDays} days for a $${t.depositUsd} deposit that comes off your first month.</span><button class="lg-btn blue" data-auth="signup">Start free</button></div>
+          <div><b>Pro</b><strong data-g="price">$${price}<small>/month</small></strong><span>Ask AI, wallet sell plans, predictions, buzz from 7 sources and more. Pay with card or crypto.</span><button class="lg-btn ghost" data-auth="signup">Get Pro</button></div>
         </div>
       </div></section>
       <section class="lg-sec alt" id="lg-faq"><div class="lg-wrap lg-faq">
@@ -435,7 +450,7 @@
   }
   window.onSiteConfig = (c) => {
     cfg = c; renderPanel(); renderProBox(); renderAnnouncement(c.announcement);
-    if ($("gate")) { const y = $("gate").scrollTop; $("gate").remove(); renderGate(); if ($("gate")) $("gate").scrollTop = y; } // show the sign-in options that are switched on
+    patchGate(); // fill in the sign-in options and prices that depend on site settings, without rebuilding the page
   };
   // Site announcement from the admin panel, until the visitor closes it
   function renderAnnouncement(a) {

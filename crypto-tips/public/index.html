@@ -1088,8 +1088,13 @@
   .cp-done { text-align: center; display: grid; gap: 10px; justify-items: center; } .cp-tick { width: 64px; height: 64px; border-radius: 50%; background: #27ad75; color: #fff; font-size: 34px; display: grid; place-items: center; }
   .cp-done h2 { margin: 0; }
   @media (max-width: 520px) { .cp-sendgrid { grid-template-columns: 1fr; } .cp-qr { justify-self: center; } .cp-price b { font-size: 38px; } .cp-steps li span { display: none; } }
+  /* Sign-in page: no flash of the app, no dark edges when the page bounces on phones */
+  html.gate-wait, html.gate-wait body, html.gated-html, html.gated-html body { background: #fff !important; }
+  html.gated-html body > *:not(#gate):not(dialog):not(#bannedScreen):not(#finishAcct):not(#emergency):not(#toasts) { visibility: hidden; }
+  #gate { overscroll-behavior: contain; -webkit-overflow-scrolling: touch; padding-top: env(safe-area-inset-top); }
+  .lg-coin img, .lg-table img { transition: none; }
 </style>
-<script>try { if (!localStorage.getItem("seenSignedIn")) { document.documentElement.classList.add("gate-wait"); setTimeout(() => document.documentElement.classList.remove("gate-wait"), 4000); } } catch {}</script>
+<script>try { if (!localStorage.getItem("signedInNow")) { document.documentElement.classList.add("gate-wait"); setTimeout(() => document.documentElement.classList.remove("gate-wait"), 5000); } } catch {}</script>
 <script>try { var t = JSON.parse(localStorage.getItem("theme") || '"dark"'); if (t === "system") t = matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"; document.documentElement.dataset.theme = t; var st = JSON.parse(localStorage.getItem("settings") || "{}"); if (st.reduceMotion) document.documentElement.classList.add("reduce-motion"); } catch (e) { document.documentElement.dataset.theme = "dark"; }</script>
 </head>
 <body>
