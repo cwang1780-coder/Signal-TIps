@@ -897,7 +897,25 @@
   .cp-warn { margin: 12px 0; padding-left: 18px; display: grid; gap: 4px; }
   .cp-check { display: grid; gap: 8px; margin-top: 8px; } .cp-check input { width: 100%; }
   .cp-msg { min-height: 1em; } .cp-msg.err { color: var(--sell); }
+
+  /* Sign-in wall (account.js) */
+  html.gate-wait body > *:not(dialog) { visibility: hidden; }
+  body.gated { overflow: hidden; }
+  #gate { position: fixed; inset: 0; z-index: 900; background: radial-gradient(1200px 600px at 80% -10%, #1d3b8f 0%, transparent 60%), #0a0b0d; color: #fff; overflow-y: auto; display: grid; place-items: center; padding: 32px 20px calc(32px + env(safe-area-inset-bottom)); }
+  .gate-in { max-width: 720px; width: 100%; }
+  .gate-brand { display: flex; align-items: center; gap: 10px; font-size: 20px; margin-bottom: 40px; }
+  #gate h1 { font-size: clamp(36px, 7vw, 64px); line-height: 1.04; letter-spacing: -.03em; margin: 0 0 16px; font-weight: 700; }
+  .gate-sub { font-size: 18px; color: #c5cad3; max-width: 560px; margin: 0 0 28px; line-height: 1.5; }
+  .gate-btns { display: flex; gap: 12px; flex-wrap: wrap; }
+  .gate-primary, .gate-secondary { font: inherit; font-weight: 600; font-size: 17px; border: 0; border-radius: 999px; padding: 14px 28px; cursor: pointer; min-height: 0; }
+  .gate-primary { background: #0052ff; color: #fff; } .gate-primary:hover { background: #2a6bff; }
+  .gate-secondary { background: #1e2025; color: #fff; } .gate-secondary:hover { background: #2a2d33; }
+  .gate-points { list-style: none; padding: 0; margin: 44px 0 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 14px; }
+  .gate-points li { background: #14161a; border: 1px solid #23262d; border-radius: 16px; padding: 16px; display: grid; gap: 6px; }
+  .gate-points span { color: #9aa0ab; font-size: 14px; line-height: 1.45; }
+  .gate-fine { color: #7d838e; font-size: 13px; margin-top: 32px; } .gate-fine a { color: #9db7ff; }
 </style>
+<script>try { if (!localStorage.getItem("seenSignedIn")) { document.documentElement.classList.add("gate-wait"); setTimeout(() => document.documentElement.classList.remove("gate-wait"), 4000); } } catch {}</script>
 </head>
 <body>
 <!-- ───────── Sidebar (desktop) / menu sheet (tablet & phone) ───────── -->

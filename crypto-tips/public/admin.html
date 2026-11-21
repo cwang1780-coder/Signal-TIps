@@ -47,6 +47,11 @@
   .msg { margin-top: 10px; padding: 10px 12px; border-radius: 10px; background: #e6f4ec; color: var(--buy); font-weight: 500; }
   .msg.err { background: #fdeaea; color: var(--sell); }
   .temp { font-family: ui-monospace, monospace; font-size: 16px; background: #fff; border: 1px dashed var(--border); padding: 6px 10px; border-radius: 8px; user-select: all; }
+  .info { margin-top: 10px; background: #fff; border: 1px solid var(--border); border-radius: 12px; padding: 12px; }
+  .info-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 10px; }
+  .info-grid > div { display: grid; gap: 2px; }
+  .info-sec { margin-top: 12px; } .chips { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+  table.mini { margin-top: 4px; font-size: 13px; } table.mini td, table.mini th { padding: 4px 8px; }
   pre { white-space: pre-wrap; word-break: break-word; font-size: 12px; background: var(--panel); padding: 10px; border-radius: 10px; margin: 0; }
   .gate { max-width: 440px; margin: 80px auto; text-align: center; }
   .links a { display: block; padding: 8px 0; color: var(--accent); font-weight: 500; text-decoration: none; border-bottom: 1px solid var(--alt); }
@@ -95,7 +100,7 @@
       <div class="grid">
         <div class="card stat"><b>${d.users}</b><span>accounts</span></div>
         <div class="card stat"><b>${d.signups.last7d}</b><span>new in 7 days (${d.signups.last24h} today)</span></div>
-        <div class="card stat"><b>${d.activeLast7d}</b><span>signed in, last 7 days</span></div>
+        <div class="card stat"><b>${d.activeToday ?? 0}</b><span>active today (${d.activeLast7d} this week)</span></div>
         <div class="card stat"><b>${(by.subscription || 0) + (by.comp || 0) + (by.trial || 0)}</b><span>with Pro (${by.subscription || 0} paid · ${by.comp || 0} free · ${by.trial || 0} trial)</span></div>
         <div class="card stat"><b>${d.aiQuestionsThisMonth}</b><span>AI questions this month</span></div>
         <div class="card stat"><b>${d.push.devices}</b><span>devices with notifications</span></div>
@@ -128,9 +133,10 @@
     const q = ($("uq")?.value || "").toLowerCase(), f = $("uf")?.value || "all";
     const list = (users || []).filter((u) => (!q || u.name.toLowerCase().includes(q)) && (f === "all" || (f === "pro" ? u.pro : f === "suspended" ? u.suspended : u.plan === f)));
     const sel = users?.find((u) => u.id === selected);
-    const detail = (u) => `<tr class="sel"><td colspan="6"><div class="detail">
+    const detail = (u) => `<tr class="sel"><td colspan="7"><div class="detail">
         <b>${esc(u.name)}</b> ${planPill(u)}
         <div class="muted small">Joined ${when(u.created)} · last sign-in ${ago(u.lastLogin)} · ${u.aiUsed} AI questions this month${u.trialEnds ? ` · trial ${u.trialEnds > Date.now() ? "ends" : "ended"} ${when(u.trialEnds)}` : ""}${u.comp ? ` · free Pro ${u.comp.until ? "until " + when(u.comp.until) : "with no end date"}` : ""}${u.subscription ? " · has a Stripe subscription" : ""}</div>
+        ${infoHtml(u)}
         ${u.owner ? '<p class="muted small" style="margin:8px 0 0">Owner accounts already have everything, and can\'t be suspended, deleted or have their password reset here.</p>' : `
         <div class="row"><span class="small muted">Free Pro:</span>
           <button class="b" data-act="grantPro" data-days="7">7 days</button><button class="b" data-act="grantPro" data-days="30">30 days</button>
@@ -150,11 +156,31 @@
         <select id="uf">${[["all", "Everyone"], ["pro", "Has Pro"], ["subscription", "Paid"], ["comp", "Free Pro"], ["trial", "Trial"], ["free", "Free"], ["suspended", "Suspended"], ["owner", "Owners"]].map(([v, t]) => `<option value="${v}"${v === f ? " selected" : ""}>${t}</option>`).join("")}</select>
         <button class="b" id="ureload">Refresh</button></div></div>
       <div class="tablewrap section"><table>
-        <tr><th>Account</th><th>Plan</th><th class="hide-sm">Joined</th><th class="hide-sm">Last sign-in</th><th>AI this month</th><th></th></tr>
-        ${list.map((u) => `<tr><td><b>${esc(u.name)}</b></td><td>${planPill(u)}</td><td class="hide-sm">${when(u.created)}</td><td class="hide-sm">${ago(u.lastLogin)}</td><td>${u.aiUsed}</td>
-          <td><button class="b" data-open="${u.id}">${u.id === selected ? "Close" : "Manage"}</button></td></tr>${u.id === selected ? detail(u) : ""}`).join("") || `<tr><td colspan="6" class="muted">No matching accounts.</td></tr>`}
+        <tr><th>Account</th><th>Plan</th><th class="hide-sm">Joined</th><th class="hide-sm">Last active</th><th class="hide-sm">Device</th><th>AI this month</th><th></th></tr>
+        ${list.map((u) => `<tr><td><b>${esc(u.name)}</b>${u.country ? ` <span class="muted small">${esc(u.country)}</span>` : ""}</td><td>${planPill(u)}</td><td class="hide-sm">${when(u.created)}</td><td class="hide-sm">${ago(u.lastSeen)}</td><td class="hide-sm small">${esc(u.device || "–")}</td><td>${u.aiUsed}</td>
+          <td><button class="b" data-open="${u.id}">${u.id === selected ? "Close" : "Manage"}</button></td></tr>${u.id === selected ? detail(u) : ""}`).join("") || `<tr><td colspan="7" class="muted">No matching accounts.</td></tr>`}
       </table></div></div>`);
     const uq = $("uq"); if (document.activeElement?.id !== "uq" && uq && uq.dataset.focus) uq.focus();
+  }
+
+  // Everything we know about one account (activity, payments, and what they've set up on the site)
+  function infoHtml(u) {
+    const d = u.data, flag = (c) => (c ? String.fromCodePoint(...[...c].map((x) => 127397 + x.charCodeAt(0))) + " " + c : "–");
+    const kv = (k, v) => `<div><span class="muted small">${k}</span><b class="small">${v}</b></div>`;
+    return `<div class="info">
+      <div class="info-grid">
+        ${kv("Last active", ago(u.lastSeen))}${kv("Visits", u.visits)}${kv("Sign-ins", u.logins)}${kv("Device", esc(u.device || "–"))}${kv("Country", flag(u.country))}
+        ${kv("Pro until", u.pro ? (u.proUntil ? when(u.proUntil) : u.owner ? "always" : "–") : "no Pro")}${kv("Level", esc(d?.level === "pro" ? "Experienced" : d?.level ? "Beginner" : "–"))}${kv("Currency", esc(d?.currency || "–"))}
+      </div>
+      ${d ? `
+      <div class="info-sec"><b class="small">Watchlist (${d.watchlist.length})</b><div class="chips">${d.watchlist.map((c) => `<span class="pill">${esc(c)}</span>`).join("") || '<span class="muted small">none</span>'}</div></div>
+      <div class="info-sec"><b class="small">Coins they say they own (${d.holdings.length})</b>${d.holdings.length ? `<table class="mini"><tr><th>Coin</th><th>Amount</th><th>Paid each</th></tr>${d.holdings.map((h) => `<tr><td>${esc(h.coin)}</td><td>${esc(h.amount)}</td><td>${h.paid ? "$" + esc(+(+h.paid).toPrecision(6)) : "–"}</td></tr>`).join("")}</table>` : '<span class="muted small"> none typed in</span>'}</div>
+      <div class="info-sec"><b class="small">Connected wallets (${d.wallets.length})</b>${d.wallets.map((w) => `<div class="small">${esc(w.label || w.network)} · <code>${esc(w.address)}</code></div>`).join("") || '<span class="muted small"> none</span>'}</div>
+      ${Object.keys(d.paidPrices).length ? `<div class="info-sec"><b class="small">Prices paid for wallet coins</b><div class="small">${Object.entries(d.paidPrices).map(([c, p]) => `${esc(c)} $${esc(+(+p).toPrecision(6))}`).join(" · ")}</div></div>` : ""}
+      <div class="info-sec small muted">${d.alerts} price alert${d.alerts === 1 ? "" : "s"} · data last saved ${ago(u.dataUpdated)}</div>`
+      : '<p class="muted small">Nothing saved to their account yet (they haven\'t set anything up while signed in).</p>'}
+      ${u.payments?.length ? `<div class="info-sec"><b class="small">Crypto payments</b>${u.payments.map((p) => `<div class="small">${when(p.at)} · ${esc(p.amount)} ${esc(p.method.toUpperCase())} ($${p.usd}) · <code>${esc(String(p.tx).slice(0, 10))}…</code></div>`).join("")}</div>` : ""}
+    </div>`;
   }
 
   // ── Announcement ──

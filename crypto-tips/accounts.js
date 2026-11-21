@@ -117,6 +117,7 @@ async function login(email, password) {
   if (!ok) throw err(401, "Wrong email or password.");
   if (u.banned) throw err(403, "This account has been suspended. Contact the site owner.");
   u.lastLogin = Date.now();
+  u.logins = (u.logins || 0) + 1;
   await saveUser(u).catch(() => {});
   return u;
 }
@@ -188,9 +189,28 @@ async function deleteAccount(u, password) {
 // and only if they're also owners. Other owners keep everything unlocked but don't get the admin panel.
 const admins = () => String(process.env.ADMIN_ACCOUNTS || "colin").split(",").map(normEmail).filter(Boolean);
 const isAdmin = (u) => Boolean(u) && admins().includes(u.email) && owners().includes(u.email);
+// Activity for the admin panel: last seen, visit count, device type and country (from Vercel's coarse IP lookup).
+// Saved at most every 5 minutes per account so it costs little.
+function deviceOf(ua) {
+  ua = String(ua || "");
+  const os = /iPhone|iPad/.test(ua) ? "iPhone/iPad" : /Android/.test(ua) ? "Android" : /Mac OS X/.test(ua) ? "Mac" : /Windows/.test(ua) ? "Windows" : /Linux/.test(ua) ? "Linux" : "Other";
+  const app = /Capacitor|SignalTipsApp/.test(ua) ? "app" : "web";
+  const br = /Edg\//.test(ua) ? "Edge" : /CriOS|Chrome\//.test(ua) ? "Chrome" : /FxiOS|Firefox\//.test(ua) ? "Firefox" : /Safari\//.test(ua) ? "Safari" : "";
+  return `${os}${br ? " · " + br : ""}${app === "app" ? " · iPhone app" : ""}`;
+}
+async function touch(u, req) {
+  if (u.lastSeen && Date.now() - u.lastSeen < 5 * 60e3) return;
+  u.lastSeen = Date.now();
+  u.visits = (u.visits || 0) + 1;
+  u.device = deviceOf(req.headers["user-agent"]);
+  const c = String(req.headers["x-vercel-ip-country"] || "");
+  if (/^[A-Z]{2}$/.test(c)) u.country = c;
+  await saveUser(u);
+}
+
 const publicUser = (u, plan) => ({ email: u.email, created: u.created, plan, aiUsed: aiUsed(u), trialDays: TRIAL_DAYS, ...(isAdmin(u) ? { admin: true } : {}) });
 
 module.exports = {
-  signup, login, userFromRequest, isAdmin, planOf, startTrial, countAi, aiUsed, savePrefs, changePassword, deleteAccount, saveUser, getUser,
+  signup, login, userFromRequest, isAdmin, touch, planOf, startTrial, countAi, aiUsed, savePrefs, changePassword, deleteAccount, saveUser, getUser,
   makeToken, readToken, sessionCookie, clearCookie, publicUser, hashPassword, checkPassword, emailId, TRIAL_DAYS, available: db.available,
 };

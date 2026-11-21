@@ -7,7 +7,7 @@
 (function () {
   const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   const FREE = { coins: 10, alerts: 3 };
-  const SYNCED = ["coins", "alerts", "holdings", "level", "levelChosen", "currency", "learnDone", "simBest", "trenchCB"];
+  const SYNCED = ["coins", "alerts", "holdings", "wallets", "paidPrices", "level", "levelChosen", "currency", "learnDone", "simBest", "trenchCB", "theme", "settings"];
   const PRO_FEATURES = [
     ["sparkle", "Ask AI", "Ask anything about a coin, your holdings or today's market, in plain English."],
     ["megaphone", "Buzz from 7 sources", "Bluesky, Mastodon, Hacker News, Lemmy and news headlines on top of StockTwits and trending searches, with a combined hype score."],
@@ -35,9 +35,10 @@
   function setUser(u) {
     const wasPro = window.isPro();
     user = u;
+    try { if (u) localStorage.setItem("seenSignedIn", "1"); } catch {}
     document.body.classList.toggle("signedIn", Boolean(u));
     document.body.classList.toggle("isPro", window.isPro());
-    renderHeader(); renderPanel(); renderProBox();
+    renderHeader(); renderPanel(); renderProBox(); renderGate();
     if (wasPro !== window.isPro()) document.dispatchEvent(new Event("plan-changed"));
   }
 
@@ -272,10 +273,37 @@
     catch (e) { toast("Couldn't confirm your payment: " + e.message); }
   }
 
+  let accountsOn = false;
   async function load() {
-    try { const d = await api("me"); setUser(d.user); } catch { setUser(null); }
+    try { const d = await api("me"); accountsOn = true; setUser(d.user); } catch { setUser(null); }
     loaded = true;
+    renderGate();
     await handleReturn();
+  }
+
+  // ── Sign-in wall: like Coinbase, the app is for account holders. Visitors see this page until they sign in. ──
+  function renderGate() {
+    let g = $("gate");
+    const show = loaded && accountsOn && !user;
+    document.body.classList.toggle("gated", show);
+    document.documentElement.classList.remove("gate-wait");
+    if (!show) { g?.remove(); return; }
+    if (g) return;
+    g = document.createElement("div");
+    g.id = "gate";
+    g.innerHTML = `<div class="gate-in">
+      <div class="gate-brand"><img src="/icon.svg" width="40" height="40" alt="" /><b>Signal Tips</b></div>
+      <h1>Know when to buy,<br>hold or sell crypto.</h1>
+      <p class="gate-sub">Live signals for every coin, a sell plan for what's in your wallet, AI answers and alerts. Free to start.</p>
+      <div class="gate-btns"><button class="gate-primary" data-auth="signup">Create free account</button><button class="gate-secondary" data-auth="login">Sign in</button></div>
+      <ul class="gate-points">
+        <li><b>Signals</b><span>BUY, HOLD or SELL for each coin, with the reasons and the track record.</span></li>
+        <li><b>Your wallet</b><span>Connect a public address and get when to take profit or cut a loss.</span></li>
+        <li><b>Ask AI</b><span>Questions about any coin or your portfolio, in plain English.</span></li>
+      </ul>
+      <p class="gate-fine">Not financial advice: signals are automated and often wrong. <a href="/privacy.html">Privacy</a></p>
+    </div>`;
+    document.body.appendChild(g);
   }
   window.onSiteConfig = (c) => { cfg = c; renderPanel(); renderProBox(); renderAnnouncement(c.announcement); };
   // Site announcement from the admin panel, until the visitor closes it

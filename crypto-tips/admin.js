@@ -16,6 +16,20 @@ async function allUsers() {
   return users.filter((u) => u && u.id);
 }
 
+// What they've set up on the site (synced to their account): watchlist, holdings, wallets, alerts, settings
+function summary(d) {
+  if (!d) return null;
+  const short = (a) => (String(a).length > 14 ? String(a).slice(0, 6) + "…" + String(a).slice(-4) : String(a));
+  return {
+    watchlist: Array.isArray(d.coins) ? d.coins.slice(0, 40) : [],
+    holdings: Array.isArray(d.holdings) ? d.holdings.slice(0, 40).map((h) => ({ coin: h.sym, amount: h.amt, paid: h.cost || null })) : [],
+    wallets: Array.isArray(d.wallets) ? d.wallets.slice(0, 20).map((w) => ({ network: w.chain, address: short(w.address), label: w.label || "" })) : [],
+    paidPrices: d.paidPrices && typeof d.paidPrices === "object" ? d.paidPrices : {},
+    alerts: Array.isArray(d.alerts) ? d.alerts.length : 0,
+    level: d.level || null, currency: d.currency || null, theme: d.theme || null,
+  };
+}
+
 // What the panel shows for one user (no password hash, no synced settings)
 async function row(u) {
   const plan = await accounts.planOf(u).catch(() => ({ kind: "unknown" }));
@@ -23,6 +37,9 @@ async function row(u) {
     id: u.id, name: u.email, created: u.created || null, lastLogin: u.lastLogin || null,
     plan: plan.kind, pro: Boolean(plan.pro), trialEnds: u.trialEnds || null, comp: u.comp || null, subscription: Boolean(u.subId),
     aiUsed: accounts.aiUsed(u), suspended: Boolean(u.banned), owner: plan.kind === "owner",
+    lastSeen: u.lastSeen || u.lastLogin || null, visits: u.visits || 0, logins: u.logins || 0, device: u.device || null, country: u.country || null,
+    proUntil: plan.until || null, payments: (u.payments || []).slice(-10).reverse().map((p) => ({ method: p.method, amount: p.amount, usd: p.usd, at: p.at, tx: p.tx })),
+    data: summary(u.prefs?.data), dataUpdated: u.prefs?.updated || null,
   };
 }
 
@@ -40,7 +57,8 @@ async function overview() {
   return {
     users: rows.length, byPlan,
     signups: { last24h: rows.filter((r) => r.created > now - day).length, last7d: rows.filter((r) => r.created > now - 7 * day).length, last30d: rows.filter((r) => r.created > now - 30 * day).length },
-    activeLast7d: rows.filter((r) => r.lastLogin > now - 7 * day).length,
+    activeLast7d: rows.filter((r) => (r.lastSeen || r.lastLogin) > now - 7 * day).length,
+    activeToday: rows.filter((r) => (r.lastSeen || r.lastLogin) > now - day).length,
     aiQuestionsThisMonth: rows.reduce((t, r) => t + r.aiUsed, 0),
     cryptoPayments: (() => {
       const all = users.flatMap((u) => (u.payments || []).map((p) => ({ ...p, user: u.email })));

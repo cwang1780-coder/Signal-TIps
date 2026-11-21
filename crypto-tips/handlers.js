@@ -327,11 +327,13 @@ async function accountHandler(req, res) {
       const b = await readJson(req);
       if (action === "login") await new Promise((r) => setTimeout(r, 300)); // slow down password guessing
       const u = action === "signup" ? await accounts.signup(b.email, b.password) : await accounts.login(b.email, b.password);
+      u.lastSeen = 0; await accounts.touch(u, req).catch(() => {}); // record device, country and the visit
       return send(200, { user: accounts.publicUser(u, await accounts.planOf(u)) }, accounts.sessionCookie(accounts.makeToken(u.id), isHttps(req)));
     }
     if (action === "logout") return send(200, { ok: true }, accounts.clearCookie(isHttps(req)));
 
     const u = await accounts.userFromRequest(req);
+    if (action === "me" && u) await accounts.touch(u, req).catch(() => {});
     if (action === "me") return send(200, u ? { user: accounts.publicUser(u, await accounts.planOf(u)), prefsUpdated: u.prefs?.updated || null } : { user: null });
     if (!u) return send(401, { reason: "Sign in first." });
 
