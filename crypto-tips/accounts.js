@@ -140,6 +140,8 @@ async function planOf(u) {
     if (c.ok) return { pro: true, kind: "subscription", aiLimit: pro.monthlyLimit(), cancelAtPeriodEnd: c.cancelAtPeriodEnd, periodEnd: c.periodEnd, status: c.status };
     if (c.status) return { pro: false, kind: "lapsed", status: c.status, reason: c.reason, trialUsed: Boolean(u.trialEnds) };
   }
+  // Pro paid for with crypto (cryptopay.js)
+  if (u.cryptoUntil && u.cryptoUntil > Date.now()) return { pro: true, kind: "crypto", until: u.cryptoUntil, aiLimit: pro.monthlyLimit() };
   // Free Pro given by the owner in the admin panel
   if (u.comp && (u.comp.until == null || u.comp.until > Date.now())) return { pro: true, kind: "comp", until: u.comp.until, aiLimit: pro.monthlyLimit() };
   if (u.trialEnds && u.trialEnds > Date.now()) return { pro: true, kind: "trial", until: u.trialEnds, aiLimit: TRIAL_AI_LIMIT };

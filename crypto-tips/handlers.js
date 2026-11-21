@@ -12,6 +12,7 @@ const { getUpcoming, poolCandles } = require("./upcoming.js");
 const accounts = require("./accounts.js");
 const push = require("./push.js");
 const admin = require("./admin.js");
+const cryptopay = require("./cryptopay.js");
 
 const ON_VERCEL = Boolean(process.env.VERCEL);
 let cache = { at: 0, data: null };
@@ -349,6 +350,15 @@ async function accountHandler(req, res) {
       if (!u.subId || !pro.enabled()) return send(400, { reason: "There's no subscription on this account." });
       return send(200, { url: await pro.portalUrl(u.subId, originOf(req)) });
     }
+    // Pay for Pro with crypto: get an exact amount to send, then check the transaction
+    if (action === "cryptoQuote" || action === "cryptoVerify") {
+      if (req.method !== "POST") return send(405, { reason: "POST only" });
+      if (!cryptopay.enabled()) return send(503, { reason: "Crypto payments aren't switched on yet." });
+      const b = await readJson(req);
+      if (action === "cryptoQuote") return send(200, await cryptopay.quote(u, String(b.method || "")));
+      const r = await cryptopay.verify(u, b.invoice, b.tx, accounts.saveUser);
+      return send(200, { ...r, user: accounts.publicUser(u, await accounts.planOf(u)) });
+    }
     if (action === "sync") {
       if (req.method === "PUT") { const b = await readJson(req); return send(200, { updated: await accounts.savePrefs(u, b.prefs) }); }
       return send(200, { prefs: u.prefs?.data || null, updated: u.prefs?.updated || null });
@@ -409,6 +419,7 @@ async function configHandler(req, res) {
   res.end(JSON.stringify({ coinbaseRef: ref, pro: proInfo, fx: await getFx(), fxUpdated: fxCache.at || null,
     accounts: accounts.available(), trialDays: accounts.TRIAL_DAYS, aiConfigured: ai.hasCredentials(), freeTrench: FREE_TRENCH,
     announcement: accounts.available() ? await admin.getAnnouncement().catch(() => null) : null,
+    cryptoPay: cryptopay.publicConfig(),
     pushKey: accounts.available() && push.webConfigured() ? push.publicKey() : null, apnsPush: accounts.available() && push.apnsConfigured() }));
 }
 

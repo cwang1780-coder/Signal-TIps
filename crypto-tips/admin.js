@@ -42,11 +42,17 @@ async function overview() {
     signups: { last24h: rows.filter((r) => r.created > now - day).length, last7d: rows.filter((r) => r.created > now - 7 * day).length, last30d: rows.filter((r) => r.created > now - 30 * day).length },
     activeLast7d: rows.filter((r) => r.lastLogin > now - 7 * day).length,
     aiQuestionsThisMonth: rows.reduce((t, r) => t + r.aiUsed, 0),
+    cryptoPayments: (() => {
+      const all = users.flatMap((u) => (u.payments || []).map((p) => ({ ...p, user: u.email })));
+      const month = all.filter((p) => p.at > now - 30 * day);
+      return { count: all.length, usdTotal: Math.round(all.reduce((t, p) => t + (p.usd || 0), 0) * 100) / 100, last30dUsd: Math.round(month.reduce((t, p) => t + (p.usd || 0), 0) * 100) / 100,
+        recent: all.sort((a, b) => b.at - a.at).slice(0, 10).map((p) => ({ user: p.user, method: p.method, amount: p.amount, usd: p.usd, at: p.at, tx: p.tx })) };
+    })(),
     push: { devices: subs.length, iphoneApp: subs.filter((s) => s.apns).length, browsers: subs.filter((s) => s.sub).length, lastCheck: lastRun?.at || null,
       topCoins: Object.entries(coinCount).sort((a, b) => b[1] - a[1]).slice(0, 10).map(([sym, n]) => ({ sym, devices: n })) },
     services: {
       storage: db.available(), ai: ai.hasCredentials(), aiProvider: ai.provider(), aiModel: ai.provider() === "gemini" ? ai.GEMINI_MODEL : ai.MODEL,
-      payments: pro.enabled(), webPush: push.webConfigured(), iphonePush: push.apnsConfigured(),
+      payments: pro.enabled(), cryptoPayments: require("./cryptopay.js").enabled(), webPush: push.webConfigured(), iphonePush: push.apnsConfigured(),
     },
     announcement: await getAnnouncement(),
   };

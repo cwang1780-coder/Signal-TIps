@@ -20,6 +20,7 @@
   let user = null, cfg = null, note = "", loaded = false;
   const plan = () => user?.plan || { pro: false, kind: "guest" };
   window.isPro = () => Boolean(plan().pro);
+  window.accountUser = () => user;
   window.account = () => user;
 
   async function api(action, opts = {}) {
@@ -99,7 +100,8 @@
     const d = $("authDialog"), p = plan(), price = cfg?.pro?.enabled && cfg.pro.price ? priceText(cfg.pro.price) : null;
     const cta = !user ? `<button class="primary pill lg" data-pw="signup">Create free account and start trial</button>`
       : !p.pro && !p.trialUsed && p.kind !== "lapsed" ? `<button class="primary pill lg" data-pw="trial">Start ${cfg?.trialDays || 7}-day free trial</button>`
-      : cfg?.pro?.enabled ? `<button class="primary pill lg" data-pw="buy">Go Pro${price ? " · " + esc(price) : ""}</button>`
+      : cfg?.pro?.enabled || cfg?.cryptoPay ? (cfg?.pro?.enabled ? `<button class="primary pill lg" data-pw="buy">Go Pro${price ? " · " + esc(price) : ""}</button>` : "")
+        + (cfg?.cryptoPay ? `<button class="${cfg?.pro?.enabled ? "pill" : "primary pill lg"}" data-crypto-pay>Pay with crypto · $${cfg.cryptoPay.priceUsd} for ${cfg.cryptoPay.days} days</button>` : "")
       : `<p class="muted">Pro subscriptions open soon. Your trial has ended; thanks for trying it!</p>`;
     d.innerHTML = `<div class="sheet paywall">
       <button type="button" class="x sheet-x" data-close-sheet aria-label="Close">✕</button>
@@ -130,6 +132,7 @@
   // ── Me tab: account panel ──
   function planLine(p) {
     if (p.kind === "owner") return `<span class="plan-badge pro">Owner</span> Everything is unlocked for you.${user?.admin ? ` <a href="/admin" class="admin-link">Open the admin panel →</a>` : ""}`;
+    if (p.kind === "crypto") return `<span class="plan-badge pro">Pro</span> Paid with crypto, until ${new Date(p.until).toLocaleDateString(undefined, { month: "short", day: "numeric" })}.`;
     if (p.kind === "comp") return `<span class="plan-badge pro">Pro</span> ${p.until ? "Free until " + new Date(p.until).toLocaleDateString(undefined, { month: "short", day: "numeric" }) : "Free, courtesy of the site"}.`;
     if (p.kind === "trial") return `<span class="plan-badge pro">Pro trial</span> Ends ${new Date(p.until).toLocaleDateString(undefined, { month: "short", day: "numeric" })}.`;
     if (p.kind === "subscription") return `<span class="plan-badge pro">Pro</span> ${p.cancelAtPeriodEnd ? "Ends" : "Renews"} ${p.periodEnd ? new Date(p.periodEnd * 1000).toLocaleDateString(undefined, { month: "short", day: "numeric" }) : ""}.`;
@@ -154,6 +157,7 @@
       <div class="acct-actions">
         ${!p.pro && !p.trialUsed && p.kind !== "lapsed" ? `<button class="primary pill" data-pw="trial">Start ${cfg?.trialDays || 7}-day free trial</button>` : ""}
         ${(p.kind !== "subscription" && p.kind !== "owner") && cfg?.pro?.enabled ? `<button class="${p.pro ? "pill" : "primary pill"}" data-pw="buy">Go Pro${price ? " · " + esc(price) : ""}</button>` : ""}
+        ${p.kind !== "owner" && p.kind !== "subscription" && cfg?.cryptoPay ? `<button class="${p.pro || cfg?.pro?.enabled ? "pill" : "primary pill"}" data-crypto-pay>${p.kind === "crypto" ? "Add more days with crypto" : `Pay with crypto · $${cfg.cryptoPay.priceUsd}`}</button>` : ""}
         ${p.kind === "subscription" || p.kind === "lapsed" ? `<button class="pill" data-acct="portal">Manage subscription</button>` : ""}
         ${!p.pro ? `<button class="pill" data-pw="show">See what Pro includes</button>` : ""}
         <button class="pill" data-acct="logout">Sign out</button>
