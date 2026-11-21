@@ -86,7 +86,13 @@ function friendlyError(e) {
   if (e instanceof Anthropic.PermissionDeniedError) return "This API key can't use the AI model. Check your Anthropic account.";
   if (e instanceof Anthropic.RateLimitError) return "Too many AI requests right now — wait a moment and try again.";
   if (e instanceof Anthropic.APIConnectionError) return "Couldn't reach the Anthropic API. Check your internet connection.";
-  if (e instanceof Anthropic.APIError) return `AI service error (${e.status ?? "unknown"}). Try again shortly.`;
+  if (e instanceof Anthropic.APIError) {
+    // Anthropic's own explanation (it never contains the key), so a setup problem can be fixed
+    const why = String(e.error?.error?.message || e.error?.message || "").slice(0, 300);
+    if (/credit balance/i.test(why)) return "The Anthropic account has no credit left. Add credit at console.anthropic.com → Billing, then try again.";
+    if (e.status === 400 || e.status === 404) return `AI service error (${e.status})${why ? ": " + why : ""}`;
+    return `AI service error (${e.status ?? "unknown"}). Try again shortly.`;
+  }
   if (/credential|api key|apiKey|authToken/i.test(e?.message || "")) return "No Anthropic API key found. See README → Ask AI.";
   return "AI request failed: " + (e?.message || e);
 }
