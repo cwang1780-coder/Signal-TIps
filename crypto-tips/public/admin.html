@@ -158,11 +158,12 @@
   function renderAnnounce() {
     const a = data?.announcement;
     show(`<div class="card"><h2>Site announcement</h2>
-      <p class="muted small">A banner at the top of the site for every visitor, until they close it. Good for "we're fixing the AI", new features or downtime. Visitors see it within a minute, even if the site is already open.</p>
+      <p class="muted small">A banner at the top of the site for every visitor, until they close it. Good for "we're fixing the AI", new features or downtime. Visitors see it straight away, or within about 15 seconds if they already have the site open.</p>
       <p class="muted small"><b>Emergency</b> turns every visitor's whole screen bright red with giant text (for example "Do not click links in DMs: scammers are pretending to be us") until they tap "I understand". Keep it short and use it only for real emergencies.</p>
       <textarea id="atext" maxlength="280" placeholder="e.g. New: connect your wallet under My coins to get a sell plan for each coin.">${esc(a?.text || "")}</textarea>
       <div class="row section"><select id="atone">${[["info", "Info (blue)"], ["good", "Good news (green)"], ["warn", "Warning (orange)"], ["emergency", "🚨 EMERGENCY: whole screen red"]].map(([v, t]) => `<option value="${v}"${a?.tone === v ? " selected" : ""}>${t}</option>`).join("")}</select>
         <label class="small"><input type="checkbox" id="apush" /> Also send it as a push notification</label>
+        <button class="b" id="apreview">Preview here</button>
         <button class="b primary" id="asave">Publish</button>${a ? '<button class="b danger" id="aclear">Remove banner</button>' : ""}</div>
       ${flashHtml()}</div>`);
   }
@@ -224,15 +225,26 @@
         flash = { html: esc(r.note) + (r.tempPassword ? `<div class="row"><span class="temp">${esc(r.tempPassword)}</span><button class="b" onclick="navigator.clipboard.writeText('${esc(r.tempPassword)}')">Copy</button></div>` : "") };
         return renderUsers();
       }
+      if (btn.id === "apreview") {
+        const text = $("atext").value.trim() || "Your message here";
+        const tone = $("atone").value;
+        const ov = document.createElement("div");
+        ov.innerHTML = tone === "emergency"
+          ? `<div style="position:fixed;inset:0;z-index:99;background:#d50000;color:#fff;display:grid;place-items:center;padding:24px;text-align:center"><div style="max-width:900px"><div style="display:inline-block;font-weight:800;letter-spacing:.12em;border:3px solid #fff;border-radius:999px;padding:6px 18px">⚠ IMPORTANT</div><h1 style="font-size:clamp(40px,9vw,110px);line-height:1.02;margin:24px 0">${esc(text)}</h1><p>Preview: only you can see this. Visitors see it after you publish.</p><button class="b" style="background:#fff;color:#b00000;font-size:20px;padding:14px 36px">Close preview</button></div></div>`
+          : `<div style="position:fixed;left:0;right:0;top:0;z-index:99;padding:12px;text-align:center;font-weight:500;background:${tone === "good" ? "#e6f4ec" : tone === "warn" ? "#fff3dc" : "#e8efff"}">${esc(text)} <button class="b">Close preview</button></div>`;
+        ov.querySelector("button").onclick = () => ov.remove();
+        document.body.appendChild(ov);
+        return;
+      }
       if (btn.id === "asave" || btn.id === "aclear") {
-        if (btn.id === "asave" && $("atone").value === "emergency" && !confirm("Turn every visitor's screen red with this message?")) return;
+        if (btn.id === "asave" && $("atone").value === "emergency" && btn.dataset.armed !== "1") { btn.dataset.armed = "1"; btn.textContent = "Tap again to turn everyone's screen red"; return; }
         const r = await api("announce", btn.id === "aclear" ? { text: "" } : { text: $("atext").value, tone: $("atone").value });
         let extra = "";
         if (r.announcement && $("apush")?.checked) {
           try { const p = await api("broadcast", { title: r.announcement.tone === "emergency" ? "⚠ Important" : "Signal Tips", body: r.announcement.text }); extra = ` Push sent to ${p.sent} device${p.sent === 1 ? "" : "s"}.`; }
           catch (pe) { extra = " Push not sent: " + esc(pe.message); }
         }
-        data.announcement = r.announcement; flash = { html: (r.announcement ? (r.announcement.tone === "emergency" ? "Emergency screen is live. Visitors will see it within a minute." : "Published. Visitors will see it within a minute.") : "Removed.") + extra };
+        data.announcement = r.announcement; flash = { html: (r.announcement ? (r.announcement.tone === "emergency" ? "Emergency screen is live. Open the site in a new tab to check: it shows straight away there, and within about 15 seconds for anyone who already has it open." : "Published. Visitors see it straight away, or within about 15 seconds if they already have the site open.") : "Removed.") + extra };
         return renderAnnounce();
       }
       if (btn.id === "nsend") {

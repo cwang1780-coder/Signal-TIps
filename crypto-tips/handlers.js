@@ -372,7 +372,7 @@ async function accountHandler(req, res) {
         if (b.id === u.id && ["suspend", "delete", "resetPassword"].includes(b.action)) return send(400, { reason: "You can't do that to your own account here." });
         return send(200, await admin.userAction(b.id, b.action, b));
       }
-      if (op === "announce") return send(200, await admin.setAnnouncement(b));
+      if (op === "announce") { const out = await admin.setAnnouncement(b); announceCache = { at: 0, a: null }; return send(200, out); }
       if (op === "broadcast") return send(200, await push.broadcast(b));
       if (op === "pushcheck") return send(200, await push.run({ force: true }));
       return send(400, { reason: "Unknown admin action" });
@@ -385,7 +385,16 @@ async function accountHandler(req, res) {
 }
 
 // Public site settings. COINBASE_REFERRAL_URL: your Coinbase affiliate link (must be an https coinbase.com link).
+// GET /api/config?announce=1: only the announcement, polled every 10 s by open pages. Shared at the edge for 5 s
+// and kept in memory for 5 s, so many visitors cost one storage read.
+let announceCache = { at: 0, a: null };
+async function announceOnly(res) {
+  if (Date.now() - announceCache.at > 5000) announceCache = { at: Date.now(), a: accounts.available() ? await admin.getAnnouncement().catch(() => null) : null };
+  res.writeHead(200, { "Content-Type": "application/json", "Cache-Control": "public, max-age=0, s-maxage=5" });
+  res.end(JSON.stringify({ announcement: announceCache.a }));
+}
 async function configHandler(req, res) {
+  if (new URL(req.url || "/", "http://x").searchParams.get("announce") === "1") return announceOnly(res);
   let ref = null;
   try {
     const u = new URL(process.env.COINBASE_REFERRAL_URL || "");
@@ -396,7 +405,7 @@ async function configHandler(req, res) {
     try { proInfo = { enabled: true, price: await pro.getPrice(), monthlyLimit: pro.monthlyLimit() }; }
     catch (e) { console.error("[pro] price lookup failed:", e.message); }
   }
-  res.writeHead(200, { "Content-Type": "application/json", "Cache-Control": "public, max-age=60" });
+  res.writeHead(200, { "Content-Type": "application/json", "Cache-Control": "no-cache" });
   res.end(JSON.stringify({ coinbaseRef: ref, pro: proInfo, fx: await getFx(), fxUpdated: fxCache.at || null,
     accounts: accounts.available(), trialDays: accounts.TRIAL_DAYS, aiConfigured: ai.hasCredentials(), freeTrench: FREE_TRENCH,
     announcement: accounts.available() ? await admin.getAnnouncement().catch(() => null) : null,

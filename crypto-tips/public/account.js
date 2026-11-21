@@ -299,11 +299,13 @@
     document.body.classList.add("emergency-on");
     try { navigator.vibrate?.([200, 100, 200]); } catch {}
   }
-  setInterval(() => {
-    if (document.hidden) return;
-    fetch("/api/config").then((r) => (r.ok ? r.json() : null)).then((c) => c && renderAnnouncement(c.announcement)).catch(() => {});
-  }, 60_000);
-  document.addEventListener("visibilitychange", () => { if (!document.hidden) fetch("/api/config").then((r) => (r.ok ? r.json() : null)).then((c) => c && renderAnnouncement(c.announcement)).catch(() => {}); });
+  // Check for announcements right away (the page's first settings load can arrive before this file is ready),
+  // then every 10 seconds while the page is open, and whenever the visitor comes back to the tab
+  const checkAnnouncement = () => fetch("/api/config?announce=1", { cache: "no-store" }).then((r) => (r.ok ? r.json() : null)).then((c) => c && renderAnnouncement(c.announcement)).catch(() => {});
+  if (typeof siteConfig !== "undefined" && siteConfig && "announcement" in siteConfig) renderAnnouncement(siteConfig.announcement);
+  checkAnnouncement();
+  setInterval(() => { if (!document.hidden) checkAnnouncement(); }, 10_000);
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) checkAnnouncement(); });
   document.addEventListener("click", (e) => { const ok = e.target.closest("[data-emergency-ok]"); if (ok) { store.set("emergencySeen", ok.dataset.emergencyOk); renderEmergency(null); } });
   document.addEventListener("click", (e) => { const b = e.target.closest("[data-announce-close]"); if (b) { store.set("announceClosed", b.dataset.announceClose); $("announce").hidden = true; } });
   window.refreshPro = load;
