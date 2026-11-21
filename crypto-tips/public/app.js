@@ -353,6 +353,7 @@ function renderDetail() {
         <div id="d-chart"></div>
         <div id="chartWrap" ${chartMode() === "draw" ? "" : "hidden"}></div>
         ${chartMode() === "draw" ? `<div class="muted small">Price (black) · 50-period avg (blue) · 200-period avg (orange) · Pick a tool above the chart to draw. Drawings are saved for this coin.</div>` : `<div class="muted small">Live from Coinbase. Drag to scroll, pinch or scroll to zoom, hover for each candle's open, high, low and close. Pick a drawing tool on the left: trend lines, Fibonacci, channels, long/short positions and more. Select a horizontal line to set a price alert.</div>`}
+        ${window.predictBoxHtml?.(selected) || ""}
       </div>
       <aside class="ov-side">
         <div class="side-box sig-box">

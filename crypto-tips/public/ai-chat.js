@@ -52,6 +52,7 @@
       wallets: window.walletSnapshot?.() || [],
       stablecoinsInWallets: window.walletCash?.() || {},
       sellPlans: window.sellPlansSnapshot?.() || [],
+      predictionForSelectedCoin: selected ? window.predictionSnapshot?.(selected) || null : null,
       alerts: window.alertsSnapshot?.() || [],
       cash: cb.cash,
       displayCurrency: window.Currency ? { code: Currency.code, perUSD: +Currency.toLocal(1).toPrecision(6) } : { code: "USD", perUSD: 1 },

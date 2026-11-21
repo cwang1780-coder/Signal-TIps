@@ -379,7 +379,65 @@
     return { n: r.length, up: r.filter((x) => x > 0).length / r.length, median: median(r) };
   }
 
-  const api = { sma, ema, rsi, macd, bollinger, analyze, backtest, findSimilar, setupHistory, levels, typicalMove, median, detectPattern, patternHistory, patternStats, PATTERNS };
+  // ── Forecast: how much a coin has typically moved next, from days in its own history that looked like today ──
+  // "Looked like today" = same side of the 50-day average, a similar RSI, and the same direction over the past week.
+  // It's history, not a promise: forecastAccuracy() measures how often this method called the direction right.
+  const HORIZONS = [[1, "1 day"], [7, "1 week"], [30, "1 month"], [90, "3 months"]];
+  function forecastFeatures(closes) {
+    const s50 = sma(closes, 50), r = rsi(closes, 14);
+    return closes.map((c, i) => (s50[i] == null || r[i] == null || i < 7 ? null : { up: c > s50[i], rsi: r[i], mom: c > closes[i - 7] }));
+  }
+  const quant = (sorted, q) => { if (!sorted.length) return null; const i = (sorted.length - 1) * q, lo = Math.floor(i), hi = Math.ceil(i); return sorted[lo] + (sorted[hi] - sorted[lo]) * (i - lo); };
+  // Forward returns over h days from past days matching `now` (only days whose outcome is known by index `upto`)
+  function matchReturns(closes, feats, now, h, upto) {
+    const tiers = [
+      (f) => f.up === now.up && Math.abs(f.rsi - now.rsi) <= 10 && f.mom === now.mom,
+      (f) => f.up === now.up && Math.abs(f.rsi - now.rsi) <= 15,
+      (f) => f.up === now.up,
+    ];
+    for (let t = 0; t < tiers.length; t++) {
+      const out = [];
+      for (let i = 0; i + h <= upto; i++) if (feats[i] && tiers[t](feats[i])) out.push(closes[i + h] / closes[i] - 1);
+      if (out.length >= 20 || t === tiers.length - 1) return { rets: out, tier: t };
+    }
+  }
+  function forecast(candles) {
+    const closes = candles.map((c) => c.close), feats = forecastFeatures(closes), n = closes.length, now = feats[n - 1];
+    if (!now) return null;
+    const price = closes[n - 1];
+    const res = HORIZONS.filter(([h]) => n - 60 > h * 3).map(([h, label]) => {
+      const { rets, tier } = matchReturns(closes, feats, now, h, n - 1);
+      if (rets.length < 8) return null;
+      const s = rets.slice().sort((x, y) => x - y);
+      return { days: h, label, n: rets.length, similarity: ["close match", "looser match", "trend only"][tier],
+        median: quant(s, 0.5), p25: quant(s, 0.25), p75: quant(s, 0.75), p10: quant(s, 0.1), p90: quant(s, 0.9),
+        upPct: rets.filter((x) => x > 0).length / rets.length, price,
+        target: price * (1 + quant(s, 0.5)), low: price * (1 + quant(s, 0.25)), high: price * (1 + quant(s, 0.75)) };
+    }).filter(Boolean);
+    return { now: { aboveAvg50: now.up, rsi: now.rsi, weekUp: now.mom }, horizons: res };
+  }
+  // Walk-forward test: at past dates, forecast using only the data before that date, then compare with what happened.
+  // Reports how often the predicted direction was right, next to how often "it goes up" alone would have been right.
+  function forecastAccuracy(candles, { step = 3 } = {}) {
+    const closes = candles.map((c) => c.close), feats = forecastFeatures(closes), n = closes.length, out = {};
+    for (const [h] of HORIZONS) {
+      let hits = 0, tests = 0, ups = 0, inRange = 0;
+      const start = Math.max(120, Math.floor(n * 0.4));
+      for (let t = start; t + h < n; t += step) {
+        if (!feats[t]) continue;
+        const m = matchReturns(closes, feats, feats[t], h, t); // only outcomes known at time t
+        if (!m || m.rets.length < 8) continue;
+        const s = m.rets.slice().sort((x, y) => x - y), med = quant(s, 0.5), actual = closes[t + h] / closes[t] - 1;
+        tests++; if (actual > 0) ups++;
+        if ((med > 0) === (actual > 0)) hits++;
+        if (actual >= quant(s, 0.25) && actual <= quant(s, 0.75)) inRange++;
+      }
+      if (tests >= 10) out[h] = { tests, directionRight: hits / tests, alwaysUpRight: ups / tests, inLikelyRange: inRange / tests };
+    }
+    return out;
+  }
+
+  const api = { sma, ema, rsi, macd, bollinger, analyze, backtest, findSimilar, setupHistory, levels, typicalMove, median, detectPattern, patternHistory, patternStats, PATTERNS, forecast, forecastAccuracy };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   else root.Indicators = api;
 })(typeof window !== "undefined" ? window : globalThis);
