@@ -101,6 +101,7 @@ async function askAccess(req, res) {
 
 async function askHandler(req, res) {
   if (req.method === "GET" && new URL(req.url, "http://x").searchParams.get("diag") === "1") return askDiag(req, res);
+  if (new URL(req.url, "http://x").searchParams.get("review") === "1") return reviewHandler(req, res);
   if (req.method !== "POST") return json(res, 405, { reason: "POST only" });
   if (!(req.headers["content-type"] || "").startsWith("application/json")) return json(res, 403, { reason: "Forbidden" });
   const access = await askAccess(req, res);
@@ -131,6 +132,35 @@ async function askHandler(req, res) {
     res.write("\n\n⚠️ " + ai.friendlyError(e));
   }
   res.end();
+}
+
+// POST /api/ask?review=1 {coin, snapshot}: the AI's second opinion on one coin's signal (Pro, like Ask AI).
+// Kept for 20 minutes per coin and signal, so repeat views don't use up the AI quota.
+const reviewCache = new Map();
+async function reviewHandler(req, res) {
+  if (req.method !== "POST") return json(res, 405, { reason: "POST only" });
+  if (!(req.headers["content-type"] || "").startsWith("application/json")) return json(res, 403, { reason: "Forbidden" });
+  if (!ai.hasCredentials()) return json(res, 503, { reason: "The AI isn't connected on this site yet." });
+  const access = await askAccess(req, res);
+  if (!access) return;
+  let b;
+  try { b = await readJson(req); } catch (e) { return json(res, e.status || 400, { reason: e.message }); }
+  const coin = String(b?.coin || "").toUpperCase();
+  if (!/^[A-Z0-9]{1,15}$/.test(coin) || !b.snapshot) return json(res, 400, { reason: "Bad request" });
+  const key = coin + ":" + (b.snapshot.coins?.[coin]?.action || "") + ":" + (b.snapshot.timeframe || "");
+  const hit = reviewCache.get(key);
+  if (hit && Date.now() - hit.at < 20 * 60_000) return json(res, 200, { ...hit.data, cached: true, at: hit.at });
+  try {
+    const data = await ai.review({ coin, snapshot: b.snapshot });
+    reviewCache.set(key, { at: Date.now(), data });
+    if (reviewCache.size > 300) reviewCache.delete(reviewCache.keys().next().value);
+    if (access.user) await accounts.countAi(access.user).catch(() => {});
+    if (access.subId) await pro.consume(access.subId).catch(() => {});
+    json(res, 200, { ...data, at: Date.now() });
+  } catch (e) {
+    console.error("[review]", e.message);
+    json(res, e.status && e.status < 600 ? e.status : 502, { reason: e.status === 503 || e.status === 502 || e.status === 400 ? e.message : ai.friendlyError(e) });
+  }
 }
 
 // GET /api/ask?diag=1 (owner accounts only): a tiny test of the AI provider, step by step with timings.

@@ -26,6 +26,7 @@ General rules:
 - "research.selectedCoin.chartPattern" names the chart pattern the open coin is in and what followed that pattern in a 4-year, 10-coin study. Name the pattern and explain it simply. Report the study numbers as they are, and say "no clear lean" when that's what they show. Never present a pattern as a prediction.
 - "trackRecordOfSelectedCoin" is a backtest of this app's own signals on the open chart versus simply holding. Be straight about it: if the signals did worse than holding, say so, and never present the signals as proven or reliable.
 - "holdings" is everything the user owns (from connected wallets, Coinbase, and coins typed in by hand); "wallets" shows each connected wallet's network and coins (read-only, public address shortened); "stablecoinsInWallets" is cash-like USDC/USDT/DAI. "sellPlans" is the app's rule-based plan for each coin they own: advice, take-profit and stop levels, profit/loss and insights. When the user asks what to do with their coins or wallet, go through what they actually hold, coin by coin, using "sellPlans" and the signals, biggest positions first. If a coin has no price paid, say the advice would be better with it. If they own nothing yet, tell them to connect a wallet or add coins under My coins.
+- Never contradict the app's signal silently. When asked whether to buy or sell a coin, first state the app's signal for it (e.g. "The app says BUY, score +2.5"), then say whether you agree. If you don't, name the exact data that makes you disagree, and check the signal's track record on that coin (trackRecordOfSelectedCoin) before trusting either view. When you and the signal disagree, say the evidence is mixed and that the safer move is to wait until both agree, or to keep any position small.
 - You can't place trades or see anything outside the snapshot.
 - Keep answers short: usually under 200 words, using short paragraphs or bullets. Use **bold** sparingly.
 - End any answer that leans toward buying or selling with one short line noting it is not financial advice. Don't repeat the disclaimer more than that.`;
@@ -169,6 +170,72 @@ async function ask({ question, history, snapshot }, onText) {
   return { stopReason: final.stop_reason };
 }
 
+// ── AI second opinion on one coin's signal ──
+// The AI reviews the app's signal with all the app's data plus (Gemini) a live Google search of news and the market,
+// and answers in a fixed JSON shape so the page can show "agrees" / "disagrees" side by side with the signal.
+const REVIEW_PROMPT = (coin, signal) => `You are giving an independent second opinion on this app's trading signal for ${coin}.
+The app's signal is ${signal.action} (score ${signal.score}; about −6 to +6; it comes from trend and momentum indicators only).
+${process.env.GEMINI_API_KEY ? "Search the web for the latest news about " + coin + " and the crypto market (last few days) before deciding." : "You have no web access: judge from the snapshot only."}
+Decide for someone thinking about buying ${coin} now and holding for a few weeks. Weigh: the trend, momentum, the signal's own track record on this coin (trackRecordOfSelectedCoin), market mood (research.fearGreed), news, social hype, and risks.
+Be honest: if the evidence is mixed, say HOLD with low confidence. Never invent numbers; use the snapshot's numbers.
+Reply with ONLY a JSON object, no other text, exactly in this shape:
+{"verdict":"BUY|HOLD|SELL","agreesWithSignal":true,"confidence":"low|medium|high","summary":"one or two plain sentences","reasons":["up to 4 short reasons, each citing a number or a news item"],"risks":["up to 3 short risks"],"news":["up to 3 short, recent news points you found, or empty"]}
+agreesWithSignal is true when your verdict points the same way as the signal (BUY/STRONG BUY with BUY, SELL/STRONG SELL with SELL, HOLD with HOLD).`;
+
+function parseReview(text) {
+  const m = String(text || "").match(/\{[\s\S]*\}/);
+  if (!m) throw Object.assign(new Error("The AI's review wasn't in the expected format. Try again."), { status: 502 });
+  const o = JSON.parse(m[0]);
+  const pick = (v, ok, d) => (ok.includes(String(v).toUpperCase?.() ?? v) ? String(v).toUpperCase() : d);
+  const list = (x, n) => (Array.isArray(x) ? x : []).map((t) => String(t).slice(0, 220)).filter(Boolean).slice(0, n);
+  return { verdict: pick(o.verdict, ["BUY", "HOLD", "SELL"], "HOLD"), agreesWithSignal: Boolean(o.agreesWithSignal),
+    confidence: ["low", "medium", "high"].includes(String(o.confidence).toLowerCase()) ? String(o.confidence).toLowerCase() : "low",
+    summary: String(o.summary || "").slice(0, 400), reasons: list(o.reasons, 4), risks: list(o.risks, 3), news: list(o.news, 3) };
+}
+
+async function review({ coin, snapshot }) {
+  const sig = snapshot?.coins?.[coin];
+  if (!sig || !sig.action) throw Object.assign(new Error("No signal for that coin yet."), { status: 400 });
+  const prompt = `App snapshot (${new Date().toISOString()}):\n${JSON.stringify(snapshot)}\n\n${REVIEW_PROMPT(coin, sig)}`;
+  if (provider() !== "gemini") {
+    const msg = await getClient().messages.create({ model: MODEL, max_tokens: 4000, output_config: { effort: "low" }, system: SYSTEM, messages: [{ role: "user", content: prompt }] });
+    const text = msg.content.filter((b) => b.type === "text").map((b) => b.text).join("");
+    return { ...parseReview(text), searched: false, sources: [], model: MODEL };
+  }
+  const { GoogleGenAI } = require("@google/genai");
+  if (!gemini) gemini = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY, ...(process.env.GEMINI_BASE_URL ? { httpOptions: { baseUrl: process.env.GEMINI_BASE_URL } } : {}) });
+  const t0 = Date.now(), total = +process.env.REVIEW_TIMEOUT_MS || 35_000;
+  let model = geminiModel || GEMINI_MODEL, search = true, lastErr = null;
+  const tried = new Set();
+  for (let attempt = 0; attempt < 5 && Date.now() - t0 < total - 2000; attempt++) {
+    const ctl = new AbortController(), cap = setTimeout(() => ctl.abort(), Math.min(search ? 25_000 : 15_000, total - (Date.now() - t0)));
+    try {
+      const r = await gemini.models.generateContent({ model, contents: prompt, config: {
+        systemInstruction: SYSTEM, maxOutputTokens: 2000, abortSignal: ctl.signal, thinkingConfig: { thinkingLevel: "LOW" },
+        ...(search ? { tools: [{ googleSearch: {} }] } : { responseMimeType: "application/json" }) } });
+      clearTimeout(cap);
+      const chunks = r.candidates?.[0]?.groundingMetadata?.groundingChunks || [];
+      const sources = chunks.map((c) => c.web).filter((w) => w?.uri).slice(0, 5).map((w) => ({ title: String(w.title || w.uri).slice(0, 120), url: w.uri }));
+      return { ...parseReview(r.text), searched: search && Boolean(r.candidates?.[0]?.groundingMetadata), sources, model };
+    } catch (e) {
+      clearTimeout(cap); lastErr = e;
+      if (e?.status === 400 && /thinking/i.test(e.message)) continue;
+      // Search not allowed on this key/model, or its free quota used up: review without search
+      if (search && (e?.status === 400 || e?.status === 403 || e?.status === 429)) { search = false; continue; }
+      if (ctl.signal.aborted || busy(e)) {
+        tried.add(model);
+        const alt = (await flashModels().catch(() => [])).find((n) => !tried.has(n));
+        if (alt) model = alt; else if (search) search = false; else break;
+        continue;
+      }
+      if (e?.status === 502) { if (search) { search = false; continue; } }
+      throw e;
+    }
+  }
+  if (lastErr && !busy(lastErr) && !(lastErr.name === "AbortError" || /abort/i.test(lastErr.message || ""))) throw lastErr;
+  throw Object.assign(new Error("Google's AI is very busy right now. Try the second opinion again in a minute."), { status: 503 });
+}
+
 // Step-by-step check of the AI provider for the owner's diagnostics page
 async function diagnose() {
   const steps = [], t0 = Date.now();
@@ -227,4 +294,4 @@ function friendlyError(e) {
   return "AI request failed: " + (e?.message || e);
 }
 
-module.exports = { ask, diagnose, buildMessages, friendlyError, hasCredentials, provider, SYSTEM, MODEL, GEMINI_MODEL };
+module.exports = { ask, review, diagnose, buildMessages, friendlyError, hasCredentials, provider, SYSTEM, MODEL, GEMINI_MODEL };

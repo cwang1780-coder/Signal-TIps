@@ -129,6 +129,7 @@
     busy = false; render();
   }
 
+  window.aiSnapshot = snapshot; // also used by the AI second opinion (review.js)
   window.askAI = (q) => { showTab("ai"); ask(q); };
 
   $("aiForm").addEventListener("submit", (e) => { e.preventDefault(); const q = $("aiInput").value; $("aiInput").value = ""; ask(q); });

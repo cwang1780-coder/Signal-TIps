@@ -92,7 +92,7 @@ async function getAnnouncement() { return (await db.getJSON(ANNOUNCE_KEY).catch(
 async function setAnnouncement({ text, tone }) {
   text = String(text || "").trim().slice(0, 280);
   if (!text) { await db.delKey(ANNOUNCE_KEY).catch(() => {}); return { ok: true, announcement: null }; }
-  const a = { text, tone: ["info", "warn", "good"].includes(tone) ? tone : "info", id: Date.now().toString(36), at: Date.now() };
+  const a = { text, tone: ["info", "warn", "good", "emergency"].includes(tone) ? tone : "info", id: Date.now().toString(36), at: Date.now() };
   await db.putJSON(ANNOUNCE_KEY, a);
   return { ok: true, announcement: a };
 }

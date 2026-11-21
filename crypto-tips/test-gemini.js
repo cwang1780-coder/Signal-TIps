@@ -15,6 +15,14 @@ const mock = http.createServer(async (req, res) => {
   if ((mode === "busy" && req.url.includes("gemini-3.8-flash")) || mode === "allbusy") { res.writeHead(503, { "Content-Type": "application/json" }); return res.end(JSON.stringify({ error: { code: 503, message: "The model is overloaded. Please try again later.", status: "UNAVAILABLE" } })); }
   if (mode === "404" && req.url.includes("gemini-3.8-flash")) { res.writeHead(404, { "Content-Type": "application/json" }); return res.end(JSON.stringify({ error: { code: 404, message: "models/gemini-3.8-flash is not found", status: "NOT_FOUND" } })); }
   if (mode === "429") { res.writeHead(429, { "Content-Type": "application/json" }); return res.end(JSON.stringify({ error: { code: 429, message: "Resource exhausted", status: "RESOURCE_EXHAUSTED" } })); }
+  if (req.url.includes(":generateContent") && body.includes("second opinion")) {
+    const withSearch = Boolean(captured.body.tools?.length);
+    if (mode === "nosearch" && withSearch) { res.writeHead(429, { "Content-Type": "application/json" }); return res.end(JSON.stringify({ error: { code: 429, message: "Search quota", status: "RESOURCE_EXHAUSTED" } })); }
+    const review = { verdict: "hold", agreesWithSignal: false, confidence: "medium", summary: "Trend is up but news is shaky.", reasons: ["RSI 30", "ETF outflows"], risks: ["Breaks support"], news: ["Exchange hack rumour"] };
+    res.writeHead(200, { "Content-Type": "application/json" });
+    return res.end(JSON.stringify({ candidates: [{ content: { role: "model", parts: [{ text: "Here you go:\n```json\n" + JSON.stringify(review) + "\n```" }] }, finishReason: "STOP",
+      ...(withSearch ? { groundingMetadata: { groundingChunks: [{ web: { uri: "https://news.example/btc", title: "BTC news" } }] } } : {}) }] }));
+  }
   if (req.url.includes(":generateContent")) { res.writeHead(200, { "Content-Type": "application/json" }); return res.end(JSON.stringify({ candidates: [{ content: { role: "model", parts: [{ text: "OK" }] }, finishReason: "STOP" }] })); }
   res.writeHead(200, { "Content-Type": "text/event-stream" });
   if (mode === "slow" || (mode === "slowfirst" && req.url.includes("gemini-3.8-flash"))) return; // never answers: the app must move on by itself
@@ -77,6 +85,24 @@ const mock = http.createServer(async (req, res) => {
   await ai.ask({ question: "x", snapshot: {} }, (t) => (out += t));
   assert.strictEqual(out, "BTC looks **weak**.");
   assert.ok(captured.url.includes("gemini-9.1-flash:streamGenerateContent"), captured.url);
+
+  // AI second opinion: structured verdict, live search requested, sources returned
+  mode = "ok";
+  const snap = { timeframe: "1d", coins: { BTC: { action: "BUY", score: 2.5 } } };
+  let rv = await ai.review({ coin: "BTC", snapshot: snap });
+  assert.strictEqual(rv.verdict, "HOLD");
+  assert.strictEqual(rv.agreesWithSignal, false);
+  assert.strictEqual(rv.searched, true);
+  assert.deepStrictEqual(rv.sources, [{ title: "BTC news", url: "https://news.example/btc" }]);
+  assert.ok(JSON.stringify(captured.body.tools).includes("googleSearch") || JSON.stringify(captured.body.tools).includes("google_search"), JSON.stringify(captured.body.tools));
+  // Search not allowed (quota): still reviews, without search
+  mode = "nosearch";
+  rv = await ai.review({ coin: "BTC", snapshot: snap });
+  assert.strictEqual(rv.searched, false);
+  assert.strictEqual(rv.verdict, "HOLD");
+  await assert.rejects(ai.review({ coin: "ETH", snapshot: snap }), /No signal/);
+  // Ask AI is told not to contradict the signal silently
+  assert.ok(/Never contradict the app's signal silently/.test(ai.SYSTEM));
 
   // Diagnostics page: each step reported with timings, key never shown
   mode = "ok";

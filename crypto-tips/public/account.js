@@ -276,6 +276,8 @@
   window.onSiteConfig = (c) => { cfg = c; renderPanel(); renderProBox(); renderAnnouncement(c.announcement); };
   // Site announcement from the admin panel, until the visitor closes it
   function renderAnnouncement(a) {
+    renderEmergency(a?.tone === "emergency" ? a : null);
+    if (a?.tone === "emergency") a = null; // shown full screen instead of as a banner
     const el = $("announce");
     if (!el) return;
     const hidden = !a || store.get("announceClosed", "") === a.id;
@@ -284,6 +286,25 @@
     el.className = "announce a-" + (a.tone || "info");
     el.innerHTML = `<span>${esc(a.text)}</span><button class="x" aria-label="Close" data-announce-close="${esc(a.id)}">✕</button>`;
   }
+  // Emergency: the whole screen turns red with giant text until the visitor taps "I understand"
+  function renderEmergency(a) {
+    let el = $("emergency");
+    if (!a || store.get("emergencySeen", "") === a.id) { if (el) el.remove(); document.body.classList.remove("emergency-on"); return; }
+    if (!el) { el = document.createElement("div"); el.id = "emergency"; el.setAttribute("role", "alertdialog"); el.setAttribute("aria-modal", "true"); document.body.appendChild(el); }
+    if (el.dataset.id === a.id) return;
+    el.dataset.id = a.id;
+    el.innerHTML = `<div class="em-inner"><div class="em-tag">⚠ Important</div><h1>${esc(a.text)}</h1>
+      <p class="em-time">From the Signal Tips team · ${new Date(a.at).toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}</p>
+      <button data-emergency-ok="${esc(a.id)}">I understand</button></div>`;
+    document.body.classList.add("emergency-on");
+    try { navigator.vibrate?.([200, 100, 200]); } catch {}
+  }
+  setInterval(() => {
+    if (document.hidden) return;
+    fetch("/api/config").then((r) => (r.ok ? r.json() : null)).then((c) => c && renderAnnouncement(c.announcement)).catch(() => {});
+  }, 60_000);
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) fetch("/api/config").then((r) => (r.ok ? r.json() : null)).then((c) => c && renderAnnouncement(c.announcement)).catch(() => {}); });
+  document.addEventListener("click", (e) => { const ok = e.target.closest("[data-emergency-ok]"); if (ok) { store.set("emergencySeen", ok.dataset.emergencyOk); renderEmergency(null); } });
   document.addEventListener("click", (e) => { const b = e.target.closest("[data-announce-close]"); if (b) { store.set("announceClosed", b.dataset.announceClose); $("announce").hidden = true; } });
   window.refreshPro = load;
   if (location.protocol !== "file:") load(); else setUser(null);

@@ -361,6 +361,7 @@ function renderDetail() {
           <p>${PLAIN[r.action]}</p>
           <span class="muted small">Score ${r.score > 0 ? "+" : ""}${r.score.toFixed(1)} · <button class="linkbtn" data-dtab="score">See why</button></span>
         </div>
+        ${window.reviewBoxHtml?.(selected) || ""}
         ${window.ownBoxHtml?.(selected) || ""}
         <div class="side-box act-box">
           ${siteConfig.coinbaseRef

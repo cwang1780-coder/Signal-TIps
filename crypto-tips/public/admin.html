@@ -158,9 +158,11 @@
   function renderAnnounce() {
     const a = data?.announcement;
     show(`<div class="card"><h2>Site announcement</h2>
-      <p class="muted small">A banner at the top of the site for every visitor, until they close it. Good for "we're fixing the AI", new features or downtime. Visitors see it within a minute.</p>
+      <p class="muted small">A banner at the top of the site for every visitor, until they close it. Good for "we're fixing the AI", new features or downtime. Visitors see it within a minute, even if the site is already open.</p>
+      <p class="muted small"><b>Emergency</b> turns every visitor's whole screen bright red with giant text (for example "Do not click links in DMs: scammers are pretending to be us") until they tap "I understand". Keep it short and use it only for real emergencies.</p>
       <textarea id="atext" maxlength="280" placeholder="e.g. New: connect your wallet under My coins to get a sell plan for each coin.">${esc(a?.text || "")}</textarea>
-      <div class="row section"><select id="atone">${[["info", "Info (blue)"], ["good", "Good news (green)"], ["warn", "Warning (orange)"]].map(([v, t]) => `<option value="${v}"${a?.tone === v ? " selected" : ""}>${t}</option>`).join("")}</select>
+      <div class="row section"><select id="atone">${[["info", "Info (blue)"], ["good", "Good news (green)"], ["warn", "Warning (orange)"], ["emergency", "🚨 EMERGENCY: whole screen red"]].map(([v, t]) => `<option value="${v}"${a?.tone === v ? " selected" : ""}>${t}</option>`).join("")}</select>
+        <label class="small"><input type="checkbox" id="apush" /> Also send it as a push notification</label>
         <button class="b primary" id="asave">Publish</button>${a ? '<button class="b danger" id="aclear">Remove banner</button>' : ""}</div>
       ${flashHtml()}</div>`);
   }
@@ -223,8 +225,14 @@
         return renderUsers();
       }
       if (btn.id === "asave" || btn.id === "aclear") {
+        if (btn.id === "asave" && $("atone").value === "emergency" && !confirm("Turn every visitor's screen red with this message?")) return;
         const r = await api("announce", btn.id === "aclear" ? { text: "" } : { text: $("atext").value, tone: $("atone").value });
-        data.announcement = r.announcement; flash = { html: r.announcement ? "Published. Visitors will see it within a minute." : "Banner removed." };
+        let extra = "";
+        if (r.announcement && $("apush")?.checked) {
+          try { const p = await api("broadcast", { title: r.announcement.tone === "emergency" ? "⚠ Important" : "Signal Tips", body: r.announcement.text }); extra = ` Push sent to ${p.sent} device${p.sent === 1 ? "" : "s"}.`; }
+          catch (pe) { extra = " Push not sent: " + esc(pe.message); }
+        }
+        data.announcement = r.announcement; flash = { html: (r.announcement ? (r.announcement.tone === "emergency" ? "Emergency screen is live. Visitors will see it within a minute." : "Published. Visitors will see it within a minute.") : "Removed.") + extra };
         return renderAnnounce();
       }
       if (btn.id === "nsend") {

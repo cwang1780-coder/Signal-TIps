@@ -93,6 +93,8 @@ let boss;
   assert.strictEqual(r.body.announcement.text, "New: wallet sell plans!");
   let cfgOut; await configHandler({ headers: {} }, { writeHead() {}, end: (b) => (cfgOut = JSON.parse(b)) });
   assert.strictEqual(cfgOut.announcement.tone, "good");
+  r = await admin("announce", { text: "Scam DMs going around", tone: "emergency" });
+  assert.strictEqual(r.body.announcement.tone, "emergency");
   await admin("announce", { text: "" });
   await configHandler({ headers: {} }, { writeHead() {}, end: (b) => (cfgOut = JSON.parse(b)) });
   assert.strictEqual(cfgOut.announcement, null);
