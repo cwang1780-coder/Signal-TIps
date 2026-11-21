@@ -115,13 +115,13 @@ async function askHandler(req, res) {
   res.writeHead(200, { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store", "X-Accel-Buffering": "no" });
   // Hard deadline for the whole answer, wherever it gets stuck, so the reply is never blank (the server stops at 60 s)
   let finished = false, wrote = false;
-  const deadline = new Promise((resolve) => setTimeout(() => resolve("deadline"), +process.env.ASK_DEADLINE_MS || 40_000));
+  const deadline = new Promise((resolve) => setTimeout(() => resolve("deadline"), +process.env.ASK_DEADLINE_MS || 50_000));
   try {
     const result = await Promise.race([ai.ask(input, (text) => { if (!finished) { wrote = true; res.write(text); } }), deadline]);
     if (result === "deadline") {
       finished = true;
       console.error("[ai] deadline reached; wrote anything:", wrote);
-      res.write(wrote ? "\n\n_(Stopped: the AI took too long to finish.)_" : "⚠️ The AI took too long to start answering. Try again in a moment.");
+      res.write(wrote ? "\n\n_(Stopped: the AI took too long to finish.)_" : ai.quickAnswer(input)); // never leave them with nothing
       return res.end();
     }
     finished = true;
@@ -130,7 +130,9 @@ async function askHandler(req, res) {
   } catch (e) {
     finished = true;
     console.error("[ai]", e.message);
-    res.write("\n\n⚠️ " + ai.friendlyError(e));
+    // Busy or over the free limit: answer from the app's own data. Setup problems (bad key...): say what's wrong.
+    if ([429, 500, 502, 503, 504].includes(e?.status) && !wrote) res.write(ai.quickAnswer(input));
+    else res.write("\n\n⚠️ " + ai.friendlyError(e));
   }
   res.end();
 }

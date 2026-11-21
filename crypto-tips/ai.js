@@ -62,8 +62,8 @@ async function askGemini({ question, history, snapshot }, onText) {
   const { GoogleGenAI } = require("@google/genai");
   if (!gemini) gemini = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY, ...(process.env.GEMINI_BASE_URL ? { httpOptions: { baseUrl: process.env.GEMINI_BASE_URL } } : {}) });
   const contents = buildMessages({ question, history, snapshot }).map((m) => ({ role: m.role === "assistant" ? "model" : "user", parts: [{ text: m.content }] }));
-  const total = +process.env.GEMINI_TIMEOUT_MS || 38_000;      // the whole answer (the handler's deadline is 40 s)
-  const firstWord = +process.env.GEMINI_FIRST_MS || 12_000;    // each try must start answering within this, or we move on
+  const total = +process.env.GEMINI_TIMEOUT_MS || 40_000;      // the whole answer (the handler's deadline is 50 s)
+  const firstWord = +process.env.GEMINI_FIRST_MS || 14_000;    // each try must start answering within this, or we move on
   const t0 = Date.now(), left = () => total - (Date.now() - t0);
   let thinking = { thinkingLevel: "MINIMAL" }; // fastest start; dropped if a model doesn't accept it
   let model = geminiModel || GEMINI_MODEL;
@@ -114,9 +114,20 @@ async function askGemini({ question, history, snapshot }, onText) {
     }
   }
   if (!any && !finish) {
-    if (lastErr && !busy(lastErr) && !(lastErr.name === "AbortError" || /abort/i.test(lastErr.message || ""))) throw lastErr;
-    onText("Google's AI is very busy right now and didn't answer in time (we tried " + (tried.size || 1) + " model" + (tried.size > 1 ? "s" : "") + "). Try again in a minute.");
-    return { stopReason: "timeout" };
+    const quiet = !lastErr || busy(lastErr) || lastErr.status === 429 || lastErr.name === "AbortError" || /abort/i.test(lastErr.message || "");
+    if (!quiet) throw lastErr; // a setup problem (bad key etc.): show it
+    // Backup 1: one plain (non-streaming) request to the lightest Flash model, which is usually the least busy
+    const lite = (await flashModels().catch(() => [])).find((n) => n.endsWith("-lite") && !tried.has(n)) || (await flashModels().catch(() => [])).find((n) => !tried.has(n));
+    if (lite && left() > 4000) {
+      const ctl = new AbortController(), cap = setTimeout(() => ctl.abort(), Math.min(left() - 1000, 12_000));
+      try {
+        const r = await gemini.models.generateContent({ model: lite, contents, config: { systemInstruction: SYSTEM, maxOutputTokens: 4096, abortSignal: ctl.signal } });
+        if (r.text) { onText(r.text); return { stopReason: "backup" }; }
+      } catch {} finally { clearTimeout(cap); }
+    }
+    // Backup 2 (can't fail): answer from the app's own data
+    onText(quickAnswer({ question, snapshot }));
+    return { stopReason: "quick" };
   }
   if (blocked || finish === "SAFETY" || finish === "PROHIBITED_CONTENT") onText("\n\n_The AI declined to answer this one. Try rephrasing the question._");
   else if (finish === "MAX_TOKENS") onText("\n\n_(Answer cut off — try a narrower question.)_");
@@ -168,6 +179,39 @@ async function ask({ question, history, snapshot }, onText) {
   if (final.stop_reason === "refusal") onText("\n\n_The AI declined to answer this one. Try rephrasing the question._");
   else if (final.stop_reason === "max_tokens") onText("\n\n_(Answer cut off — try a narrower question.)_");
   return { stopReason: final.stop_reason };
+}
+
+// ── Quick answer from the app's own data, for when the AI service doesn't answer in time ──
+// Not AI: it reads the same snapshot (signals, reasons, sell plans) and says what the app's own rules say.
+function quickAnswer({ question, snapshot }) {
+  const s = snapshot || {}, coins = s.coins || {}, q = String(question || "").toUpperCase();
+  const f = (x) => (x == null ? "?" : "$" + (x >= 1 ? (+x).toLocaleString("en-US", { maximumFractionDigits: 2 }) : (+x).toPrecision(4)));
+  const mentioned = Object.keys(coins).filter((c) => new RegExp(`\\b${c}\\b`).test(q));
+  const plans = Array.isArray(s.sellPlans) ? s.sellPlans : [];
+  const out = ["_The AI service is busy, so here's a quick answer from the app's own signals and rules (not AI):_", ""];
+  const coinLine = (c) => {
+    const r = coins[c];
+    if (!r || r.error) return `- **${c}**: no data right now.`;
+    const why = (r.reasons || []).slice(0, 2).map((x) => String(x).replace(/^[+-]?[\d.]+:\s*/, "")).join("; ");
+    return `- **${c}** ${f(r.price)} (${r.change24hPct >= 0 ? "+" : ""}${r.change24hPct}% today): signal **${r.action}**, score ${r.score}. ${why}.`;
+  };
+  const wantsPortfolio = /\b(MY|WALLET|HOLD|PORTFOLIO|OWN|SELL)\b/.test(q) && plans.length;
+  if (mentioned.length) mentioned.slice(0, 4).forEach((c) => out.push(coinLine(c)));
+  if (wantsPortfolio || (!mentioned.length && plans.length)) {
+    out.push(mentioned.length ? "" : "**Your coins:**");
+    plans.filter((p) => typeof p.plan === "object").sort((a, b) => (b.valueUSD || 0) - (a.valueUSD || 0)).slice(0, 6).forEach((p) =>
+      out.push(`- **${p.coin}**${p.valueUSD ? ` (${f(p.valueUSD)})` : ""}: ${p.plan.advice}. Take profit near ${f(p.plan.takeProfitNearUSD)}, sell if it drops to ${f(p.plan.sellIfItDropsToUSD)}.${p.gainPct != null ? ` You're ${p.gainPct >= 0 ? "up" : "down"} ${Math.abs(p.gainPct)}%.` : ""}`));
+  }
+  if (!mentioned.length && !plans.length) {
+    const sel = s.selectedCoin && coins[s.selectedCoin] ? [s.selectedCoin] : [];
+    const ranked = Object.entries(coins).filter(([, r]) => r && !r.error && r.action).sort((a, b) => b[1].score - a[1].score);
+    (sel.length ? sel : ranked.slice(0, 3).map(([c]) => c)).forEach((c) => out.push(coinLine(c)));
+    if (!sel.length && ranked.length) out.push("", `Strongest signal right now: **${ranked[0][0]}** (${ranked[0][1].action}). Weakest: **${ranked[ranked.length - 1][0]}** (${ranked[ranked.length - 1][1].action}).`);
+  }
+  const fg = s.research?.fearGreed;
+  if (fg?.value != null) out.push("", `Market mood: ${fg.value}/100 (${fg.label}).`);
+  out.push("", "Ask again in a minute for a full AI answer. Not financial advice.");
+  return out.join("\n");
 }
 
 // ── AI second opinion on one coin's signal ──
@@ -294,4 +338,4 @@ function friendlyError(e) {
   return "AI request failed: " + (e?.message || e);
 }
 
-module.exports = { ask, review, diagnose, buildMessages, friendlyError, hasCredentials, provider, SYSTEM, MODEL, GEMINI_MODEL };
+module.exports = { ask, review, diagnose, quickAnswer, buildMessages, friendlyError, hasCredentials, provider, SYSTEM, MODEL, GEMINI_MODEL };

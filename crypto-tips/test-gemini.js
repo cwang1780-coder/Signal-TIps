@@ -52,7 +52,7 @@ const mock = http.createServer(async (req, res) => {
   mode = "slow"; out = ""; process.env.GEMINI_TIMEOUT_MS = "300";
   const t0 = Date.now();
   await ai.ask({ question: "x", snapshot: {} }, (t) => (out += t));
-  assert.ok(Date.now() - t0 < 5000 && /didn't answer in time/.test(out), "a stuck answer is cut off: " + out);
+  assert.ok(Date.now() - t0 < 5000 && /quick answer/.test(out), "a stuck answer falls back to a quick answer: " + out);
   delete process.env.GEMINI_TIMEOUT_MS;
 
   // The first model hangs: after the first-word limit it moves to another model, which answers
@@ -75,7 +75,7 @@ const mock = http.createServer(async (req, res) => {
   // Everything busy: a clear message, not "error 503"
   mode = "allbusy"; out = "";
   await ai.ask({ question: "x", snapshot: {} }, (t) => (out += t));
-  assert.ok(/very busy right now/.test(out), out);
+  assert.ok(/quick answer from the app/.test(out), out); // never "busy, try again": a quick answer from the app's data
 
   mode = "429";
   await assert.rejects(ai.ask({ question: "x", snapshot: {} }, () => {}), (e) => /free Gemini limit/.test(ai.friendlyError(e)));
