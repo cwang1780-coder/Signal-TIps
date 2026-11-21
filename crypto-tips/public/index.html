@@ -856,6 +856,13 @@
   .pl-dust { grid-column: 1 / -1; margin: 0; }
   .pl-empty { grid-column: 1 / -1; background: var(--alt); border-radius: 12px; padding: 14px; line-height: 1.5; }
   @media (max-width: 767px) { .pl-list { grid-template-columns: 1fr; } }
+
+  /* Site announcement (set in the admin panel) */
+  .announce { display: flex; align-items: center; gap: 10px; justify-content: center; padding: 10px 16px; font-size: 14px; font-weight: 500; text-align: center; }
+  .announce[hidden] { display: none; }
+  .announce.a-info { background: #e8efff; color: #0040c4; } .announce.a-good { background: #e6f4ec; color: var(--buy); } .announce.a-warn { background: #fff3dc; color: #8a5200; }
+  .announce .x { background: none; border: 0; min-height: 0; padding: 2px 6px; color: inherit; opacity: .7; cursor: pointer; }
+  .admin-link { font-weight: 600; margin-left: 6px; }
 </style>
 </head>
 <body>
@@ -879,6 +886,7 @@
 <!-- ───────── Pinned top: notice bar + header ───────── -->
 <div class="top" id="top">
   <div class="promo"><button class="linkbtn plain" data-open-help>Not financial advice: signals are automated and often wrong. See how they work →</button></div>
+  <div id="announce" class="announce" role="status" hidden></div>
   <header class="header">
     <a class="brand" href="#" data-go="signals" aria-label="Signal Tips home"><img src="icon.svg" alt="" width="40" height="40" /><span>Signal Tips</span></a>
     <div class="search" id="searchBox" role="search">

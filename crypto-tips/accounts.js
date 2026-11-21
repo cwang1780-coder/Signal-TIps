@@ -91,7 +91,7 @@ async function signup(email, password) {
   if (bad) throw err(400, bad);
   const id = emailId(email);
   if (await getUser(id) || ownerSeed(email)) throw err(409, "That name is already taken. Sign in instead.");
-  const u = { id, email, pw: hashPassword(password), created: Date.now(), trialEnds: null, subId: null, ai: null, prefs: null };
+  const u = { id, email, pw: hashPassword(password), created: Date.now(), lastLogin: Date.now(), trialEnds: null, subId: null, ai: null, prefs: null };
   await saveUser(u);
   return u;
 }

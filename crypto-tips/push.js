@@ -158,7 +158,7 @@ async function run({ force = false } = {}) {
 async function broadcast({ title, body }) {
   title = String(title || "").trim().slice(0, 80); body = String(body || "").trim().slice(0, 200);
   if (!title) throw Object.assign(new Error("Add a title."), { status: 400 });
-  if (!configured()) throw Object.assign(new Error("Push notifications aren't set up."), { status: 503 });
+  if (!configured()) throw Object.assign(new Error("Push notifications aren't set up on this site yet."), { status: 400 });
   const keys = await storage.listKeys("push/");
   let sent = 0, failed = 0, removed = 0;
   for (let i = 0; i < keys.length; i += 20) {

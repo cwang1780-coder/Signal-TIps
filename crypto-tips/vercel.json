@@ -25,6 +25,14 @@
     {
       "source": "/some-test/",
       "destination": "/draft.html"
+    },
+    {
+      "source": "/admin",
+      "destination": "/admin.html"
+    },
+    {
+      "source": "/admin/",
+      "destination": "/admin.html"
     }
   ],
   "crons": [

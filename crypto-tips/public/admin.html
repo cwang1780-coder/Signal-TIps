@@ -1,0 +1,275 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<meta name="robots" content="noindex" />
+<title>Admin · Signal Tips</title>
+<link rel="icon" href="/icon.svg" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  :root { --bg: #fff; --text: #0a0b0d; --dim: #5b616e; --alt: #eef0f3; --panel: #f7f8f9; --border: #e4e7eb; --accent: #0052ff; --buy: #098551; --sell: #cf202f; --warn: #9a5b00; }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 15px/1.5 Inter, system-ui, sans-serif; color: var(--text); background: var(--panel); }
+  header { position: sticky; top: 0; z-index: 5; background: #fff; border-bottom: 1px solid var(--border); padding: 12px 20px; display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+  header h1 { font-size: 18px; margin: 0; display: flex; align-items: center; gap: 8px; }
+  header nav { display: flex; gap: 4px; flex-wrap: wrap; margin-left: auto; }
+  header nav button { background: none; border: 0; font: inherit; font-weight: 600; padding: 8px 12px; border-radius: 999px; color: var(--dim); cursor: pointer; }
+  header nav button.on { background: #e8efff; color: var(--accent); }
+  main { max-width: 1180px; margin: 0 auto; padding: 20px 16px 60px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 12px; }
+  .card { background: #fff; border: 1px solid var(--border); border-radius: 14px; padding: 16px; }
+  .card h2 { font-size: 16px; margin: 0 0 10px; }
+  .stat b { display: block; font-size: 28px; font-weight: 700; letter-spacing: -.02em; }
+  .stat span { color: var(--dim); font-size: 13px; }
+  .section { margin-top: 18px; }
+  .muted { color: var(--dim); } .small { font-size: 13px; }
+  .pill { display: inline-block; padding: 2px 9px; border-radius: 999px; font-size: 12px; font-weight: 600; background: var(--alt); color: var(--dim); }
+  .p-owner { background: #1a1a2e; color: #fff; } .p-subscription { background: #e6f4ec; color: var(--buy); } .p-comp { background: #e8efff; color: var(--accent); }
+  .p-trial { background: #fff3dc; color: var(--warn); } .p-lapsed, .p-sus { background: #fdeaea; color: var(--sell); }
+  .svc { display: flex; justify-content: space-between; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--alt); } .svc:last-child { border: 0; }
+  .ok { color: var(--buy); font-weight: 600; } .off { color: var(--sell); font-weight: 600; }
+  button.b, a.b { font: inherit; font-weight: 600; border: 0; border-radius: 999px; padding: 8px 14px; background: var(--alt); color: var(--text); cursor: pointer; text-decoration: none; display: inline-block; }
+  button.b.primary { background: var(--accent); color: #fff; } button.b.danger { background: #fdeaea; color: var(--sell); }
+  button.b:disabled { opacity: .5; cursor: default; }
+  input, select, textarea { font: inherit; border: 1px solid var(--border); border-radius: 10px; padding: 8px 10px; background: #fff; color: var(--text); }
+  textarea { width: 100%; min-height: 70px; resize: vertical; }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th { text-align: left; font-size: 12px; color: var(--dim); font-weight: 600; padding: 8px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+  td { padding: 10px 8px; border-bottom: 1px solid var(--alt); vertical-align: top; }
+  tr.sel td { background: #f4f7ff; }
+  .tablewrap { overflow-x: auto; }
+  .detail { margin-top: 10px; background: var(--panel); border-radius: 12px; padding: 12px; }
+  .detail .row { margin-top: 8px; }
+  .msg { margin-top: 10px; padding: 10px 12px; border-radius: 10px; background: #e6f4ec; color: var(--buy); font-weight: 500; }
+  .msg.err { background: #fdeaea; color: var(--sell); }
+  .temp { font-family: ui-monospace, monospace; font-size: 16px; background: #fff; border: 1px dashed var(--border); padding: 6px 10px; border-radius: 8px; user-select: all; }
+  pre { white-space: pre-wrap; word-break: break-word; font-size: 12px; background: var(--panel); padding: 10px; border-radius: 10px; margin: 0; }
+  .gate { max-width: 440px; margin: 80px auto; text-align: center; }
+  .links a { display: block; padding: 8px 0; color: var(--accent); font-weight: 500; text-decoration: none; border-bottom: 1px solid var(--alt); }
+  @media (max-width: 640px) { .grid { grid-template-columns: repeat(2, 1fr); } .grid > .card:not(.stat) { grid-column: 1 / -1; } .stat b { font-size: 24px; } header nav { margin-left: 0; width: 100%; overflow-x: auto; flex-wrap: nowrap; } .hide-sm { display: none; } }
+</style>
+</head>
+<body>
+<header>
+  <h1><img src="/icon.svg" width="26" height="26" alt="" /> Admin</h1>
+  <a href="/" class="small muted">← Back to the site</a>
+  <nav id="tabs" hidden>
+    <button data-tab="overview" class="on">Overview</button>
+    <button data-tab="users">Users</button>
+    <button data-tab="announce">Announcement</button>
+    <button data-tab="notify">Notifications</button>
+    <button data-tab="tools">Tools</button>
+  </nav>
+</header>
+<main id="main"><p class="muted">Loading…</p></main>
+
+<script>
+(function () {
+  const $ = (id) => document.getElementById(id);
+  const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const when = (t) => (t ? new Date(t).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" }) : "–");
+  const ago = (t) => { if (!t) return "never"; const m = Math.round((Date.now() - t) / 60000); return m < 60 ? m + "m ago" : m < 1440 ? Math.round(m / 60) + "h ago" : Math.round(m / 1440) + "d ago"; };
+  const PLAN = { owner: "Owner", subscription: "Pro (paid)", comp: "Pro (free)", trial: "Trial", free: "Free", lapsed: "Lapsed", guest: "Guest" };
+  const planPill = (r) => `<span class="pill p-${esc(r.plan)}">${esc(PLAN[r.plan] || r.plan)}</span>${r.suspended ? ' <span class="pill p-sus">Suspended</span>' : ""}`;
+
+  async function api(op, body) {
+    const r = await fetch(`/api/account?action=admin&op=${op}`, body ? { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) } : {});
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) throw Object.assign(new Error(d.reason || "HTTP " + r.status), { status: r.status });
+    return d;
+  }
+
+  let tab = "overview", data = null, users = null, selected = null, flash = null;
+  const show = (html) => { $("main").innerHTML = html; };
+  const flashHtml = () => (flash ? `<div class="msg${flash.err ? " err" : ""}">${flash.html}</div>` : "");
+
+  // ── Overview ──
+  function renderOverview() {
+    const d = data, s = d.services, by = d.byPlan || {};
+    const svc = (name, on, note) => `<div class="svc"><span>${name}</span><span class="${on ? "ok" : "off"}">${on ? "On" : "Off"}${note ? ` <span class="muted small">${esc(note)}</span>` : ""}</span></div>`;
+    show(`
+      <div class="grid">
+        <div class="card stat"><b>${d.users}</b><span>accounts</span></div>
+        <div class="card stat"><b>${d.signups.last7d}</b><span>new in 7 days (${d.signups.last24h} today)</span></div>
+        <div class="card stat"><b>${d.activeLast7d}</b><span>signed in, last 7 days</span></div>
+        <div class="card stat"><b>${(by.subscription || 0) + (by.comp || 0) + (by.trial || 0)}</b><span>with Pro (${by.subscription || 0} paid · ${by.comp || 0} free · ${by.trial || 0} trial)</span></div>
+        <div class="card stat"><b>${d.aiQuestionsThisMonth}</b><span>AI questions this month</span></div>
+        <div class="card stat"><b>${d.push.devices}</b><span>devices with notifications</span></div>
+      </div>
+      <div class="grid section" style="grid-template-columns:repeat(auto-fill,minmax(320px,1fr))">
+        <div class="card"><h2>Services</h2>
+          ${svc("Account storage", s.storage)}
+          ${svc("Ask AI", s.ai, s.ai ? `${s.aiProvider === "gemini" ? "Gemini" : "Claude"} · ${s.aiModel}` : "add GEMINI_API_KEY in Vercel")}
+          ${svc("Payments (Stripe)", s.payments, s.payments ? "" : "add STRIPE_SECRET_KEY + STRIPE_PRICE_ID")}
+          ${svc("Web push notifications", s.webPush)}
+          ${svc("iPhone app notifications", s.iphonePush, s.iphonePush ? "" : "add APNS_* keys")}
+        </div>
+        <div class="card"><h2>Plans</h2>
+          ${Object.entries(by).map(([k, n]) => `<div class="svc"><span>${esc(PLAN[k] || k)}</span><b>${n}</b></div>`).join("") || '<p class="muted">No accounts yet.</p>'}
+          <p class="muted small" style="margin:10px 0 0">Signups in 30 days: ${d.signups.last30d}</p>
+        </div>
+        <div class="card"><h2>Coins people get notified about</h2>
+          ${d.push.topCoins.map((c) => `<div class="svc"><span>${esc(c.sym)}</span><span class="muted">${c.devices} device${c.devices > 1 ? "s" : ""}</span></div>`).join("") || '<p class="muted">Nobody has turned notifications on yet.</p>'}
+          <p class="muted small" style="margin:10px 0 0">Last sell-plan check: ${ago(d.push.lastCheck)} · ${d.push.iphoneApp} iPhone app · ${d.push.browsers} browser</p>
+        </div>
+      </div>
+      ${d.announcement ? `<div class="card section"><h2>Live announcement</h2><p style="margin:0">${esc(d.announcement.text)}</p><p class="muted small">Since ${ago(d.announcement.at)}</p></div>` : ""}`);
+  }
+
+  // ── Users ──
+  function renderUsers() {
+    const q = ($("uq")?.value || "").toLowerCase(), f = $("uf")?.value || "all";
+    const list = (users || []).filter((u) => (!q || u.name.toLowerCase().includes(q)) && (f === "all" || (f === "pro" ? u.pro : f === "suspended" ? u.suspended : u.plan === f)));
+    const sel = users?.find((u) => u.id === selected);
+    const detail = (u) => `<tr class="sel"><td colspan="6"><div class="detail">
+        <b>${esc(u.name)}</b> ${planPill(u)}
+        <div class="muted small">Joined ${when(u.created)} · last sign-in ${ago(u.lastLogin)} · ${u.aiUsed} AI questions this month${u.trialEnds ? ` · trial ${u.trialEnds > Date.now() ? "ends" : "ended"} ${when(u.trialEnds)}` : ""}${u.comp ? ` · free Pro ${u.comp.until ? "until " + when(u.comp.until) : "with no end date"}` : ""}${u.subscription ? " · has a Stripe subscription" : ""}</div>
+        ${u.owner ? '<p class="muted small" style="margin:8px 0 0">Owner accounts already have everything, and can\'t be suspended, deleted or have their password reset here.</p>' : `
+        <div class="row"><span class="small muted">Free Pro:</span>
+          <button class="b" data-act="grantPro" data-days="7">7 days</button><button class="b" data-act="grantPro" data-days="30">30 days</button>
+          <button class="b" data-act="grantPro" data-days="365">1 year</button><button class="b" data-act="grantPro" data-forever="1">Forever</button>
+          ${u.comp ? '<button class="b danger" data-act="revokePro">Remove free Pro</button>' : ""}</div>
+        <div class="row"><span class="small muted">Other:</span>
+          <button class="b" data-act="extendTrial" data-days="7">Extend trial 7 days</button>
+          <button class="b" data-act="resetAi">Reset AI questions</button>
+          <button class="b" data-act="resetPassword">Temporary password</button>
+          ${u.suspended ? '<button class="b" data-act="unsuspend">Unsuspend</button>' : '<button class="b danger" data-act="suspend">Suspend</button>'}
+          <button class="b danger" data-act="delete">Delete account</button></div>`}
+        ${flash ? flashHtml() : ""}
+      </div></td></tr>`;
+    show(`<div class="card">
+      <div class="row" style="justify-content:space-between"><h2 style="margin:0">Users <span class="muted small">(${list.length} of ${users?.length ?? 0})</span></h2>
+        <div class="row"><input id="uq" placeholder="Search name or email" value="${esc($("uq")?.value || "")}" />
+        <select id="uf">${[["all", "Everyone"], ["pro", "Has Pro"], ["subscription", "Paid"], ["comp", "Free Pro"], ["trial", "Trial"], ["free", "Free"], ["suspended", "Suspended"], ["owner", "Owners"]].map(([v, t]) => `<option value="${v}"${v === f ? " selected" : ""}>${t}</option>`).join("")}</select>
+        <button class="b" id="ureload">Refresh</button></div></div>
+      <div class="tablewrap section"><table>
+        <tr><th>Account</th><th>Plan</th><th class="hide-sm">Joined</th><th class="hide-sm">Last sign-in</th><th>AI this month</th><th></th></tr>
+        ${list.map((u) => `<tr><td><b>${esc(u.name)}</b></td><td>${planPill(u)}</td><td class="hide-sm">${when(u.created)}</td><td class="hide-sm">${ago(u.lastLogin)}</td><td>${u.aiUsed}</td>
+          <td><button class="b" data-open="${u.id}">${u.id === selected ? "Close" : "Manage"}</button></td></tr>${u.id === selected ? detail(u) : ""}`).join("") || `<tr><td colspan="6" class="muted">No matching accounts.</td></tr>`}
+      </table></div></div>`);
+    const uq = $("uq"); if (document.activeElement?.id !== "uq" && uq && uq.dataset.focus) uq.focus();
+  }
+
+  // ── Announcement ──
+  function renderAnnounce() {
+    const a = data?.announcement;
+    show(`<div class="card"><h2>Site announcement</h2>
+      <p class="muted small">A banner at the top of the site for every visitor, until they close it. Good for "we're fixing the AI", new features or downtime. Visitors see it within a minute.</p>
+      <textarea id="atext" maxlength="280" placeholder="e.g. New: connect your wallet under My coins to get a sell plan for each coin.">${esc(a?.text || "")}</textarea>
+      <div class="row section"><select id="atone">${[["info", "Info (blue)"], ["good", "Good news (green)"], ["warn", "Warning (orange)"]].map(([v, t]) => `<option value="${v}"${a?.tone === v ? " selected" : ""}>${t}</option>`).join("")}</select>
+        <button class="b primary" id="asave">Publish</button>${a ? '<button class="b danger" id="aclear">Remove banner</button>' : ""}</div>
+      ${flashHtml()}</div>`);
+  }
+
+  // ── Notifications ──
+  function renderNotify() {
+    show(`<div class="grid" style="grid-template-columns:repeat(auto-fill,minmax(340px,1fr))">
+      <div class="card"><h2>Send a notification to everyone</h2>
+        <p class="muted small">Goes to all ${data?.push.devices ?? 0} devices that turned notifications on. Use it sparingly: too many and people turn them off.</p>
+        <input id="ntitle" maxlength="80" placeholder="Title" style="width:100%" />
+        <textarea id="nbody" maxlength="200" placeholder="Message (optional)" style="margin-top:8px"></textarea>
+        <div class="row section"><button class="b primary" id="nsend">Send to everyone</button></div></div>
+      <div class="card"><h2>Sell-plan check</h2>
+        <p class="muted small">Runs automatically every 15 minutes. Run it now to check everyone's coins and send any due notifications.</p>
+        <p class="small">Last run: <b>${ago(data?.push.lastCheck)}</b></p>
+        <button class="b" id="nrun">Run the check now</button></div>
+    </div>${flashHtml()}`);
+  }
+
+  // ── Tools ──
+  function renderTools() {
+    show(`<div class="grid" style="grid-template-columns:repeat(auto-fill,minmax(320px,1fr))">
+      <div class="card"><h2>Check the AI</h2><p class="muted small">Runs a short test against the AI provider and shows each step with timings. Use it when Ask AI misbehaves.</p>
+        <button class="b primary" id="tdiag">Run AI check</button><div id="tdiagout" class="section"></div></div>
+      <div class="card links"><h2>Dashboards</h2>
+        <a href="https://vercel.com/dashboard" target="_blank" rel="noopener">Vercel: hosting, settings and keys ↗</a>
+        <a href="https://github.com/cwang1780-coder/Signal-TIps/actions" target="_blank" rel="noopener">GitHub Actions: iPhone builds and checks ↗</a>
+        <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">Google AI Studio: Gemini key and usage ↗</a>
+        <a href="https://console.anthropic.com" target="_blank" rel="noopener">Anthropic console: Claude key and billing ↗</a>
+        <a href="https://dashboard.stripe.com" target="_blank" rel="noopener">Stripe: payments and subscriptions ↗</a>
+        <a href="https://appstoreconnect.apple.com" target="_blank" rel="noopener">App Store Connect: iPhone app ↗</a>
+        <a href="/privacy.html" target="_blank">Privacy policy ↗</a>
+      </div></div>`);
+  }
+
+  const RENDER = { overview: renderOverview, users: renderUsers, announce: renderAnnounce, notify: renderNotify, tools: renderTools };
+  async function go(t) {
+    tab = t; flash = null;
+    document.querySelectorAll("#tabs button").forEach((b) => b.classList.toggle("on", b.dataset.tab === t));
+    if (t === "users" && !users) { show('<p class="muted">Loading accounts…</p>'); users = (await api("users")).users; }
+    RENDER[t]();
+  }
+
+  document.addEventListener("click", async (e) => {
+    const t = e.target.closest("[data-tab]"); if (t) return go(t.dataset.tab);
+    const o = e.target.closest("[data-open]"); if (o) { selected = selected === o.dataset.open ? null : o.dataset.open; flash = null; return renderUsers(); }
+    const btn = e.target.closest("button"); if (!btn) return;
+    try {
+      if (btn.id === "ureload") { users = (await api("users")).users; return renderUsers(); }
+      const act = btn.dataset.act;
+      if (act) {
+        const u = users.find((x) => x.id === selected);
+        const confirmMsg = { delete: `Delete ${u.name}'s account for good? This can't be undone.`, suspend: `Suspend ${u.name}? They'll be signed out and can't sign in.`, resetPassword: `Make a new temporary password for ${u.name}? Their current password stops working.` }[act];
+        if (confirmMsg && !confirm(confirmMsg)) return;
+        btn.disabled = true;
+        const r = await api("user", { id: u.id, action: act, days: btn.dataset.days, forever: Boolean(btn.dataset.forever) });
+        if (r.deleted) { users = users.filter((x) => x.id !== u.id); selected = null; }
+        else users = users.map((x) => (x.id === u.id ? r.user : x));
+        flash = { html: esc(r.note) + (r.tempPassword ? `<div class="row"><span class="temp">${esc(r.tempPassword)}</span><button class="b" onclick="navigator.clipboard.writeText('${esc(r.tempPassword)}')">Copy</button></div>` : "") };
+        return renderUsers();
+      }
+      if (btn.id === "asave" || btn.id === "aclear") {
+        const r = await api("announce", btn.id === "aclear" ? { text: "" } : { text: $("atext").value, tone: $("atone").value });
+        data.announcement = r.announcement; flash = { html: r.announcement ? "Published. Visitors will see it within a minute." : "Banner removed." };
+        return renderAnnounce();
+      }
+      if (btn.id === "nsend") {
+        const title = $("ntitle").value.trim();
+        if (!title) return $("ntitle").focus();
+        if (!confirm(`Send "${title}" to ${data.push.devices} devices?`)) return;
+        btn.disabled = true;
+        const r = await api("broadcast", { title, body: $("nbody").value });
+        flash = { html: `Sent to ${r.sent} device${r.sent === 1 ? "" : "s"}${r.failed ? `, ${r.failed} failed` : ""}${r.removed ? `, ${r.removed} no longer subscribed (removed)` : ""}.` };
+        return renderNotify();
+      }
+      if (btn.id === "nrun") {
+        btn.disabled = true; btn.textContent = "Checking…";
+        const r = await api("pushcheck", {});
+        data.push.lastCheck = Date.now();
+        flash = { html: r.ok ? `Checked ${r.subscriptions} devices and ${r.coins} coins. Sent ${r.sent} notification${r.sent === 1 ? "" : "s"}.` : esc(r.reason || "Not set up.") };
+        return renderNotify();
+      }
+      if (btn.id === "tdiag") {
+        btn.disabled = true; btn.textContent = "Running…";
+        const r = await api("diag");
+        $("tdiagout").innerHTML = `<p class="small">Provider: <b>${esc(r.provider)}</b> · model <b>${esc(r.model)}</b></p>` +
+          (r.steps || []).map((s) => `<div class="svc"><span>${s.ok ? "✓" : "✗"} ${esc(s.step)}</span><span class="muted small">${s.ms} ms</span></div>${s.ok ? (s.result ? `<pre>${esc(s.result)}</pre>` : "") : `<pre style="color:var(--sell)">${esc((s.status ? s.status + ": " : "") + s.error)}</pre>`}`).join("") +
+          (r.steps?.length ? "" : '<p class="muted small">No Gemini key set, so there was nothing to test.</p>');
+        btn.disabled = false; btn.textContent = "Run AI check again";
+      }
+    } catch (err) {
+      btn.disabled = false;
+      flash = { err: true, html: esc(err.message) };
+      RENDER[tab]();
+    }
+  });
+  document.addEventListener("input", (e) => { if (e.target.id === "uq") { e.target.dataset.focus = "1"; const pos = e.target.selectionStart; renderUsers(); const n = $("uq"); n.focus(); n.setSelectionRange(pos, pos); } });
+  document.addEventListener("change", (e) => { if (e.target.id === "uf") renderUsers(); });
+
+  (async () => {
+    try {
+      data = await api("overview");
+      $("tabs").hidden = false;
+      renderOverview();
+    } catch (e) {
+      show(`<div class="gate card"><h2>Owner accounts only</h2><p class="muted">${e.status === 401 ? "Sign in on the site with an owner account first, then come back here." : esc(e.message)}</p><a class="b primary" href="/?tab=me">Go to sign in</a></div>`);
+    }
+  })();
+})();
+</script>
+</body>
+</html>

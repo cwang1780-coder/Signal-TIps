@@ -11,6 +11,7 @@ const { getTrench, coinCandles } = require("./trench.js");
 const { getUpcoming, poolCandles } = require("./upcoming.js");
 const accounts = require("./accounts.js");
 const push = require("./push.js");
+const admin = require("./admin.js");
 
 const ON_VERCEL = Boolean(process.env.VERCEL);
 let cache = { at: 0, data: null };
@@ -324,6 +325,28 @@ async function accountHandler(req, res) {
     }
     if (action === "password") { const b = await readJson(req); await accounts.changePassword(u, b.current, b.next); return send(200, { ok: true }); }
     if (action === "delete") { const b = await readJson(req); await accounts.deleteAccount(u, b.password); return send(200, { ok: true }, accounts.clearCookie(isHttps(req))); }
+
+    // Admin panel (owner accounts only). Reads are GET; changes are same-site JSON POSTs (checked above).
+    if (action === "admin") {
+      if ((await accounts.planOf(u)).kind !== "owner") return send(403, { reason: "Only owner accounts can open the admin panel." });
+      const op = new URL(req.url, "http://x").searchParams.get("op") || "overview";
+      if (req.method === "GET") {
+        if (op === "overview") return send(200, await admin.overview());
+        if (op === "users") return send(200, { users: await admin.users() });
+        if (op === "diag") return send(200, await ai.diagnose());
+        return send(400, { reason: "Unknown admin view" });
+      }
+      if (req.method !== "POST") return send(405, { reason: "POST only" });
+      const b = await readJson(req);
+      if (op === "user") {
+        if (b.id === u.id && ["suspend", "delete", "resetPassword"].includes(b.action)) return send(400, { reason: "You can't do that to your own account here." });
+        return send(200, await admin.userAction(b.id, b.action, b));
+      }
+      if (op === "announce") return send(200, await admin.setAnnouncement(b));
+      if (op === "broadcast") return send(200, await push.broadcast(b));
+      if (op === "pushcheck") return send(200, await push.run({ force: true }));
+      return send(400, { reason: "Unknown admin action" });
+    }
     return send(400, { reason: "Unknown action" });
   } catch (e) {
     if (!e.status || e.status >= 500) console.error("[account]", action, e.message);
@@ -343,9 +366,10 @@ async function configHandler(req, res) {
     try { proInfo = { enabled: true, price: await pro.getPrice(), monthlyLimit: pro.monthlyLimit() }; }
     catch (e) { console.error("[pro] price lookup failed:", e.message); }
   }
-  res.writeHead(200, { "Content-Type": "application/json", "Cache-Control": "public, max-age=300" });
+  res.writeHead(200, { "Content-Type": "application/json", "Cache-Control": "public, max-age=60" });
   res.end(JSON.stringify({ coinbaseRef: ref, pro: proInfo, fx: await getFx(), fxUpdated: fxCache.at || null,
     accounts: accounts.available(), trialDays: accounts.TRIAL_DAYS, aiConfigured: ai.hasCredentials(), freeTrench: FREE_TRENCH,
+    announcement: accounts.available() ? await admin.getAnnouncement().catch(() => null) : null,
     pushKey: accounts.available() && push.webConfigured() ? push.publicKey() : null, apnsPush: accounts.available() && push.apnsConfigured() }));
 }
 

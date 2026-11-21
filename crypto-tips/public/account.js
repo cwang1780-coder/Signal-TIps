@@ -129,7 +129,8 @@
 
   // ── Me tab: account panel ──
   function planLine(p) {
-    if (p.kind === "owner") return `<span class="plan-badge pro">Owner</span> Everything is unlocked for you.`;
+    if (p.kind === "owner") return `<span class="plan-badge pro">Owner</span> Everything is unlocked for you. <a href="/admin" class="admin-link">Open the admin panel →</a>`;
+    if (p.kind === "comp") return `<span class="plan-badge pro">Pro</span> ${p.until ? "Free until " + new Date(p.until).toLocaleDateString(undefined, { month: "short", day: "numeric" }) : "Free, courtesy of the site"}.`;
     if (p.kind === "trial") return `<span class="plan-badge pro">Pro trial</span> Ends ${new Date(p.until).toLocaleDateString(undefined, { month: "short", day: "numeric" })}.`;
     if (p.kind === "subscription") return `<span class="plan-badge pro">Pro</span> ${p.cancelAtPeriodEnd ? "Ends" : "Renews"} ${p.periodEnd ? new Date(p.periodEnd * 1000).toLocaleDateString(undefined, { month: "short", day: "numeric" }) : ""}.`;
     if (p.kind === "lapsed") return `<span class="plan-badge">Free</span> Your subscription is ${esc(String(p.status).replace("_", " "))}.`;
@@ -173,7 +174,7 @@
     const p = plan();
     box.hidden = false;
     if (p.pro) {
-      box.innerHTML = `<div class="proRow"><span><b>${icon("star")} ${p.kind === "trial" ? "Pro trial" : p.kind === "owner" ? "Owner" : "Pro"}</b> ${typeof p.aiLimit === "number" ? `· ${user.aiUsed} of ${p.aiLimit} AI questions used this month` : "· unlimited AI questions"}${cfg && !cfg.aiConfigured ? `<br><span class="muted">The AI isn't connected on this site yet (the site owner needs to add an Anthropic API key).</span>` : ""}</span></div>`;
+      box.innerHTML = `<div class="proRow"><span><b>${icon("star")} ${p.kind === "trial" ? "Pro trial" : p.kind === "owner" ? "Owner" : "Pro"}</b> ${typeof p.aiLimit === "number" ? `· ${user.aiUsed} of ${p.aiLimit} AI questions used this month` : "· unlimited AI questions"}${cfg && !cfg.aiConfigured ? `<br><span class="muted">The AI isn't connected on this site yet (the site owner needs to add an AI key).</span>` : ""}</span></div>`;
     } else {
       box.innerHTML = `<div class="proRow"><span><b>${icon("star")} Ask AI is part of Pro.</b><br><span class="muted">Try it free for ${cfg?.trialDays || 7} days, no card needed.</span></span>
         <span class="proBtns"><button class="primary" data-pw="${!user ? "signup" : !p.trialUsed ? "trial" : "show"}">${!user ? "Create free account" : !p.trialUsed ? "Start free trial" : "Go Pro"}</button></span></div>`;
@@ -272,7 +273,18 @@
     loaded = true;
     await handleReturn();
   }
-  window.onSiteConfig = (c) => { cfg = c; renderPanel(); renderProBox(); };
+  window.onSiteConfig = (c) => { cfg = c; renderPanel(); renderProBox(); renderAnnouncement(c.announcement); };
+  // Site announcement from the admin panel, until the visitor closes it
+  function renderAnnouncement(a) {
+    const el = $("announce");
+    if (!el) return;
+    const hidden = !a || store.get("announceClosed", "") === a.id;
+    el.hidden = hidden;
+    if (hidden) return;
+    el.className = "announce a-" + (a.tone || "info");
+    el.innerHTML = `<span>${esc(a.text)}</span><button class="x" aria-label="Close" data-announce-close="${esc(a.id)}">✕</button>`;
+  }
+  document.addEventListener("click", (e) => { const b = e.target.closest("[data-announce-close]"); if (b) { store.set("announceClosed", b.dataset.announceClose); $("announce").hidden = true; } });
   window.refreshPro = load;
   if (location.protocol !== "file:") load(); else setUser(null);
 
