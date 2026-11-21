@@ -2,9 +2,9 @@
 // - App files: network first (always the latest version), cached copy when offline.
 // - The page itself: network first, cached copy if offline.
 // - /api/* and anything from other sites: never cached here (always live).
-const CACHE = "signal-tips-v10";
+const CACHE = "signal-tips-v11";
 const SHELL = ["/", "/index.html", "/manifest.webmanifest", "/icon.svg", "/icon-192.png", "/icon-512.png", "/icons.js", "/currency.js", "/coins/list.js",
-  "/indicators.js", "/draw.js", "/app.js", "/extras.js", "/research.js", "/account.js", "/ai-chat.js", "/learn.js", "/wallets.js", "/trench-ui.js", "/sim.js", "/search.js", "/prochart.js", "/pcdraw.js", "/exodus.js", "/sellplan.js", "/position.js", "/review.js", "/predict.js", "/settings.js", "/market.js", "/cryptopay-ui.js", "/vendor/lightweight-charts.js"];
+  "/indicators.js", "/draw.js", "/app.js", "/extras.js", "/research.js", "/account.js", "/ai-chat.js", "/learn.js", "/wallets.js", "/trench-ui.js", "/sim.js", "/search.js", "/prochart.js", "/pcdraw.js", "/exodus.js", "/sellplan.js", "/position.js", "/review.js", "/predict.js", "/settings.js", "/market.js", "/vendor/qrcode.js", "/cryptopay-ui.js", "/vendor/lightweight-charts.js"];
 
 self.addEventListener("install", (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL)).catch(() => {}).then(() => self.skipWaiting()));

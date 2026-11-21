@@ -66,7 +66,7 @@
   function openAuth(m = "signup", why = "") {
     mode = m;
     const d = $("authDialog");
-    const social = ["google", "apple"].filter((p) => cfg?.oauth?.[p]);
+    const social = ["google", ...(cfg?.oauth?.apple ? ["apple"] : [])]; // Google always shows (it explains if it isn't switched on yet)
     d.innerHTML = `<form method="dialog" class="sheet auth" novalidate>
       <button type="button" class="x sheet-x" data-close-sheet aria-label="Close">✕</button>
       <h2>${mode === "signup" ? "Create your account" : "Sign in to Signal Tips"}</h2>
@@ -358,7 +358,7 @@
     g = document.createElement("div");
     g.id = "gate";
     const t = cfg?.trial || { freeDays: 3, depositDays: 7, depositUsd: 1 }, price = cfg?.cryptoPay?.priceUsd || 5;
-    const social = ["google", "apple"].filter((p) => cfg?.oauth?.[p]);
+    const social = ["google", ...(cfg?.oauth?.apple ? ["apple"] : [])]; // Google always shows (it explains if it isn't switched on yet)
     const row = (sym, name) => `<tr data-lsym="${sym}"><td><span class="lg-c">${window.coinIcon ? window.coinIcon(sym, 28) : ""}<b>${name}</b> <span class="lg-dim">${sym}</span></span></td><td class="lg-px">…</td><td class="lg-ch">…</td><td><button class="lg-trade" data-auth="signup">Get signal</button></td></tr>`;
     g.innerHTML = `
       <header class="lg-nav"><div class="lg-wrap">

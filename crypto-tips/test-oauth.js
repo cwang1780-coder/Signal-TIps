@@ -87,7 +87,7 @@ const fake = http.createServer(async (req, res) => {
   // Not set up: the buttons say so
   delete process.env.GOOGLE_CLIENT_ID;
   r = await call("/api/account?action=oauth&provider=google");
-  assert.ok(r.location.startsWith("/?authError="));
+  assert.ok(r.location.startsWith("/?authError=") && /coming soon/.test(decodeURIComponent(r.location)));
   fake.close();
   console.log("oauth tests passed");
 })().catch((e) => { console.error(e); process.exit(1); });

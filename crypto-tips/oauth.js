@@ -51,7 +51,7 @@ const stateCookie = (value, secure, maxAge = 600) =>
 
 function start(provider, origin, secure) {
   const p = PROVIDERS[provider];
-  if (!p?.on()) throw err(400, "That sign-in option isn't set up on this site yet.");
+  if (!p?.on()) throw err(400, `${provider === "apple" ? "Apple" : "Google"} sign-in is coming soon. Use your email for now.`);
   const state = crypto.randomBytes(18).toString("base64url");
   return { location: p.authUrl(redirectUri(origin, provider), state), cookie: stateCookie(`${provider}.${state}`, secure) };
 }

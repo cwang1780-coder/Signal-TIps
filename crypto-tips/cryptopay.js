@@ -75,7 +75,13 @@ async function quote(user, method, purpose = "pro") {
   const id = crypto.randomBytes(12).toString("hex");
   const inv = { id, user: user.id, method, purpose: purpose === "deposit" ? "deposit" : "pro", creditUsed: credit, address, units: units.toString(), amount: fmtUnits(units, m.decimals), usd, created: Date.now(), expires: Date.now() + 3 * 3600e3 };
   await db.putJSON(`cryptopay/invoices/${id}.json`, inv);
-  return { invoice: id, method, purpose: inv.purpose, label: m.label, network: m.network, asset: m.short, address, amount: inv.amount, usd, creditUsed: credit,
+  // A wallet link for the QR code (Solana Pay, BIP-21, EIP-681), pre-filling the address and exact amount
+  const uri = method === "usdc-sol" ? `solana:${address}?amount=${inv.amount}&spl-token=${USDC_SOL}&label=Signal%20Tips`
+    : method === "sol" ? `solana:${address}?amount=${inv.amount}&label=Signal%20Tips`
+    : method === "btc" ? `bitcoin:${address}?amount=${inv.amount}`
+    : method === "eth" ? `ethereum:${address}?value=${inv.units}`
+    : `ethereum:${USDC_ETH}/transfer?address=${address}&uint256=${inv.units}`;
+  return { invoice: id, method, purpose: inv.purpose, uri, label: m.label, network: m.network, asset: m.short, address, amount: inv.amount, usd, creditUsed: credit,
     days: inv.purpose === "deposit" ? DEPOSIT_TRIAL_DAYS : days(), expires: inv.expires, note: m.note || null };
 }
 

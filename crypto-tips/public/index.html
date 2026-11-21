@@ -1049,6 +1049,45 @@
   #bannedScreen h1 { font-size: clamp(32px, 6vw, 60px); line-height: 1.05; margin: 20px 0 8px; } #bannedScreen .bn-until { font-size: 22px; color: #f0616d; font-weight: 600; }
   #bannedScreen p { color: #c5cad3; } #bannedScreen .bn-small { font-size: 14px; color: #7d838e; margin-top: 18px; }
   #bannedScreen .em-tag { display: inline-block; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; border: 2px solid #f0616d; color: #f0616d; border-radius: 999px; padding: 6px 16px; }
+
+  /* Payment sheet v2: bold header, step tracker, QR code */
+  #authDialog:has(.cp2) { padding: 0; overflow: hidden; }
+  .cp2 { padding: 0 !important; max-width: 520px; overflow: hidden; }
+  .cp-hero { position: relative; color: #fff; padding: 24px 24px 18px; background: radial-gradient(500px 220px at 100% 0%, #6b8cff 0%, transparent 60%), linear-gradient(135deg, #0038d6 0%, #0052ff 45%, #3b2bd6 100%); }
+  .cp-hero .sheet-x { color: #fff; background: rgba(255,255,255,.16); }
+  .cp-kicker { font-size: 12px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; opacity: .85; }
+  .cp-price { display: flex; align-items: baseline; gap: 10px; margin-top: 6px; } .cp-price b { font-size: 46px; letter-spacing: -.03em; line-height: 1; } .cp-price span { font-size: 17px; opacity: .9; }
+  .cp-hero-note { margin: 6px 0 0; font-size: 14px; opacity: .85; }
+  .cp-steps { list-style: none; display: flex; gap: 6px; margin: 16px 0 0; padding: 0; }
+  .cp-steps li { flex: 1; display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; opacity: .6; }
+  .cp-steps li i { font-style: normal; width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; background: rgba(255,255,255,.18); font-size: 12px; flex: none; }
+  .cp-steps li.on, .cp-steps li.done { opacity: 1; } .cp-steps li.on i { background: #fff; color: #0052ff; } .cp-steps li.done i { background: #27ad75; }
+  .cp-body { padding: 18px 22px 22px; display: grid; gap: 12px; }
+  .cp-lead { margin: 0; color: var(--dim); }
+  .cp2 .cp-methods { display: grid; gap: 10px; margin: 0; }
+  .cp2 .cp-m { display: flex; flex-direction: row; align-items: center; justify-content: flex-start; gap: 12px; text-align: left; width: 100%; padding: 14px 16px; border-radius: 16px; background: var(--card); border: 1.5px solid var(--border); cursor: pointer; transition: border-color .15s, transform .15s, box-shadow .15s; }
+  .cp2 .cp-m:hover { border-color: var(--accent); transform: translateY(-1px); box-shadow: 0 6px 18px rgba(0,82,255,.14); }
+  .cp2 .cp-m.best { border-color: var(--accent); background: var(--accent-bg); }
+  .cp-m-ic { position: relative; flex: none; } .cp-net { position: absolute; right: -4px; bottom: -4px; border-radius: 50%; box-shadow: 0 0 0 2px var(--card); display: flex; }
+  .cp-m-txt { display: grid; gap: 2px; flex: 1; min-width: 0; } .cp-m-txt b { font-size: 16px; } .cp-m-txt span { font-size: 13px; color: var(--dim); }
+  .cp-best { font-style: normal; font-size: 11px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: #fff; background: var(--accent); border-radius: 999px; padding: 4px 10px; }
+  .cp-arrow { font-size: 24px; color: var(--dim); }
+  .cp-fine { margin: 0; font-size: 13px; color: var(--dim); text-align: center; }
+  .cp-sendgrid { display: grid; grid-template-columns: 170px 1fr; gap: 16px; align-items: start; }
+  .cp-qr { background: #fff; border-radius: 16px; padding: 8px; border: 1px solid var(--border); display: grid; gap: 4px; justify-items: center; }
+  .cp-qr svg { width: 152px; height: 152px; display: block; } .cp-qr span { font-size: 11px; color: #5b616e; }
+  .cp-sendinfo { display: grid; gap: 6px; min-width: 0; }
+  .cp-label { font-size: 12px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--dim); }
+  .cp-amount2 { display: flex; align-items: center; gap: 8px; } .cp-amount2 b { font-size: 26px; letter-spacing: -.02em; word-break: break-all; } .cp-amount2 > span:last-child { font-weight: 700; color: var(--dim); }
+  .cp-addr2 { font-size: 13px; word-break: break-all; background: var(--alt); padding: 8px 10px; border-radius: 10px; }
+  .cp-copy { justify-self: start; font: inherit; font-weight: 600; font-size: 13px; padding: 6px 12px; min-height: 0; border-radius: 999px; border: 1px solid var(--line); background: var(--card); color: var(--text); cursor: pointer; margin-bottom: 4px; }
+  .cp-alert { background: var(--warn-bg); color: var(--hold-text); border-radius: 12px; padding: 10px 12px; font-size: 13px; line-height: 1.45; }
+  .cp2 .cp-check label { font-size: 14px; } .cp2 .cp-check input { padding: 12px 14px; border-radius: 12px; border: 1px solid var(--line); font: inherit; }
+  .cp-go { font: inherit; font-weight: 700; font-size: 16px; border: 0; border-radius: 999px; padding: 15px; color: #fff; background: linear-gradient(135deg, #0052ff, #3b2bd6); cursor: pointer; box-shadow: 0 8px 20px rgba(0,82,255,.3); width: 100%; }
+  .cp-go:disabled { opacity: .6; }
+  .cp-done { text-align: center; display: grid; gap: 10px; justify-items: center; } .cp-tick { width: 64px; height: 64px; border-radius: 50%; background: #27ad75; color: #fff; font-size: 34px; display: grid; place-items: center; }
+  .cp-done h2 { margin: 0; }
+  @media (max-width: 520px) { .cp-sendgrid { grid-template-columns: 1fr; } .cp-qr { justify-self: center; } .cp-price b { font-size: 38px; } .cp-steps li span { display: none; } }
 </style>
 <script>try { if (!localStorage.getItem("seenSignedIn")) { document.documentElement.classList.add("gate-wait"); setTimeout(() => document.documentElement.classList.remove("gate-wait"), 4000); } } catch {}</script>
 <script>try { var t = JSON.parse(localStorage.getItem("theme") || '"dark"'); if (t === "system") t = matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"; document.documentElement.dataset.theme = t; var st = JSON.parse(localStorage.getItem("settings") || "{}"); if (st.reduceMotion) document.documentElement.classList.add("reduce-motion"); } catch (e) { document.documentElement.dataset.theme = "dark"; }</script>
@@ -1509,6 +1548,7 @@
 <script src="wallets.js"></script>
 <script src="trench-ui.js"></script>
 <script src="position.js"></script>
+<script src="vendor/qrcode.js"></script>
 <script src="cryptopay-ui.js"></script>
 <script src="sim.js"></script>
 <script src="search.js"></script>

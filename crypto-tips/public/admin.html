@@ -52,6 +52,26 @@
   .info-grid > div { display: grid; gap: 2px; }
   .info-sec { margin-top: 12px; } .chips { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
   table.mini { margin-top: 4px; font-size: 13px; } table.mini td, table.mini th { padding: 4px 8px; }
+  /* Moderation */
+  .mod { margin-top: 12px; border: 1px solid #f0c9cd; background: linear-gradient(180deg, #fff7f7, #fff); border-radius: 14px; padding: 14px 16px; display: grid; gap: 12px; }
+  .mod-head { display: flex; align-items: center; gap: 12px; } .mod-head > div { display: grid; flex: 1; } .mod-head b { font-size: 16px; } .mod-head span { font-size: 13px; color: var(--dim); }
+  .mod-icon { font-size: 22px; width: 40px; height: 40px; border-radius: 12px; background: #fdeaea; display: grid; place-items: center; }
+  .mod-field { display: grid; gap: 6px; } .mod-field > span { font-size: 12px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--dim); }
+  .mod-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip { font: inherit; font-size: 13px; font-weight: 600; border: 1px solid var(--border); background: #fff; border-radius: 999px; padding: 6px 12px; cursor: pointer; }
+  .chip:hover { border-color: #c9a0a5; } .chip.on { background: #1a1a2e; color: #fff; border-color: #1a1a2e; } .chip.perm.on { background: var(--sell); border-color: var(--sell); }
+  .chip-input { width: 120px; border-radius: 999px; padding: 6px 12px; font-size: 13px; }
+  .mod-note { width: 100%; }
+  .mod-toggle { display: flex; gap: 10px; align-items: flex-start; font-size: 13px; color: var(--dim); } .mod-toggle input { margin-top: 3px; } .mod-toggle b { color: var(--text); }
+  .mod-summary { font-size: 14px; background: #fff; border: 1px dashed #f0c9cd; border-radius: 10px; padding: 8px 12px; }
+  .b.mod-ban { background: var(--sell); color: #fff; justify-self: start; padding: 10px 22px; } .b.mod-ban.armed { background: #8f0f1c; box-shadow: 0 0 0 3px #f6c2c8; }
+  .mod-banned { border-color: var(--sell); background: linear-gradient(180deg, #fdeaea, #fff); } .mod-banned .mod-icon { background: var(--sell); }
+  .mod-count { font-size: 13px; font-weight: 700; color: var(--sell); background: #fdeaea; border-radius: 999px; padding: 4px 10px; white-space: nowrap; } .mod-count.perm { background: #1a1a2e; color: #fff; }
+  .mod-reason { display: grid; gap: 2px; background: #fff; border-radius: 10px; padding: 8px 12px; border: 1px solid #f0c9cd; } .mod-reason span { font-size: 12px; color: var(--dim); }
+  .mod-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; } .b.mod-lift { background: #1a1a2e; color: #fff; }
+  .ban-list { display: grid; gap: 8px; } .ban-item { display: flex; align-items: center; gap: 12px; border: 1px solid var(--border); border-radius: 12px; padding: 10px 12px; }
+  .ban-item .avatar { width: 36px; height: 36px; border-radius: 50%; background: #fdeaea; color: var(--sell); display: grid; place-items: center; font-weight: 700; flex: none; }
+  .ban-who { display: grid; flex: 1; min-width: 0; }
   pre { white-space: pre-wrap; word-break: break-word; font-size: 12px; background: var(--panel); padding: 10px; border-radius: 10px; margin: 0; }
   .gate { max-width: 440px; margin: 80px auto; text-align: center; }
   .links a { display: block; padding: 8px 0; color: var(--accent); font-weight: 500; text-decoration: none; border-bottom: 1px solid var(--alt); }
@@ -148,10 +168,7 @@
           <button class="b" data-act="resetAi">Reset AI questions</button>
           <button class="b" data-act="resetPassword">Temporary password</button>
           <button class="b danger" data-act="delete">Delete account</button></div>
-        <div class="row ban-row">${u.suspended
-          ? `<span class="pill p-sus">Banned ${u.banUntil ? "until " + when(u.banUntil) : "with no end date"}</span>${u.banReason ? `<span class="small muted">Reason: ${esc(u.banReason)}</span>` : ""}<button class="b" data-act="unban">Unban</button>`
-          : `<span class="small muted">Ban:</span><input id="banDays" type="number" min="1" max="3650" placeholder="days (blank = forever)" style="width:190px" /><input id="banReason" maxlength="200" placeholder="Reason (shown to them)" style="flex:1;min-width:160px" />
-             <label class="small"><input type="checkbox" id="banIp" checked /> also ban their internet addresses</label><button class="b danger" data-act="ban">Ban</button>`}</div>`}
+        ${modHtml(u)}`}
         ${flash ? flashHtml() : ""}
       </div></td></tr>`;
     show(`<div class="card">
@@ -166,6 +183,32 @@
       </table></div></div>`);
     const uq = $("uq"); if (document.activeElement?.id !== "uq" && uq && uq.dataset.focus) uq.focus();
   }
+
+  // ── Moderation panel (ban / unban) ──
+  const BAN_DAYS = [[1, "24 hours"], [3, "3 days"], [7, "7 days"], [30, "30 days"], [0, "Permanent"]];
+  const BAN_REASONS = ["Spam", "Harassment", "Scam or fraud", "Payment dispute", "Bot or abuse", "Breaking the rules"];
+  let banDur = 7, banWhy = "Spam", banNote = "", banIp = true;
+  const left = (t) => { const ms = t - Date.now(); if (ms <= 0) return "ending now"; const d = Math.floor(ms / 864e5), h = Math.floor((ms % 864e5) / 36e5), m = Math.floor((ms % 36e5) / 6e4); return d ? `${d}d ${h}h left` : h ? `${h}h ${m}m left` : `${m}m left`; };
+  function modHtml(u) {
+    if (u.suspended) return `<div class="mod mod-banned">
+        <div class="mod-head"><span class="mod-icon">⛔</span><div><b>Banned</b><span>${u.banUntil ? `until ${new Date(u.banUntil).toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}` : "permanently"}</span></div>
+          ${u.banUntil ? `<span class="mod-count" data-count="${u.banUntil}">${left(u.banUntil)}</span>` : `<span class="mod-count perm">Permanent</span>`}</div>
+        ${u.banReason ? `<div class="mod-reason"><span>Reason shown to them</span><b>${esc(u.banReason)}</b></div>` : ""}
+        <div class="mod-actions"><button class="b mod-lift" data-act="unban">Lift ban</button><span class="small muted">Lifting also unblocks their internet addresses.</span></div></div>`;
+    const ipCount = (u.ips || []).length;
+    return `<div class="mod">
+      <div class="mod-head"><span class="mod-icon">🛡️</span><div><b>Moderation</b><span>Ban this account${ipCount ? " and where it signs in from" : ""}. They see the end date and your reason.</span></div></div>
+      <div class="mod-field"><span>Duration</span><div class="mod-chips">${BAN_DAYS.map(([d, t]) => `<button class="chip${banDur === d ? " on" : ""}${d === 0 ? " perm" : ""}" data-bandur="${d}">${t}</button>`).join("")}
+        <input id="banCustom" class="chip-input" type="number" min="1" max="3650" placeholder="Custom days" value="${BAN_DAYS.some(([d]) => d === banDur) ? "" : banDur}" /></div></div>
+      <div class="mod-field"><span>Reason</span><div class="mod-chips">${BAN_REASONS.map((r) => `<button class="chip${banWhy === r ? " on" : ""}" data-banwhy="${esc(r)}">${esc(r)}</button>`).join("")}</div>
+        <input id="banNote" class="mod-note" maxlength="150" placeholder="Add a note for them (optional)" value="${esc(banNote)}" /></div>
+      <label class="mod-toggle"><input type="checkbox" id="banIp" ${banIp ? "checked" : ""} /><span><b>Also block their internet address${ipCount === 1 ? "" : "es"}</b> ${ipCount ? `(${ipCount} seen recently: ${(u.ips || []).slice(0, 3).map((x) => esc(x.mask)).join(", ")})` : "(none recorded yet)"}. Stops new accounts from the same place.</span></label>
+      <div class="mod-summary">Ban <b>${esc(u.name)}</b> ${banDur ? `for <b>${banDur} day${banDur === 1 ? "" : "s"}</b> (until ${when(Date.now() + banDur * 864e5)})` : "<b>permanently</b>"} · reason: <b>${esc(banWhy)}${banNote ? ": " + esc(banNote) : ""}</b></div>
+      <button class="b mod-ban" data-act="ban">Ban user</button>
+    </div>`;
+  }
+  // Live countdowns on bans
+  setInterval(() => document.querySelectorAll("[data-count]").forEach((el) => (el.textContent = left(+el.dataset.count))), 30_000);
 
   // Everything we know about one account (activity, payments, and what they've set up on the site)
   function infoHtml(u) {
@@ -237,10 +280,23 @@
   // ── Bans by internet address ──
   let banList = null;
   function renderBans() {
-    show(`<div class="card"><h2>Banned internet addresses</h2>
-      <p class="muted small">Banning an account (Users → Manage → Ban) also bans the internet addresses it used in the last 30 days, so a new account from the same place is blocked too. Owners are never blocked. Addresses are stored as fingerprints and shown masked.</p>
-      ${banList?.length ? `<table><tr><th>Address</th><th>Account</th><th>Until</th><th>Reason</th><th></th></tr>${banList.map((b) => `<tr><td><code>${esc(b.mask || "hidden")}</code></td><td>${esc((users || []).find((u) => u.id === b.user)?.name || (b.user ? "deleted account" : "–"))}</td><td>${b.until ? when(b.until) : "forever"}</td><td class="small">${esc(b.reason || "")}</td><td><button class="b" data-unbanip="${esc(b.id)}">Lift</button></td></tr>`).join("")}</table>` : '<p class="muted">No banned addresses.</p>'}
-      ${flashHtml()}</div>`);
+    const banned = (users || []).filter((u) => u.suspended), soon = banned.filter((u) => u.banUntil && u.banUntil - Date.now() < 864e5).length;
+    show(`<div class="grid">
+        <div class="card stat"><b>${banned.length}</b><span>banned accounts</span></div>
+        <div class="card stat"><b>${banList?.length || 0}</b><span>blocked internet addresses</span></div>
+        <div class="card stat"><b>${banned.filter((u) => !u.banUntil).length}</b><span>permanent bans</span></div>
+        <div class="card stat"><b>${soon}</b><span>ending within 24 hours</span></div>
+      </div>
+      <div class="card section"><h2>Banned accounts</h2>
+        ${banned.length ? `<div class="ban-list">${banned.map((u) => `<div class="ban-item"><span class="avatar">${esc(u.name[0].toUpperCase())}</span>
+          <div class="ban-who"><b>${esc(u.name)}</b><span class="small muted">${esc(u.banReason || "No reason given")}</span></div>
+          ${u.banUntil ? `<span class="mod-count" data-count="${u.banUntil}">${left(u.banUntil)}</span>` : `<span class="mod-count perm">Permanent</span>`}
+          <button class="b" data-liftuser="${esc(u.id)}">Lift</button></div>`).join("")}</div>` : '<p class="muted">Nobody is banned. 🎉</p>'}
+      </div>
+      <div class="card section"><h2>Blocked internet addresses</h2>
+        <p class="muted small">Banning an account also blocks the addresses it used in the last 30 days, so a new account from the same place is refused. Owners are never blocked. Addresses are kept as fingerprints and shown masked.</p>
+        ${banList?.length ? `<table><tr><th>Address</th><th>Account</th><th>Ends</th><th>Reason</th><th></th></tr>${banList.map((b) => `<tr><td><code>${esc(b.mask || "hidden")}</code></td><td>${esc((users || []).find((u) => u.id === b.user)?.name || (b.user ? "deleted account" : "–"))}</td><td>${b.until ? `<span class="mod-count" data-count="${b.until}">${left(b.until)}</span>` : '<span class="mod-count perm">Permanent</span>'}</td><td class="small">${esc(b.reason || "")}</td><td><button class="b" data-unbanip="${esc(b.id)}">Lift</button></td></tr>`).join("")}</table>` : '<p class="muted">No blocked addresses.</p>'}
+      </div>${flashHtml()}`);
   }
   const RENDER = { bans: renderBans, overview: renderOverview, users: renderUsers, announce: renderAnnounce, notify: renderNotify, tools: renderTools };
   async function go(t) {
@@ -253,10 +309,13 @@
 
   document.addEventListener("click", async (e) => {
     const t = e.target.closest("[data-tab]"); if (t) return go(t.dataset.tab);
+    const bd = e.target.closest("[data-bandur]"); if (bd) { banDur = +bd.dataset.bandur; banNote = $("banNote")?.value || banNote; banIp = $("banIp")?.checked ?? banIp; return renderUsers(); }
+    const bw = e.target.closest("[data-banwhy]"); if (bw) { banWhy = bw.dataset.banwhy; banNote = $("banNote")?.value || banNote; banIp = $("banIp")?.checked ?? banIp; return renderUsers(); }
     const o = e.target.closest("[data-open]"); if (o) { selected = selected === o.dataset.open ? null : o.dataset.open; flash = null; return renderUsers(); }
     const btn = e.target.closest("button"); if (!btn) return;
     try {
       if (btn.id === "ureload") { users = (await api("users")).users; return renderUsers(); }
+      if (btn.dataset.liftuser) { await api("user", { id: btn.dataset.liftuser, action: "unban" }); users = (await api("users")).users; banList = (await api("bans")).bans; flash = { html: "Ban lifted." }; return renderBans(); }
       if (btn.dataset.unbanip) { await api("unbanip", { id: btn.dataset.unbanip }); banList = (await api("bans")).bans; flash = { html: "Ban lifted." }; return renderBans(); }
       const act = btn.dataset.act;
       if (act) {
@@ -265,10 +324,9 @@
         if (confirmMsg && !confirm(confirmMsg)) return;
         let extra = {};
         if (act === "ban") {
-          const days = $("banDays").value.trim(), reason = $("banReason").value.trim();
-          if (days && !(+days >= 1)) return $("banDays").focus();
-          if (!confirm(`Ban ${u.name} ${days ? "for " + days + " day" + (days === "1" ? "" : "s") : "with no end date"}${$("banIp").checked ? ", including their internet addresses" : ""}?`)) return;
-          extra = { days: days || 0, reason, ip: $("banIp").checked };
+          banNote = $("banNote").value.trim(); banIp = $("banIp").checked;
+          if (btn.dataset.armed !== "1") { btn.dataset.armed = "1"; btn.textContent = `Confirm: ban ${banDur ? "for " + banDur + " day" + (banDur === 1 ? "" : "s") : "permanently"}`; btn.classList.add("armed"); return; }
+          extra = { days: banDur, reason: banWhy + (banNote ? ": " + banNote : ""), ip: banIp };
         }
         btn.disabled = true;
         const r = await api("user", { id: u.id, action: act, days: btn.dataset.days, forever: Boolean(btn.dataset.forever), ...extra });
@@ -330,7 +388,10 @@
     }
   });
   document.addEventListener("input", (e) => { if (e.target.id === "uq") { e.target.dataset.focus = "1"; const pos = e.target.selectionStart; renderUsers(); const n = $("uq"); n.focus(); n.setSelectionRange(pos, pos); } });
-  document.addEventListener("change", (e) => { if (e.target.id === "uf") renderUsers(); });
+  document.addEventListener("change", (e) => {
+    if (e.target.id === "uf") renderUsers();
+    if (e.target.id === "banCustom" && +e.target.value >= 1) { banDur = Math.min(3650, Math.round(+e.target.value)); banNote = $("banNote")?.value || banNote; renderUsers(); }
+  });
 
   (async () => {
     try {
