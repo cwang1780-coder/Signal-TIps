@@ -14,6 +14,7 @@ const mock = http.createServer(async (req, res) => {
   captured = { url: req.url, headers: req.headers, body: JSON.parse(body) };
   if (mode === "404" && req.url.includes("gemini-3.8-flash")) { res.writeHead(404, { "Content-Type": "application/json" }); return res.end(JSON.stringify({ error: { code: 404, message: "models/gemini-3.8-flash is not found", status: "NOT_FOUND" } })); }
   if (mode === "429") { res.writeHead(429, { "Content-Type": "application/json" }); return res.end(JSON.stringify({ error: { code: 429, message: "Resource exhausted", status: "RESOURCE_EXHAUSTED" } })); }
+  if (req.url.includes(":generateContent")) { res.writeHead(200, { "Content-Type": "application/json" }); return res.end(JSON.stringify({ candidates: [{ content: { role: "model", parts: [{ text: "OK" }] }, finishReason: "STOP" }] })); }
   res.writeHead(200, { "Content-Type": "text/event-stream" });
   if (mode === "slow") return; // never answers: the app must give up by itself
   const chunk = (text, finishReason) => `data: ${JSON.stringify({ candidates: [{ content: { role: "model", parts: [{ text }] }, ...(finishReason ? { finishReason } : {}) }] })}\r\n\r\n`;
@@ -57,6 +58,13 @@ const mock = http.createServer(async (req, res) => {
   await ai.ask({ question: "x", snapshot: {} }, (t) => (out += t));
   assert.strictEqual(out, "BTC looks **weak**.");
   assert.ok(captured.url.includes("gemini-9.1-flash:streamGenerateContent"), captured.url);
+
+  // Diagnostics page: each step reported with timings, key never shown
+  mode = "ok";
+  const d = await ai.diagnose();
+  assert.strictEqual(d.provider, "gemini");
+  assert.deepStrictEqual(d.steps.map((x) => x.ok), [true, true, true, true], JSON.stringify(d.steps));
+  assert.ok(!JSON.stringify(d).includes("test-gemini-key"), "the key is never shown");
 
   process.env.AI_PROVIDER = "anthropic";
   assert.strictEqual(ai.provider(), "anthropic", "AI_PROVIDER=anthropic switches back to Claude");

@@ -137,6 +137,39 @@ async function ask({ question, history, snapshot }, onText) {
   return { stopReason: final.stop_reason };
 }
 
+// Step-by-step check of the AI provider for the owner's diagnostics page
+async function diagnose() {
+  const steps = [], t0 = Date.now();
+  const step = async (name, fn) => {
+    const t = Date.now();
+    try { const v = await Promise.race([fn(), new Promise((_, no) => setTimeout(() => no(new Error("no answer after 20 s")), 20_000))]); steps.push({ step: name, ok: true, ms: Date.now() - t, ...(v ? { result: v } : {}) }); return true; }
+    catch (e) { steps.push({ step: name, ok: false, ms: Date.now() - t, error: String(e?.message || e).slice(0, 400), status: e?.status ?? null }); return false; }
+  };
+  const out = { provider: provider(), geminiKeySet: Boolean(process.env.GEMINI_API_KEY), anthropicKeySet: Boolean(process.env.ANTHROPIC_API_KEY),
+    model: provider() === "gemini" ? geminiModel || GEMINI_MODEL : MODEL, node: process.version, steps };
+  if (provider() !== "gemini") return out;
+  let lib;
+  if (!(await step("load Google library", async () => { lib = require("@google/genai"); return "ok"; }))) return out;
+  const g = new lib.GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY, ...(process.env.GEMINI_BASE_URL ? { httpOptions: { baseUrl: process.env.GEMINI_BASE_URL } } : {}) });
+  await step("list models", async () => {
+    const pager = await g.models.list();
+    return (pager.page || []).map((m) => String(m.name).replace(/^models\//, "")).filter((n) => /flash|pro/.test(n)).slice(0, 25).join(", ");
+  });
+  const model = geminiModel || GEMINI_MODEL;
+  await step(`one-line answer from ${model} (no streaming)`, async () => {
+    const r = await g.models.generateContent({ model, contents: "Reply with just: OK", config: { maxOutputTokens: 50, thinkingConfig: { thinkingLevel: "LOW" } } });
+    return JSON.stringify({ text: r.text, finishReason: r.candidates?.[0]?.finishReason || null });
+  });
+  await step(`streamed answer from ${model}`, async () => {
+    const st = await g.models.generateContentStream({ model, contents: "Count from 1 to 5.", config: { maxOutputTokens: 100, thinkingConfig: { thinkingLevel: "LOW" } } });
+    let text = "", chunks = 0;
+    for await (const c of st) { chunks++; text += c.text || ""; }
+    return JSON.stringify({ chunks, text: text.slice(0, 80) });
+  });
+  out.totalMs = Date.now() - t0;
+  return out;
+}
+
 function friendlyError(e) {
   const G = (() => { try { return require("@google/genai").ApiError; } catch { return null; } })();
   if (G && e instanceof G) {
@@ -161,4 +194,4 @@ function friendlyError(e) {
   return "AI request failed: " + (e?.message || e);
 }
 
-module.exports = { ask, buildMessages, friendlyError, hasCredentials, provider, SYSTEM, MODEL, GEMINI_MODEL };
+module.exports = { ask, diagnose, buildMessages, friendlyError, hasCredentials, provider, SYSTEM, MODEL, GEMINI_MODEL };

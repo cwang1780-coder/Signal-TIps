@@ -99,6 +99,7 @@ async function askAccess(req, res) {
 }
 
 async function askHandler(req, res) {
+  if (req.method === "GET" && new URL(req.url, "http://x").searchParams.get("diag") === "1") return askDiag(req, res);
   if (req.method !== "POST") return json(res, 405, { reason: "POST only" });
   if (!(req.headers["content-type"] || "").startsWith("application/json")) return json(res, 403, { reason: "Forbidden" });
   const access = await askAccess(req, res);
@@ -109,15 +110,35 @@ async function askHandler(req, res) {
   if (JSON.stringify(input).length > 300_000) return json(res, 413, { reason: "Too much data" });
 
   res.writeHead(200, { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store", "X-Accel-Buffering": "no" });
+  // Hard deadline for the whole answer, wherever it gets stuck, so the reply is never blank (the server stops at 60 s)
+  let finished = false, wrote = false;
+  const deadline = new Promise((resolve) => setTimeout(() => resolve("deadline"), +process.env.ASK_DEADLINE_MS || 40_000));
   try {
-    await ai.ask(input, (text) => res.write(text));
+    const result = await Promise.race([ai.ask(input, (text) => { if (!finished) { wrote = true; res.write(text); } }), deadline]);
+    if (result === "deadline") {
+      finished = true;
+      console.error("[ai] deadline reached; wrote anything:", wrote);
+      res.write(wrote ? "\n\n_(Stopped: the AI took too long to finish.)_" : "⚠️ The AI took too long to start answering. Try again in a moment.");
+      return res.end();
+    }
+    finished = true;
     if (access.subId) await pro.consume(access.subId).catch((e) => console.error("[pro] usage count failed:", e.message));
     if (access.user) await accounts.countAi(access.user).catch((e) => console.error("[account] usage count failed:", e.message));
   } catch (e) {
+    finished = true;
     console.error("[ai]", e.message);
     res.write("\n\n⚠️ " + ai.friendlyError(e));
   }
   res.end();
+}
+
+// GET /api/ask?diag=1 (owner accounts only): a tiny test of the AI provider, step by step with timings.
+// Never shows keys; only says whether they're set.
+async function askDiag(req, res) {
+  const user = await accounts.userFromRequest(req).catch(() => null);
+  const plan = user ? await accounts.planOf(user) : null;
+  if (plan?.kind !== "owner") return json(res, 403, { reason: "Sign in with an owner account first, then open this page again." });
+  json(res, 200, await ai.diagnose());
 }
 
 // Public: social buzz for up to 15 coins. GET /api/social?coins=BTC,ETH
