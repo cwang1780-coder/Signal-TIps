@@ -233,5 +233,12 @@
   const prevOnConfig = window.onSiteConfig;
   window.onSiteConfig = (c) => { prevOnConfig?.(c); renderPush(); syncPush(); };
   window.updateSellPlans = update;
+  // For Ask AI: each coin you own with its plan (prices in USD)
+  window.sellPlansSnapshot = () => owned().map((o) => {
+    const p = plans[o.sym], r = (x) => (x == null || !isFinite(x) ? null : +(+x).toPrecision(6));
+    return { coin: o.sym, amount: r(o.amt), paidPerCoinUSD: o.cost ? r(o.cost) : null, valueUSD: p ? r(p.price * o.amt) : null,
+      gainPct: p?.gain != null ? +(p.gain * 100).toFixed(1) : null,
+      plan: p ? { advice: p.verdict, why: p.detail, takeProfitNearUSD: r(p.target), sellIfItDropsToUSD: r(p.stop), stopAlreadyBroken: p.price <= p.stop, insights: p.insights } : "no plan (not enough price history on Coinbase)" };
+  });
   render();
 })();

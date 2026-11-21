@@ -81,6 +81,13 @@
     }
     return out;
   };
+  // For Ask AI: what's in each connected wallet (shortened address only)
+  window.walletSnapshot = () => wallets.map((w) => {
+    const b = balances[w.id] || {};
+    return { wallet: w.label || NETS[w.chain] || "Wallet", network: b.network || NETS[w.chain] || null, address: short(w.address),
+      coins: (b.balances || []).filter((x) => x.amt > 0).map((x) => ({ coin: x.token || x.sym, amount: +x.amt.toPrecision(8), ...(x.where ? { on: x.where } : {}) })),
+      untrackedTokens: b.untracked?.length || 0, ...(b.error ? { error: b.error } : {}) };
+  });
   window.walletCash = () => {
     const out = {};
     for (const w of wallets) for (const b of balances[w.id]?.balances || []) if (STABLE.has(b.sym) && b.amt > 0) out[b.sym] = (out[b.sym] || 0) + b.amt;

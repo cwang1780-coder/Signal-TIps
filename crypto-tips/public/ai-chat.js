@@ -37,16 +37,22 @@
         reasons: r.reasons.map((x) => `${x.pts > 0 ? "+" : ""}${x.pts}: ${x.text}`),
       };
     }
+    const paid = store.get("paidPrices", {}); // prices typed in for wallet coins
     const all = [...cb.holdings.map((h) => ({ ...h, source: "Coinbase" })), ...(window.walletHoldings?.() || []).map((h) => ({ ...h, source: "Connected wallet (read-only)" })), ...holdings.map((h) => ({ ...h, source: "Manual (e.g. Exodus)" }))];
     return {
       timeframe: $("tf").selectedOptions[0].textContent,
       selectedCoin: selected || null,
       coins: coinsOut,
       holdings: all.map((h) => {
-        const p = results[h.sym]?.price;
-        return { coin: h.sym, amount: sig(h.amt), avgBuyPrice: h.cost || null, valueUSD: p ? round(p * h.amt) : null,
-          profitUSD: p && h.cost ? round((p - h.cost) * h.amt) : null, source: h.source };
+        const p = results[h.sym]?.price, cost = h.cost || paid[h.sym] || null;
+        return { coin: h.sym, amount: sig(h.amt), avgBuyPrice: cost, valueUSD: p ? round(p * h.amt) : null,
+          profitUSD: p && cost ? round((p - cost) * h.amt) : null, source: h.source };
       }),
+      portfolioTotalUSD: round(all.reduce((t, h) => t + (results[h.sym]?.price || 0) * h.amt, 0)),
+      wallets: window.walletSnapshot?.() || [],
+      stablecoinsInWallets: window.walletCash?.() || {},
+      sellPlans: window.sellPlansSnapshot?.() || [],
+      alerts: window.alertsSnapshot?.() || [],
       cash: cb.cash,
       displayCurrency: window.Currency ? { code: Currency.code, perUSD: +Currency.toLocal(1).toPrecision(6) } : { code: "USD", perUSD: 1 },
       userExperience: window.userLevel ? (window.userLevel() === "pro" ? "experienced trader" : "new to trading") : "new to trading",
@@ -84,8 +90,13 @@
     const answer = { role: "assistant", content: "" };
     chat.push(answer);
     busy = true; render();
+    // Safety net: if nothing arrives for 75 seconds, stop waiting instead of "Thinking…" forever
+    const stop = new AbortController();
+    let idle = setTimeout(() => stop.abort(), 75_000);
+    const poke = () => { clearTimeout(idle); idle = setTimeout(() => stop.abort(), 75_000); };
     try {
       const res = await fetch("/api/ask", {
+        signal: stop.signal,
         method: "POST",
         headers: { "Content-Type": "application/json", ...authHeaders() },
         body: JSON.stringify({ question, history, snapshot: snapshot() }),
@@ -105,14 +116,16 @@
       for (;;) {
         const { done, value } = await reader.read();
         if (done) break;
+        poke();
         answer.content += dec.decode(value, { stream: true });
         render();
       }
       if (!answer.content.trim()) answer.content = "No answer came back. Try again.";
       window.refreshPro?.();
     } catch (e) {
-      answer.content = "Error: " + (e.message || "Request failed");
+      answer.content = stop.signal.aborted ? (answer.content ? answer.content + "\n\n_(Stopped: the answer stalled.)_" : "The AI didn't answer in time. Try again.") : "Error: " + (e.message || "Request failed");
     }
+    clearTimeout(idle);
     busy = false; render();
   }
 

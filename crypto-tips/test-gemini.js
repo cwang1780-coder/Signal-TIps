@@ -15,6 +15,7 @@ const mock = http.createServer(async (req, res) => {
   if (mode === "404" && req.url.includes("gemini-3.8-flash")) { res.writeHead(404, { "Content-Type": "application/json" }); return res.end(JSON.stringify({ error: { code: 404, message: "models/gemini-3.8-flash is not found", status: "NOT_FOUND" } })); }
   if (mode === "429") { res.writeHead(429, { "Content-Type": "application/json" }); return res.end(JSON.stringify({ error: { code: 429, message: "Resource exhausted", status: "RESOURCE_EXHAUSTED" } })); }
   res.writeHead(200, { "Content-Type": "text/event-stream" });
+  if (mode === "slow") return; // never answers: the app must give up by itself
   const chunk = (text, finishReason) => `data: ${JSON.stringify({ candidates: [{ content: { role: "model", parts: [{ text }] }, ...(finishReason ? { finishReason } : {}) }] })}\r\n\r\n`;
   res.end(chunk("BTC looks ") + chunk("**weak**.", mode === "safety" ? "SAFETY" : "STOP"));
 });
@@ -35,6 +36,14 @@ const mock = http.createServer(async (req, res) => {
   assert.deepStrictEqual(b.contents.map((c) => c.role), ["user", "model", "user"], "assistant turns become model turns");
   assert.ok(b.contents[2].parts[0].text.includes("Question: Sell BTC?") && b.contents[2].parts[0].text.includes('"rsi":30'));
   assert.ok(JSON.stringify(b.systemInstruction || b.system_instruction).includes("Crypto Signal Tips"), "system prompt sent");
+
+  assert.strictEqual(b.generationConfig?.thinkingConfig?.thinkingLevel || b.generation_config?.thinking_config?.thinking_level, "LOW", "light thinking for quick answers");
+
+  mode = "slow"; out = ""; process.env.GEMINI_TIMEOUT_MS = "300";
+  const t0 = Date.now();
+  await ai.ask({ question: "x", snapshot: {} }, (t) => (out += t));
+  assert.ok(Date.now() - t0 < 5000 && /took too long/.test(out), "a stuck answer is cut off: " + out);
+  delete process.env.GEMINI_TIMEOUT_MS;
 
   mode = "safety"; out = "";
   await ai.ask({ question: "x", snapshot: {} }, (t) => (out += t));

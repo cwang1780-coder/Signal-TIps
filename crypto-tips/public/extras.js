@@ -77,6 +77,7 @@
       : "Alerts show on this page and are checked every minute while it's open (it can be in a background tab).";
   }
 
+  window.alertsSnapshot = () => alerts.map((a) => ({ alert: TYPES[a.type]?.text(a), triggered: Boolean(a.triggeredAt) }));
   window.hasAlert = (sym, value) => alerts.some((a) => a.sym === sym && a.value === value && (a.type === "above" || a.type === "below") && !a.triggeredAt);
   // Used by chart drawings: turn a price level into an alert.
   window.addAlert = (sym, type, value) => {
