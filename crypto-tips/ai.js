@@ -4,7 +4,7 @@
 const Anthropic = require("@anthropic-ai/sdk").default;
 
 const MODEL = process.env.AI_MODEL || "claude-opus-5-5";
-const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-flash-latest"; // Google's alias for its current Flash model
+const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-3.8-flash"; // Google's current Flash model (see pickGeminiModel)
 const provider = () => (process.env.GEMINI_API_KEY && process.env.AI_PROVIDER !== "anthropic" ? "gemini" : "anthropic");
 
 const SYSTEM = `You are the assistant inside "Crypto Signal Tips", a personal app that rates coins BUY/SELL/HOLD from technical indicators on live Coinbase data and shows the user's holdings.
@@ -39,15 +39,31 @@ function hasCredentials() {
   return Boolean(process.env.GEMINI_API_KEY || process.env.ANTHROPIC_API_KEY || process.env.ANTHROPIC_AUTH_TOKEN || process.env.ANTHROPIC_PROFILE);
 }
 
-let gemini;
+let gemini, geminiModel = null;
+// If Google retires or renames the model, ask which models this key can use and take the newest "gemini-X-flash"
+async function pickGeminiModel() {
+  const pager = await gemini.models.list();
+  const names = (pager.page || []).filter((m) => !m.supportedActions || m.supportedActions.includes("generateContent"))
+    .map((m) => String(m.name || "").replace(/^models\//, "")).filter((n) => /^gemini-\d+(\.\d+)?-flash$/.test(n));
+  names.sort((a, b) => parseFloat(b.match(/\d+(\.\d+)?/)[0]) - parseFloat(a.match(/\d+(\.\d+)?/)[0]));
+  return names[0] || null;
+}
 // Gemini: same system prompt and messages; its roles are "user" and "model"
 async function askGemini({ question, history, snapshot }, onText) {
   const { GoogleGenAI } = require("@google/genai");
   if (!gemini) gemini = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY, ...(process.env.GEMINI_BASE_URL ? { httpOptions: { baseUrl: process.env.GEMINI_BASE_URL } } : {}) });
   const contents = buildMessages({ question, history, snapshot }).map((m) => ({ role: m.role === "assistant" ? "model" : "user", parts: [{ text: m.content }] }));
-  const stream = await gemini.models.generateContentStream({
-    model: GEMINI_MODEL, contents, config: { systemInstruction: SYSTEM, maxOutputTokens: 8192 },
-  });
+  const req = (model) => gemini.models.generateContentStream({ model, contents, config: { systemInstruction: SYSTEM, maxOutputTokens: 8192 } });
+  let stream;
+  try { stream = await req(geminiModel || GEMINI_MODEL); }
+  catch (e) {
+    if (e?.status !== 404) throw e;
+    const next = await pickGeminiModel().catch(() => null);
+    if (!next || next === (geminiModel || GEMINI_MODEL)) throw e;
+    console.error("[ai] Gemini model", geminiModel || GEMINI_MODEL, "not found; using", next);
+    geminiModel = next;
+    stream = await req(next);
+  }
   let finish = null, blocked = null, any = false;
   for await (const chunk of stream) {
     const t = chunk.text;
