@@ -67,6 +67,7 @@
     <button data-tab="users">Users</button>
     <button data-tab="announce">Announcement</button>
     <button data-tab="notify">Notifications</button>
+    <button data-tab="bans">Bans</button>
     <button data-tab="tools">Tools</button>
   </nav>
 </header>
@@ -146,8 +147,11 @@
           <button class="b" data-act="extendTrial" data-days="7">Extend trial 7 days</button>
           <button class="b" data-act="resetAi">Reset AI questions</button>
           <button class="b" data-act="resetPassword">Temporary password</button>
-          ${u.suspended ? '<button class="b" data-act="unsuspend">Unsuspend</button>' : '<button class="b danger" data-act="suspend">Suspend</button>'}
-          <button class="b danger" data-act="delete">Delete account</button></div>`}
+          <button class="b danger" data-act="delete">Delete account</button></div>
+        <div class="row ban-row">${u.suspended
+          ? `<span class="pill p-sus">Banned ${u.banUntil ? "until " + when(u.banUntil) : "with no end date"}</span>${u.banReason ? `<span class="small muted">Reason: ${esc(u.banReason)}</span>` : ""}<button class="b" data-act="unban">Unban</button>`
+          : `<span class="small muted">Ban:</span><input id="banDays" type="number" min="1" max="3650" placeholder="days (blank = forever)" style="width:190px" /><input id="banReason" maxlength="200" placeholder="Reason (shown to them)" style="flex:1;min-width:160px" />
+             <label class="small"><input type="checkbox" id="banIp" checked /> also ban their internet addresses</label><button class="b danger" data-act="ban">Ban</button>`}</div>`}
         ${flash ? flashHtml() : ""}
       </div></td></tr>`;
     show(`<div class="card">
@@ -169,6 +173,7 @@
     const kv = (k, v) => `<div><span class="muted small">${k}</span><b class="small">${v}</b></div>`;
     return `<div class="info">
       <div class="info-grid">
+        ${kv("Location", u.location ? esc([u.location.city, u.location.region, u.location.country].filter(Boolean).join(", ")) + (u.location.lat != null ? ` <a class="small" target="_blank" rel="noopener" href="https://www.openstreetmap.org/?mlat=${u.location.lat}&mlon=${u.location.lon}#map=10/${u.location.lat}/${u.location.lon}">map ↗</a>` : "") : "–")}
         ${kv("Last active", ago(u.lastSeen))}${kv("Visits", u.visits)}${kv("Sign-ins", u.logins)}${kv("Device", esc(u.device || "–"))}${kv("Country", flag(u.country))}
         ${kv("Pro until", u.pro ? (u.proUntil ? when(u.proUntil) : u.owner ? "always" : "–") : "no Pro")}${kv("Level", esc(d?.level === "pro" ? "Experienced" : d?.level ? "Beginner" : "–"))}${kv("Currency", esc(d?.currency || "–"))}
       </div>
@@ -179,6 +184,7 @@
       ${Object.keys(d.paidPrices).length ? `<div class="info-sec"><b class="small">Prices paid for wallet coins</b><div class="small">${Object.entries(d.paidPrices).map(([c, p]) => `${esc(c)} $${esc(+(+p).toPrecision(6))}`).join(" · ")}</div></div>` : ""}
       <div class="info-sec small muted">${d.alerts} price alert${d.alerts === 1 ? "" : "s"} · data last saved ${ago(u.dataUpdated)}</div>`
       : '<p class="muted small">Nothing saved to their account yet (they haven\'t set anything up while signed in).</p>'}
+      ${u.ips?.length ? `<div class="info-sec"><b class="small">Internet addresses (masked)</b><div class="small">${u.ips.map((x) => `<code>${esc(x.mask)}</code> ${ago(x.at)}`).join(" · ")}</div></div>` : ""}
       ${u.payments?.length ? `<div class="info-sec"><b class="small">Crypto payments</b>${u.payments.map((p) => `<div class="small">${when(p.at)} · ${esc(p.amount)} ${esc(p.method.toUpperCase())} ($${p.usd}) · <code>${esc(String(p.tx).slice(0, 10))}…</code></div>`).join("")}</div>` : ""}
     </div>`;
   }
@@ -228,11 +234,20 @@
       </div></div>`);
   }
 
-  const RENDER = { overview: renderOverview, users: renderUsers, announce: renderAnnounce, notify: renderNotify, tools: renderTools };
+  // ── Bans by internet address ──
+  let banList = null;
+  function renderBans() {
+    show(`<div class="card"><h2>Banned internet addresses</h2>
+      <p class="muted small">Banning an account (Users → Manage → Ban) also bans the internet addresses it used in the last 30 days, so a new account from the same place is blocked too. Owners are never blocked. Addresses are stored as fingerprints and shown masked.</p>
+      ${banList?.length ? `<table><tr><th>Address</th><th>Account</th><th>Until</th><th>Reason</th><th></th></tr>${banList.map((b) => `<tr><td><code>${esc(b.mask || "hidden")}</code></td><td>${esc((users || []).find((u) => u.id === b.user)?.name || (b.user ? "deleted account" : "–"))}</td><td>${b.until ? when(b.until) : "forever"}</td><td class="small">${esc(b.reason || "")}</td><td><button class="b" data-unbanip="${esc(b.id)}">Lift</button></td></tr>`).join("")}</table>` : '<p class="muted">No banned addresses.</p>'}
+      ${flashHtml()}</div>`);
+  }
+  const RENDER = { bans: renderBans, overview: renderOverview, users: renderUsers, announce: renderAnnounce, notify: renderNotify, tools: renderTools };
   async function go(t) {
     tab = t; flash = null;
     document.querySelectorAll("#tabs button").forEach((b) => b.classList.toggle("on", b.dataset.tab === t));
     if (t === "users" && !users) { show('<p class="muted">Loading accounts…</p>'); users = (await api("users")).users; }
+    if (t === "bans") { show('<p class="muted">Loading bans…</p>'); banList = (await api("bans")).bans; if (!users) users = (await api("users")).users; }
     RENDER[t]();
   }
 
@@ -242,13 +257,21 @@
     const btn = e.target.closest("button"); if (!btn) return;
     try {
       if (btn.id === "ureload") { users = (await api("users")).users; return renderUsers(); }
+      if (btn.dataset.unbanip) { await api("unbanip", { id: btn.dataset.unbanip }); banList = (await api("bans")).bans; flash = { html: "Ban lifted." }; return renderBans(); }
       const act = btn.dataset.act;
       if (act) {
         const u = users.find((x) => x.id === selected);
         const confirmMsg = { delete: `Delete ${u.name}'s account for good? This can't be undone.`, suspend: `Suspend ${u.name}? They'll be signed out and can't sign in.`, resetPassword: `Make a new temporary password for ${u.name}? Their current password stops working.` }[act];
         if (confirmMsg && !confirm(confirmMsg)) return;
+        let extra = {};
+        if (act === "ban") {
+          const days = $("banDays").value.trim(), reason = $("banReason").value.trim();
+          if (days && !(+days >= 1)) return $("banDays").focus();
+          if (!confirm(`Ban ${u.name} ${days ? "for " + days + " day" + (days === "1" ? "" : "s") : "with no end date"}${$("banIp").checked ? ", including their internet addresses" : ""}?`)) return;
+          extra = { days: days || 0, reason, ip: $("banIp").checked };
+        }
         btn.disabled = true;
-        const r = await api("user", { id: u.id, action: act, days: btn.dataset.days, forever: Boolean(btn.dataset.forever) });
+        const r = await api("user", { id: u.id, action: act, days: btn.dataset.days, forever: Boolean(btn.dataset.forever), ...extra });
         if (r.deleted) { users = users.filter((x) => x.id !== u.id); selected = null; }
         else users = users.map((x) => (x.id === u.id ? r.user : x));
         flash = { html: esc(r.note) + (r.tempPassword ? `<div class="row"><span class="temp">${esc(r.tempPassword)}</span><button class="b" onclick="navigator.clipboard.writeText('${esc(r.tempPassword)}')">Copy</button></div>` : "") };

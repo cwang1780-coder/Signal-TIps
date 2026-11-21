@@ -5,6 +5,7 @@ const db = require("./storage.js");
 const accounts = require("./accounts.js");
 const push = require("./push.js");
 const ai = require("./ai.js");
+const bans = require("./bans.js");
 const pro = require("./pro.js");
 
 const err = (status, message) => Object.assign(new Error(message), { status });
@@ -36,7 +37,8 @@ async function row(u) {
   return {
     id: u.id, name: u.email, created: u.created || null, lastLogin: u.lastLogin || null,
     plan: plan.kind, pro: Boolean(plan.pro), trialEnds: u.trialEnds || null, comp: u.comp || null, subscription: Boolean(u.subId),
-    aiUsed: accounts.aiUsed(u), suspended: Boolean(u.banned), owner: plan.kind === "owner",
+    aiUsed: accounts.aiUsed(u), suspended: accounts.isBanned(u), banUntil: accounts.isBanned(u) ? u.banned.until || null : null, banReason: accounts.isBanned(u) ? u.banned.reason || "" : "", owner: plan.kind === "owner",
+    location: u.location || null, ips: (u.ips || []).map((x) => ({ mask: x.mask, at: x.at })),
     lastSeen: u.lastSeen || u.lastLogin || null, visits: u.visits || 0, logins: u.logins || 0, device: u.device || null, country: u.country || null,
     proUntil: plan.until || null, payments: (u.payments || []).slice(-10).reverse().map((p) => ({ method: p.method, amount: p.amount, usd: p.usd, at: p.at, tx: p.tx })),
     data: summary(u.prefs?.data), dataUpdated: u.prefs?.updated || null,
@@ -94,8 +96,17 @@ async function userAction(id, op, arg = {}) {
     case "revokePro": u.comp = null; note = "Free Pro removed. (A paid subscription, if any, is managed in Stripe.)"; break;
     case "extendTrial": u.trialEnds = Math.max(u.trialEnds || 0, Date.now()) + days * DAY; note = `Trial now ends ${new Date(u.trialEnds).toDateString()}.`; break;
     case "resetAi": u.ai = null; note = "AI questions for this month reset to 0."; break;
-    case "suspend": if (isOwner) throw err(400, "Owner accounts can't be suspended."); u.banned = { since: Date.now() }; note = "Suspended: they're signed out and can't sign in."; break;
-    case "unsuspend": u.banned = null; note = "Unsuspended."; break;
+    case "suspend": case "ban": {
+      if (isOwner) throw err(400, "Owner accounts can't be banned.");
+      const d = Math.max(0, Math.min(3650, parseInt(arg.days, 10) || 0)), reason = String(arg.reason || "").trim().slice(0, 200);
+      u.banned = { since: Date.now(), until: d ? Date.now() + d * DAY : null, reason };
+      // Also ban the internet addresses this account used recently, so a new account from there is blocked too
+      const ips = (u.ips || []).filter((x) => Date.now() - x.at < 30 * DAY);
+      if (arg.ip !== false && ips.length) await bans.banHashes(ips.map((x) => x.hash), { days: d, reason, user: u.id, masks: Object.fromEntries(ips.map((x) => [x.hash, x.mask])) });
+      note = `Banned ${d ? "for " + d + " day" + (d === 1 ? "" : "s") : "with no end date"}${ips.length && arg.ip !== false ? `, with ${ips.length} internet address${ips.length === 1 ? "" : "es"}` : ""}. They're signed out and blocked.`;
+      break;
+    }
+    case "unsuspend": case "unban": u.banned = null; await bans.unbanUser(u.id); note = "Unbanned (account and its addresses)."; break;
     case "resetPassword": {
       if (isOwner) throw err(400, "Change owner passwords in Vercel (OWNER_ACCOUNT / OWNER_ACCOUNTS).");
       const temp = crypto.randomBytes(9).toString("base64").replace(/[+/=]/g, "").slice(0, 12);
@@ -121,4 +132,15 @@ async function setAnnouncement({ text, tone }) {
   return { ok: true, announcement: a };
 }
 
-module.exports = { overview, users, userAction, getAnnouncement, setAnnouncement };
+async function banList() {
+  const l = await bans.list();
+  return Object.entries(l).map(([hash, b]) => ({ id: hash.slice(0, 12), mask: b.mask, until: b.until, reason: b.reason, user: b.user, at: b.at }));
+}
+async function unbanIp(idPrefix) {
+  const l = await bans.list(), h = Object.keys(l).find((k) => k.startsWith(String(idPrefix)) && String(idPrefix).length === 12);
+  if (!h) throw err(404, "That ban was already lifted.");
+  await bans.unbanHash(h);
+  return { ok: true };
+}
+
+module.exports = { overview, users, userAction, getAnnouncement, setAnnouncement, banList, unbanIp };

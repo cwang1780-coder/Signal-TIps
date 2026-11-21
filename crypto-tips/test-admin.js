@@ -59,9 +59,9 @@ let boss;
   assert.strictEqual(r.body.user.aiUsed, 0);
 
   // Suspend: signed out, can't sign in; unsuspend restores it
-  r = await admin("user", { id: samId, action: "suspend" });
+  r = await admin("user", { id: samId, action: "suspend", ip: false });
   assert.strictEqual(r.body.user.suspended, true);
-  assert.strictEqual((await call("me", { cookie: sam.cookie })).body.user, null, "suspended sessions end");
+  { const me = await call("me", { cookie: sam.cookie }); assert.ok(me.status === 403 && me.body.banned, "a banned account sees the ban, not the app"); }
   assert.strictEqual((await call("login", { method: "POST", body: { email: "sam@example.com", username: "sam", password: "sampass123" } })).status, 403);
   await admin("user", { id: samId, action: "unsuspend" });
 

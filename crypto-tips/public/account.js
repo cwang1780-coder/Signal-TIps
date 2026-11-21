@@ -15,6 +15,9 @@
     ["chart", "Deep coin research", "Chart patterns with years of history, similar past moments, and each coin's signal track record."],
     ["bell", "Unlimited watchlist and alerts", `Follow every coin you like and set as many alerts as you need (free: ${FREE.coins} coins, ${FREE.alerts} alerts).`],
     ["game", "Real-market simulator", "Practise on real past prices of a hidden coin, not just made-up scenarios."],
+    ["wallet", "Wallet sell plans and phone alerts", "When to take profit or cut a loss on every coin you own, and a notification when it's time."],
+    ["gauge", "Price predictions", "The typical move and likely range for each coin over a day, week, month and 3 months, with its real track record."],
+    ["shield", "AI second opinion", "The AI checks each signal against live news and the market, and says if it agrees."],
   ];
 
   let user = null, cfg = null, note = "", loaded = false;
@@ -28,7 +31,8 @@
     if (opts.body !== undefined) { init.headers["Content-Type"] = "application/json"; init.body = JSON.stringify(opts.body); }
     const res = await fetch("/api/account?action=" + action, init);
     const d = await res.json().catch(() => ({}));
-    if (!res.ok) throw Object.assign(new Error(d.reason || "Something went wrong (HTTP " + res.status + ")."), { status: res.status });
+    if (d.banned) showBanned(d);
+    if (!res.ok) throw Object.assign(new Error(d.message || d.reason || "Something went wrong (HTTP " + res.status + ")."), { status: res.status, banned: Boolean(d.banned) });
     return d;
   }
 
@@ -246,6 +250,8 @@
     if (a) { e.preventDefault(); return openAuth(a.dataset.auth); }
     if (e.target.closest("[data-close-sheet]")) return $("authDialog").close();
     if (e.target.closest("#acctBtn")) { if (user) { showTab("me"); $("acctPanel").scrollIntoView({ block: "start" }); } else openAuth("signup"); return; }
+    const pf = e.target.closest("[data-pw-feature]");
+    if (pf) { e.preventDefault(); return paywall(pf.dataset.pwFeature); }
     const pw = e.target.closest("[data-pw]");
     if (pw) {
       const k = pw.dataset.pw;
@@ -321,6 +327,18 @@
     catch (e) { toast("Couldn't confirm your payment: " + e.message); }
   }
 
+  // Banned (by account or internet address): a full screen saying so, with the end date and reason
+  function showBanned(d) {
+    if ($("bannedScreen")) return;
+    const el = document.createElement("div");
+    el.id = "bannedScreen";
+    el.innerHTML = `<div><div class="em-tag">Access blocked</div><h1>You're banned from Signal Tips${d.until ? "" : "."}</h1>
+      ${d.until ? `<p class="bn-until">until ${new Date(d.until).toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric", year: "numeric" })}</p>` : ""}
+      ${d.reason ? `<p>Reason: ${esc(d.reason)}</p>` : ""}<p class="bn-small">If you think this is a mistake, contact the site owner.</p></div>`;
+    document.body.appendChild(el);
+    document.documentElement.classList.remove("gate-wait");
+    document.body.classList.add("gated");
+  }
   let accountsOn = false;
   async function load() {
     try { const d = await api("me"); accountsOn = true; setUser(d.user); } catch { setUser(null); }

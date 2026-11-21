@@ -44,7 +44,7 @@ function cleanCoins(list) {
   return Object.values(out);
 }
 
-async function subscribe(body) {
+async function subscribe(body, userId = null) {
   const coins = cleanCoins(body.coins);
   let sub = null, apns = null;
   if (okToken(body.apns)) { if (!apnsConfigured()) throw Object.assign(new Error("iPhone app notifications aren't set up yet"), { status: 503 }); apns = body.apns.toLowerCase(); }
@@ -52,7 +52,7 @@ async function subscribe(body) {
   const key = keyFor(apns ? "apns:" + apns : sub.endpoint), old = (await storage.getJSON(key)) || {};
   const states = {};
   for (const c of coins) { const st = old.states?.[c.sym] || c.state; if (st) states[c.sym] = st; delete c.state; }
-  await storage.putJSON(key, { ...(apns ? { apns } : { sub }), coins, states, created: old.created || Date.now(), updated: Date.now() });
+  await storage.putJSON(key, { ...(apns ? { apns } : { sub }), user: userId, coins, states, created: old.created || Date.now(), updated: Date.now() });
   return { ok: true, coins: coins.length };
 }
 async function unsubscribe(body) {
@@ -132,8 +132,12 @@ async function run({ force = false } = {}) {
   for (let i = 0; i < syms.length; i += 5) {
     await Promise.all(syms.slice(i, i + 5).map(async (s) => { try { candles[s] = await dailyCandles(s); } catch { candles[s] = null; } }));
   }
-  let sent = 0, removed = 0;
+  let sent = 0, removed = 0, skipped = 0;
+  const accounts = require("./accounts.js");
   for (const [key, rec] of recs) {
+    // Sell-plan notifications are a Pro feature: skip devices whose account no longer has Pro
+    if (rec.user) { const u = await accounts.getUser(rec.user).catch(() => null); if (!u || !(await accounts.planOf(u).catch(() => ({}))).pro) { skipped++; continue; } }
+    else if (!process.env.PUSH_ALLOW_ANONYMOUS) { skipped++; continue; }
     let changed = false;
     rec.states = rec.states || {};
     for (const c of rec.coins) {
@@ -151,7 +155,7 @@ async function run({ force = false } = {}) {
     }
     if (changed) await storage.putJSON(key, rec);
   }
-  return { ok: true, subscriptions: recs.length, coins: syms.length, sent, removed };
+  return { ok: true, subscriptions: recs.length, coins: syms.length, sent, removed, skipped };
 }
 
 // Admin: one message to every device that turned notifications on

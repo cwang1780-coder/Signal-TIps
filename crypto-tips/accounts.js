@@ -129,7 +129,7 @@ async function oauthUser(provider, email, sub) {
   if (!isEmail(email)) throw err(400, "Your " + provider + " account didn't share an email address.");
   let u = await getUser(emailId(email));
   if (!u) { const link = await db.getJSON(emailKey(email)); if (link?.id) u = await getUser(link.id); }
-  if (u?.banned) throw err(403, "This account has been suspended. Contact the site owner.");
+  if (isBanned(u)) throw err(403, banMessage(u.banned));
   if (!u) u = { id: emailId(email), email, pw: null, created: Date.now(), trialEnds: null, subId: null, ai: null, prefs: null };
   u.oauth = { ...(u.oauth || {}), [provider]: String(sub || "").slice(0, 200) };
   u.lastLogin = Date.now(); u.logins = (u.logins || 0) + 1;
@@ -180,7 +180,7 @@ async function login(email, password) {
   if (u && !u.pw && u.oauth) throw err(401, `This account signs in with ${Object.keys(u.oauth).map((p) => p[0].toUpperCase() + p.slice(1)).join(" or ")}. Use that button instead.`);
   const ok = u ? checkPassword(String(password || ""), u.pw) : (checkPassword("x", hashPassword("y")), false);
   if (!ok) throw err(401, "Wrong email, username or password.");
-  if (u.banned) throw err(403, "This account has been suspended. Contact the site owner.");
+  if (isBanned(u)) throw err(403, banMessage(u.banned));
   u.lastLogin = Date.now();
   u.logins = (u.logins || 0) + 1;
   await saveUser(u).catch(() => {});
@@ -190,7 +190,7 @@ async function login(email, password) {
 async function userFromRequest(req) {
   const tok = cookieValue(req), id = readToken(tok);
   const u = id ? await getUser(id) : null;
-  if (!u || u.banned) return null; // suspended accounts are signed out
+  if (!u || isBanned(u)) return null; // suspended accounts are signed out
   if (u.sessionsFrom && tokenIssued(tok) < u.sessionsFrom) return null; // password was reset: older sessions end
   return u;
 }
@@ -270,15 +270,28 @@ async function touch(u, req) {
   u.lastSeen = Date.now();
   u.visits = (u.visits || 0) + 1;
   u.device = deviceOf(req.headers["user-agent"]);
-  const c = String(req.headers["x-vercel-ip-country"] || "");
+  const h = req.headers, c = String(h["x-vercel-ip-country"] || "");
   if (/^[A-Z]{2}$/.test(c)) u.country = c;
+  // Approximate location from the internet address (city level, from Vercel); never GPS
+  const dec = (v) => { try { return decodeURIComponent(String(v || "")).slice(0, 60); } catch { return ""; } };
+  const lat = parseFloat(h["x-vercel-ip-latitude"]), lon = parseFloat(h["x-vercel-ip-longitude"]);
+  if (c || h["x-vercel-ip-city"]) u.location = { city: dec(h["x-vercel-ip-city"]) || null, region: dec(h["x-vercel-ip-country-region"]) || null, country: c || null,
+    lat: isFinite(lat) ? Math.round(lat * 100) / 100 : null, lon: isFinite(lon) ? Math.round(lon * 100) / 100 : null, at: Date.now() };
+  // Recent internet addresses, kept only as fingerprints (so the account's addresses can be banned) plus a masked form
+  const bans = require("./bans.js"), ip = bans.ipOf(req), hash = bans.ipHash(ip);
+  if (hash) u.ips = [{ hash, mask: bans.maskIp(ip), at: Date.now() }, ...(u.ips || []).filter((x) => x.hash !== hash)].slice(0, 10);
   await saveUser(u);
 }
+// Suspended right now? (a suspension can have an end date)
+const isBanned = (u) => Boolean(u?.banned && (!u.banned.until || u.banned.until > Date.now()));
 
+function banMessage(b) {
+  return `This account is banned${b?.until ? " until " + new Date(b.until).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }) : ""}.${b?.reason ? " Reason: " + b.reason : ""}`;
+}
 const publicUser = (u, plan) => ({ email: emailOf(u) || u.email, username: usernameOf(u), needs: needs(u), created: u.created, plan, aiUsed: aiUsed(u), trialDays: TRIAL_DAYS,
   credit: u.credit || 0, ...(isAdmin(u) ? { admin: true } : {}) });
 
 module.exports = {
-  signup, login, userFromRequest, isAdmin, touch, oauthUser, completeProfile, usernameOf, emailOf, needs, DEPOSIT_TRIAL_DAYS, planOf, startTrial, countAi, aiUsed, savePrefs, changePassword, deleteAccount, saveUser, getUser,
+  signup, login, userFromRequest, isAdmin, touch, isBanned, banMessage, oauthUser, completeProfile, usernameOf, emailOf, needs, DEPOSIT_TRIAL_DAYS, planOf, startTrial, countAi, aiUsed, savePrefs, changePassword, deleteAccount, saveUser, getUser,
   makeToken, readToken, sessionCookie, clearCookie, publicUser, hashPassword, checkPassword, emailId, TRIAL_DAYS, available: db.available,
 };

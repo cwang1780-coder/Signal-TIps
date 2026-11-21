@@ -52,7 +52,12 @@
     return `<div class="card pd-box" id="predictBox" data-sym="${esc(sym)}"><h3>Price prediction <span class="pill-beta">based on history</span></h3>${body}</div>`;
   }
 
-  window.predictBoxHtml = (sym) => { if (!cache[sym] || (cache[sym].at && Date.now() - cache[sym].at > 15 * 60_000)) setTimeout(() => load(sym), 0); return html(sym); };
+  const locked = (sym) => `<div class="card pd-box pro-lock" id="predictBox" data-sym="${esc(sym)}"><h3>Price prediction <span class="pill-beta">Pro</span></h3>
+    <p class="small muted">See the typical move and likely price range for ${esc(sym)} over the next day, week, month and 3 months, with how often it's been right.</p>
+    <div class="lock-blur" aria-hidden="true"><table class="pd-table"><tr><td>1 week</td><td>+?.?%</td><td>$??,??? – $??,???</td></tr><tr><td>1 month</td><td>+?.?%</td><td>$??,??? – $??,???</td></tr></table></div>
+    <button class="primary pill" data-pw-feature="Price predictions">Unlock with Pro</button></div>`;
+  window.predictBoxHtml = (sym) => {
+    if (!window.isPro?.()) return locked(sym); if (!cache[sym] || (cache[sym].at && Date.now() - cache[sym].at > 15 * 60_000)) setTimeout(() => load(sym), 0); return html(sym); };
   // For Ask AI: the same numbers, so the AI talks about the prediction honestly
   window.predictionSnapshot = (sym) => {
     const c = cache[sym];

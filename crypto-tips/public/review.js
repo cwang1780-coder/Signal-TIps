@@ -26,6 +26,8 @@
   function html(sym) {
     const r = results[sym];
     if (!r || r.error || !r.action) return "";
+    if (!window.isPro?.()) return `<div class="side-box rv-box" id="reviewBox" data-sym="${esc(sym)}"><h3>AI second opinion <span class="pill-beta">Pro</span></h3>
+      <p class="small muted">Have the AI check this ${esc(r.action)} signal against live news and the market.</p><button class="rv-go" data-pw-feature="AI second opinion">Unlock with Pro</button></div>`;
     const st = state[keyOf(sym)];
     let body;
     if (!st) body = `<p class="small muted">Have the AI check this ${esc(r.action)} signal against the latest news and the whole market, and say whether it agrees.</p>

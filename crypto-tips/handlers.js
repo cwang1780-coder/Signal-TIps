@@ -14,6 +14,7 @@ const push = require("./push.js");
 const admin = require("./admin.js");
 const cryptopay = require("./cryptopay.js");
 const oauth = require("./oauth.js");
+const bans = require("./bans.js");
 
 // The body of a form POST (Apple's sign-in callback), whether or not the platform already parsed it
 async function readForm(req) {
@@ -379,6 +380,11 @@ async function accountHandler(req, res) {
 
     const u = await accounts.userFromRequest(req);
     if (action === "me" && u) await accounts.touch(u, req).catch(() => {});
+    if (action === "me" && !u) { // signed in to a banned account: say so, with the end date
+      const id = accounts.readToken((String(req.headers.cookie || "").match(/(?:^|;\s*)st_sess=([^;]+)/) || [])[1]);
+      const bu = id ? await accounts.getUser(id).catch(() => null) : null;
+      if (accounts.isBanned(bu)) return send(403, { banned: true, until: bu.banned.until || null, reason: bu.banned.reason || "", message: accounts.banMessage(bu.banned) });
+    }
     if (action === "me") return send(200, u ? { user: accounts.publicUser(u, await accounts.planOf(u)), prefsUpdated: u.prefs?.updated || null } : { user: null });
     if (!u) return send(401, { reason: "Sign in first." });
 
@@ -430,6 +436,7 @@ async function accountHandler(req, res) {
         if (op === "overview") return send(200, await admin.overview());
         if (op === "users") return send(200, { users: await admin.users() });
         if (op === "diag") return send(200, await ai.diagnose());
+        if (op === "bans") return send(200, { bans: await admin.banList() });
         return send(400, { reason: "Unknown admin view" });
       }
       if (req.method !== "POST") return send(405, { reason: "POST only" });
@@ -441,6 +448,7 @@ async function accountHandler(req, res) {
       if (op === "announce") { const out = await admin.setAnnouncement(b); announceCache = { at: 0, a: null }; return send(200, out); }
       if (op === "broadcast") return send(200, await push.broadcast(b));
       if (op === "pushcheck") return send(200, await push.run({ force: true }));
+      if (op === "unbanip") return send(200, await admin.unbanIp(b.id));
       return send(400, { reason: "Unknown admin action" });
     }
     return send(400, { reason: "Unknown action" });
@@ -495,7 +503,11 @@ async function pushHandler(req, res) {
     const origin = req.headers.origin;
     if (!(req.headers["content-type"] || "").startsWith("application/json") || (origin && origin !== originOf(req))) return json(res, 403, { reason: "Forbidden" });
     const b = await readJson(req);
-    if (action === "subscribe") return json(res, 200, await push.subscribe(b));
+    if (action === "subscribe") {
+      const u = await accounts.userFromRequest(req).catch(() => null);
+      if (!u || !(await accounts.planOf(u)).pro) return json(res, 402, { reason: "Phone notifications are part of Pro." });
+      return json(res, 200, await push.subscribe(b, u.id));
+    }
     if (action === "unsubscribe") return json(res, 200, await push.unsubscribe(b));
     if (action === "test") return json(res, 200, await push.test(b));
     return json(res, 400, { reason: "Unknown action" });
@@ -529,4 +541,14 @@ async function proHandler(req, res) {
   }
 }
 
-module.exports = { holdingsHandler, askHandler, socialHandler, configHandler, proHandler, researchHandler, walletHandler, trenchHandler, candlesHandler, accountHandler, pushHandler, authorize };
+// Every API call from a banned internet address is refused (the page then shows the ban)
+function guard(fn) {
+  return async (req, res) => {
+    const b = await bans.check(req).catch(() => null);
+    // Owners are never locked out (e.g. if they share an internet connection with someone they banned)
+    if (b && (await accounts.planOf(await accounts.userFromRequest(req).catch(() => null)).catch(() => ({}))).kind === "owner") return fn(req, res);
+    if (b) return json(res, 403, { banned: true, until: b.until || null, reason: b.reason || "", message: `You're banned from Signal Tips${b.until ? " until " + new Date(b.until).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }) : ""}.` });
+    return fn(req, res);
+  };
+}
+module.exports = { holdingsHandler: guard(holdingsHandler), askHandler: guard(askHandler), socialHandler: guard(socialHandler), configHandler, proHandler: guard(proHandler), researchHandler: guard(researchHandler), walletHandler: guard(walletHandler), trenchHandler: guard(trenchHandler), candlesHandler: guard(candlesHandler), accountHandler: guard(accountHandler), pushHandler: guard(pushHandler), authorize };

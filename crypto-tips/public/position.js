@@ -83,6 +83,12 @@
     if (!el) return;
     const mine = owned();
     $("planWrap").hidden = false;
+    if (!window.isPro?.()) { // the sell plan and its notifications are Pro
+      el.innerHTML = `<div class="pl-empty pro-lock"><b>Your sell plan is part of Pro.</b> For each coin you own${mine.length ? ` (${mine.map((o) => esc(o.sym)).join(", ")})` : ""}: when to take profit, where to sell to limit a loss, insights, and a phone notification when it's time. <button class="primary pill" data-pw-feature="Wallet sell plans">Unlock with Pro</button></div>`;
+      const pb = $("pushBox"); if (pb) pb.hidden = true;
+      return;
+    }
+    { const pb = $("pushBox"); if (pb) pb.hidden = false; }
     // Leftover "dust" (worth under $1) doesn't need advice
     const dust = mine.filter((o) => plans[o.sym] && plans[o.sym].price * o.amt < 1), shown = mine.filter((o) => !dust.includes(o));
     el.innerHTML = (shown.map((o) => card(o, plans[o.sym])).join("") + (dust.length ? `<p class="muted small pl-dust">Also tiny leftover amounts (under $1) of ${dust.map((o) => esc(o.sym)).join(", ")}, not worth acting on.</p>` : "")) ||
@@ -95,7 +101,7 @@
   // The box on a coin's page when you own it
   function fillOwnBox(box, sym) {
     const o = owned().find((x) => x.sym === sym), p = plans[sym];
-    box.hidden = !o || !p;
+    box.hidden = !o || !p || !window.isPro?.();
     if (!o || !p) return;
     const [lab, cls] = LABEL[p.state];
     box.innerHTML = `<span class="muted small">You own ${esc(sym)}${p.gain != null ? ` · ${p.gain >= 0 ? "up" : "down"} ${Math.abs(p.gain * 100).toFixed(1)}%` : ""}</span>
@@ -229,6 +235,7 @@
   });
 
   document.addEventListener("prices-updated", update);
+  document.addEventListener("plan-changed", () => { render(); update(); });
   document.addEventListener("holdings-changed", update);
   const prevOnConfig = window.onSiteConfig;
   window.onSiteConfig = (c) => { prevOnConfig?.(c); renderPush(); syncPush(); };
