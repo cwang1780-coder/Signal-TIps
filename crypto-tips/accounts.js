@@ -10,6 +10,7 @@ const COOKIE = "st_sess";
 const SESSION_DAYS = 30;
 const TRIAL_DAYS = 3;          // free trial, nothing to pay
 const DEPOSIT_TRIAL_DAYS = 7;  // trial with a small deposit (paid in crypto, taken off the first month)
+const freeTrialDays = () => require("./sitesettings.js").get().freeTrialDays ?? TRIAL_DAYS; // the admin can change it
 const TRIAL_AI_LIMIT = 20;
 const PREFS_MAX = 60_000; // bytes of synced settings per account
 
@@ -130,6 +131,7 @@ async function oauthUser(provider, email, sub) {
   let u = await getUser(emailId(email));
   if (!u) { const link = await db.getJSON(emailKey(email)); if (link?.id) u = await getUser(link.id); }
   if (isBanned(u)) throw err(403, banMessage(u.banned));
+  if (!u && !require("./sitesettings.js").get().signupsOpen) throw err(403, "New sign-ups are paused right now. Please try again later.");
   if (!u) u = { id: emailId(email), email, pw: null, created: Date.now(), trialEnds: null, subId: null, ai: null, prefs: null };
   u.oauth = { ...(u.oauth || {}), [provider]: String(sub || "").slice(0, 200) };
   u.lastLogin = Date.now(); u.logins = (u.logins || 0) + 1;
@@ -216,7 +218,7 @@ async function planOf(u) {
 
 async function startTrial(u) {
   if (u.trialEnds) throw err(409, "You've already used your free trial.");
-  u.trialEnds = Date.now() + TRIAL_DAYS * 864e5;
+  u.trialEnds = Date.now() + freeTrialDays() * 864e5;
   await saveUser(u);
   return u;
 }

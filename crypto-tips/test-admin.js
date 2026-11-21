@@ -23,6 +23,19 @@ let boss;
 
 (async () => {
   boss = (await call("signup", { method: "POST", body: { email: "boss@example.com", username: "boss", password: "bosspass123" } })).cookie;
+  // The admin controls need a trusted device: first refused, then "trust this computer" with the password
+  let first = await call("admin", { cookie: boss, op: "overview" });
+  assert.strictEqual(first.status, 403);
+  assert.strictEqual(first.body.needTrust, true);
+  assert.strictEqual((await call("adminTrust", { method: "POST", body: { password: "wrong-pass" }, cookie: boss })).status, 401);
+  const trust = await call("adminTrust", { method: "POST", body: { password: "bosspass123", name: "Test Mac" }, cookie: boss });
+  assert.strictEqual(trust.status, 200);
+  assert.ok(trust.cookie.startsWith("st_adev="));
+  const untrustedBoss = boss;
+  boss = boss + "; " + trust.cookie;
+  assert.strictEqual((await call("adminWho", { cookie: boss })).body.deviceTrusted, true);
+  // A forged device cookie doesn't work
+  assert.strictEqual((await call("admin", { cookie: untrustedBoss + "; st_adev=" + trust.cookie.split("=")[1].slice(0, -4) + "AAAA", op: "overview" })).body.needTrust, true);
   const sam = await call("signup", { method: "POST", body: { email: "sam@example.com", username: "sam", password: "sampass123" } });
   await call("signup", { method: "POST", body: { email: "kim@example.com", username: "kim", password: "kimpass123" } });
 
@@ -98,6 +111,19 @@ let boss;
   await admin("announce", { text: "" });
   await configHandler({ headers: {} }, { writeHead() {}, end: (b) => (cfgOut = JSON.parse(b)) });
   assert.strictEqual(cfgOut.announcement, null);
+
+  // Site controls: switches and prices, saved and shown in the public settings
+  r = await admin("settings", { maintenance: true, signupsOpen: false, priceUsd: 7, freeTrialDays: 5 });
+  assert.strictEqual(r.body.settings.priceUsd, 7);
+  await configHandler({ url: "/api/config", headers: {} }, { writeHead() {}, end: (b) => (cfgOut = JSON.parse(b)) });
+  assert.ok(cfgOut.maintenance && cfgOut.signupsOpen === false && cfgOut.trial.freeDays === 5);
+  assert.strictEqual((await call("signup", { method: "POST", body: { email: "new@example.com", username: "newbie", password: "newpass123" } })).status, 403, "sign-ups paused");
+  await admin("settings", { maintenance: false, signupsOpen: true, priceUsd: null, freeTrialDays: 3 });
+  // Devices list, and the activity log records what was done
+  const devs = (await admin("devices")).body.devices;
+  assert.ok(devs.length === 1 && devs[0].current && devs[0].name === "Test Mac");
+  const log = (await admin("audit")).body.log;
+  assert.ok(log.some((x) => x.op === "settings") && log.some((x) => x.op === "user.delete") && log.some((x) => x.op === "device.trust"), JSON.stringify(log.map((x) => x.op)));
 
   // Broadcast without push set up gives a clear message
   r = await admin("broadcast", { title: "Hi" });

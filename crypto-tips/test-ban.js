@@ -18,7 +18,8 @@ async function call(handler, url, { method = "GET", body, cookie, ip = "203.0.11
 const acct = (action, opts) => call(accountHandler, "/api/account?action=" + action, opts);
 
 (async () => {
-  const boss = (await acct("signup", { method: "POST", body: { email: "boss@example.com", username: "boss", password: "bosspass12" }, ip: "198.51.100.1" })).cookie;
+  let boss = (await acct("signup", { method: "POST", body: { email: "boss@example.com", username: "boss", password: "bosspass12" }, ip: "198.51.100.1" })).cookie;
+  boss += "; " + (await acct("adminTrust", { method: "POST", body: { password: "bosspass12" }, cookie: boss, ip: "198.51.100.1" })).cookie;
   const troll = (await acct("signup", { method: "POST", body: { email: "troll@example.com", username: "troll", password: "trollpass1" } })).cookie;
   let list = (await acct("admin", { cookie: boss, url: "" }));
   const users = (await call(accountHandler, "/api/account?action=admin&op=users", { cookie: boss, ip: "198.51.100.1" })).body.users;

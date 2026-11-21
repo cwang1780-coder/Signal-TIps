@@ -15,9 +15,22 @@
     "api/push.js": {
       "maxDuration": 60,
       "includeFiles": "public/{sellplan,indicators}.js"
+    },
+    "api/account.js": {
+      "includeFiles": "admin-ui/admin.html"
     }
   },
   "rewrites": [
+    {
+      "source": "/control",
+      "has": [
+        {
+          "type": "host",
+          "value": "signal-tips-control.vercel.app"
+        }
+      ],
+      "destination": "/api/account?action=adminPage"
+    },
     {
       "source": "/some-test",
       "destination": "/draft.html"
@@ -25,14 +38,6 @@
     {
       "source": "/some-test/",
       "destination": "/draft.html"
-    },
-    {
-      "source": "/admin",
-      "destination": "/admin.html"
-    },
-    {
-      "source": "/admin/",
-      "destination": "/admin.html"
     }
   ],
   "crons": [

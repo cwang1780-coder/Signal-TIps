@@ -25,10 +25,12 @@ const server = http.createServer(async (req, res) => {
   if (url.pathname === "/api/trench") return trenchHandler(req, res);
   if (url.pathname === "/api/candles") return candlesHandler(req, res);
   if (url.pathname === "/api/account") return accountHandler(req, res);
+  // The admin panel (online it's on its own address; here on your computer it's at /admin)
+  if (url.pathname === "/admin" || url.pathname === "/admin/") { req.url = "/api/account?action=adminPage"; return accountHandler(req, res); }
   if (url.pathname === "/api/push") return pushHandler(req, res);
 
   // Sub-sites: /some-test shows the farm design draft
-  const SUB = { "/some-test": "draft.html", "/some-test/": "draft.html", "/admin": "admin.html", "/admin/": "admin.html" };
+  const SUB = { "/some-test": "draft.html", "/some-test/": "draft.html" };
   const file = url.pathname === "/" ? "index.html" : SUB[url.pathname] || url.pathname.slice(1);
   if (!/^((coins|art|vendor)\/)?[\w.-]+\.(html|js|svg|webmanifest|json|png|txt)$/.test(file) || file.includes("..") || !fs.existsSync(path.join(PUBLIC, file))) { res.writeHead(404); return res.end("Not found"); }
   res.writeHead(200, { "Content-Type": TYPES[path.extname(file)] });

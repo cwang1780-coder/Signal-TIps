@@ -15,6 +15,23 @@ const admin = require("./admin.js");
 const cryptopay = require("./cryptopay.js");
 const oauth = require("./oauth.js");
 const bans = require("./bans.js");
+const sitesettings = require("./sitesettings.js");
+const adminDevice = require("./admindevice.js");
+const fs = require("fs");
+const path = require("path");
+
+// The admin panel lives on its own address (ADMIN_HOST, e.g. signal-tips-control.vercel.app). On the normal site it
+// doesn't exist. Without ADMIN_HOST (running on your own computer) it's served at /admin.
+const onAdminHost = (req) => !process.env.ADMIN_HOST || String(req.headers.host || "").toLowerCase() === process.env.ADMIN_HOST.toLowerCase();
+
+// Admin activity log (newest first, last 300 entries)
+async function audit(u, op, detail) {
+  try {
+    const log = (await require("./storage.js").getJSON("admin/audit.json").catch(() => null)) || [];
+    log.unshift({ at: Date.now(), by: accounts.usernameOf(u) || u.email, op, detail: String(detail || "").slice(0, 200) });
+    await require("./storage.js").putJSON("admin/audit.json", log.slice(0, 300));
+  } catch {}
+}
 
 // The body of a form POST (Apple's sign-in callback), whether or not the platform already parsed it
 async function readForm(req) {
@@ -112,6 +129,7 @@ async function askAccess(req, res) {
 }
 
 async function askHandler(req, res) {
+  if (!(await sitesettings.load()).aiEnabled && !String(req.url).includes("diag=1")) return json(res, 503, { reason: "Ask AI is turned off right now. Please try again later." });
   if (req.method === "GET" && new URL(req.url, "http://x").searchParams.get("diag") === "1") return askDiag(req, res);
   if (new URL(req.url, "http://x").searchParams.get("review") === "1") return reviewHandler(req, res);
   if (req.method !== "POST") return json(res, 405, { reason: "POST only" });
@@ -346,6 +364,13 @@ async function accountHandler(req, res) {
   if (!accounts.available()) return send(503, { reason: "Accounts aren't set up on this site yet." });
   const host = req.headers.host || "";
   if (!/^[a-z0-9.-]+(:\d+)?$/i.test(host)) return send(400, { reason: "Bad host" });
+  if (action === "adminPage") {
+    if (!onAdminHost(req)) { res.writeHead(404, { "Content-Type": "text/plain" }); return res.end("Not found"); }
+    let html = "";
+    try { html = fs.readFileSync(path.join(__dirname, "admin-ui", "admin.html"), "utf8"); } catch { res.writeHead(500); return res.end("Admin page missing"); }
+    res.writeHead(200, { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store", "X-Robots-Tag": "noindex, nofollow", "X-Frame-Options": "DENY", "Referrer-Policy": "no-referrer" });
+    return res.end(html);
+  }
   // Sign in with Google / Apple: these are browser redirects, not JSON calls
   if (action === "oauth" || action === "oauthCallback") {
     const q = new URL(req.url, "http://x").searchParams, provider = q.get("provider");
@@ -370,6 +395,7 @@ async function accountHandler(req, res) {
   try {
     if (action === "signup" || action === "login") {
       if (req.method !== "POST") return send(405, { reason: "POST only" });
+      if (action === "signup" && !(await sitesettings.load()).signupsOpen) return send(403, { reason: "New sign-ups are paused right now. Please try again later." });
       const b = await readJson(req);
       if (action === "login") await new Promise((r) => setTimeout(r, 300)); // slow down password guessing
       const u = action === "signup" ? await accounts.signup(b.email, b.password, String(b.username ?? "")) : await accounts.login(b.email, b.password);
@@ -428,11 +454,37 @@ async function accountHandler(req, res) {
     if (action === "password") { const b = await readJson(req); await accounts.changePassword(u, b.current, b.next); return send(200, { ok: true }); }
     if (action === "delete") { const b = await readJson(req); await accounts.deleteAccount(u, b.password); return send(200, { ok: true }, accounts.clearCookie(isHttps(req))); }
 
-    // Admin panel (owner accounts only). Reads are GET; changes are same-site JSON POSTs (checked above).
+    // Admin: who am I here, and is this a trusted device?
+    if (action === "adminWho") {
+      if (!onAdminHost(req)) return send(404, { reason: "Not found" });
+      const d = accounts.isAdmin(u) ? adminDevice.check(u, req) : null;
+      return send(200, { admin: accounts.isAdmin(u), username: accounts.usernameOf(u), deviceTrusted: Boolean(d), device: d ? d.name : null });
+    }
+    if (action === "adminTrust") {
+      if (!onAdminHost(req)) return send(404, { reason: "Not found" });
+      if (!accounts.isAdmin(u)) return send(403, { reason: "Only the admin account can do this." });
+      if (req.method !== "POST") return send(405, { reason: "POST only" });
+      const b = await readJson(req);
+      await new Promise((r) => setTimeout(r, 300));
+      if (!u.pw || !accounts.checkPassword(String(b.password || ""), u.pw)) return send(401, { reason: "That password isn't right." });
+      const fresh = await accounts.getUser(u.id);
+      const { device, cookie } = adminDevice.trust(fresh, req, b.name, isHttps(req));
+      await accounts.saveUser(fresh);
+      await audit(fresh, "device.trust", device.name);
+      return send(200, { ok: true, device: device.name }, cookie);
+    }
+    // Admin panel: the admin account, on the admin address, from a trusted device. Reads are GET; changes are same-site JSON POSTs.
     if (action === "admin") {
+      if (!onAdminHost(req)) return send(404, { reason: "Not found" });
       if (!accounts.isAdmin(u)) return send(403, { reason: "The admin panel is only for the site's admin account." });
+      const dev = adminDevice.check(u, req);
+      if (!dev) return send(403, { needTrust: true, reason: "This computer isn't trusted yet." });
+      if (Date.now() - (dev.lastUsed || 0) > 10 * 60e3) { dev.lastUsed = Date.now(); await accounts.saveUser(u).catch(() => {}); }
       const op = new URL(req.url, "http://x").searchParams.get("op") || "overview";
       if (req.method === "GET") {
+        if (op === "settings") return send(200, { settings: await sitesettings.load(), defaults: sitesettings.DEFAULTS });
+        if (op === "audit") return send(200, { log: (await require("./storage.js").getJSON("admin/audit.json").catch(() => null)) || [] });
+        if (op === "devices") return send(200, { devices: (u.adminDevices || []).map((d) => ({ ...d, current: d.id === dev.id })) });
         if (op === "overview") return send(200, await admin.overview());
         if (op === "users") return send(200, { users: await admin.users() });
         if (op === "diag") return send(200, await ai.diagnose());
@@ -442,13 +494,24 @@ async function accountHandler(req, res) {
       if (req.method !== "POST") return send(405, { reason: "POST only" });
       const b = await readJson(req);
       if (op === "user") {
-        if (b.id === u.id && ["suspend", "delete", "resetPassword"].includes(b.action)) return send(400, { reason: "You can't do that to your own account here." });
-        return send(200, await admin.userAction(b.id, b.action, b));
+        if (b.id === u.id && ["suspend", "ban", "delete", "resetPassword", "signOut"].includes(b.action)) return send(400, { reason: "You can't do that to your own account here." });
+        const out = await admin.userAction(b.id, b.action, b);
+        await audit(u, "user." + b.action, (out.user?.name || b.id) + (b.days ? ` · ${b.days} days` : "") + (b.reason ? ` · ${b.reason}` : ""));
+        return send(200, out);
       }
-      if (op === "announce") { const out = await admin.setAnnouncement(b); announceCache = { at: 0, a: null }; return send(200, out); }
-      if (op === "broadcast") return send(200, await push.broadcast(b));
+      if (op === "announce") { const out = await admin.setAnnouncement(b); announceCache = { at: 0, a: null }; await audit(u, "announce", out.announcement ? `${out.announcement.tone}: ${out.announcement.text}` : "removed"); return send(200, out); }
+      if (op === "broadcast") { const out = await push.broadcast(b); await audit(u, "push.broadcast", `${b.title} → ${out.sent} devices`); return send(200, out); }
       if (op === "pushcheck") return send(200, await push.run({ force: true }));
-      if (op === "unbanip") return send(200, await admin.unbanIp(b.id));
+      if (op === "unbanip") { const out = await admin.unbanIp(b.id); await audit(u, "ban.lift-ip", b.id); return send(200, out); }
+      if (op === "settings") { const out = await sitesettings.save(b); await audit(u, "settings", Object.keys(b).map((k) => `${k}=${JSON.stringify(b[k])}`).join(", ")); return send(200, { settings: out }); }
+      if (op === "device") {
+        const fresh = await accounts.getUser(u.id);
+        if (b.action === "remove") fresh.adminDevices = (fresh.adminDevices || []).filter((d) => d.id !== b.id);
+        if (b.action === "rename") { const d = (fresh.adminDevices || []).find((x) => x.id === b.id); if (d) d.name = String(b.name || "").trim().slice(0, 40) || d.name; }
+        await accounts.saveUser(fresh);
+        await audit(u, "device." + b.action, b.name || b.id);
+        return send(200, { devices: (fresh.adminDevices || []).map((d) => ({ ...d, current: d.id === dev.id })) }, b.action === "remove" && b.id === dev.id ? adminDevice.forget(isHttps(req)) : undefined);
+      }
       return send(400, { reason: "Unknown admin action" });
     }
     return send(400, { reason: "Unknown action" });
@@ -469,6 +532,7 @@ async function announceOnly(res) {
 }
 async function configHandler(req, res) {
   if (new URL(req.url || "/", "http://x").searchParams.get("announce") === "1") return announceOnly(res);
+  const site = await sitesettings.load();
   let ref = null;
   try {
     const u = new URL(process.env.COINBASE_REFERRAL_URL || "");
@@ -485,7 +549,8 @@ async function configHandler(req, res) {
     announcement: accounts.available() ? await admin.getAnnouncement().catch(() => null) : null,
     cryptoPay: cryptopay.publicConfig(),
     oauth: oauth.enabled(),
-    trial: { freeDays: accounts.TRIAL_DAYS, depositDays: accounts.DEPOSIT_TRIAL_DAYS, depositUsd: cryptopay.depositUsd(), depositAvailable: cryptopay.enabled() },
+    maintenance: site.maintenance ? { message: site.maintenanceMessage } : null, signupsOpen: site.signupsOpen, aiEnabled: site.aiEnabled && ai.hasCredentials(),
+    trial: { freeDays: site.freeTrialDays, depositDays: cryptopay.depositDays(), depositUsd: cryptopay.depositUsd(), depositAvailable: cryptopay.enabled() },
     pushKey: accounts.available() && push.webConfigured() ? push.publicKey() : null, apnsPush: accounts.available() && push.apnsConfigured() }));
 }
 

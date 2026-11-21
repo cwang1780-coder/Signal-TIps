@@ -27,11 +27,12 @@ const METHODS = {
 };
 const ADDR_RE = { CRYPTO_SOL_ADDRESS: /^[1-9A-HJ-NP-Za-km-z]{32,44}$/, CRYPTO_ETH_ADDRESS: /^0x[a-fA-F0-9]{40}$/, CRYPTO_BTC_ADDRESS: /^(bc1[a-z0-9]{25,87}|[13][a-km-zA-HJ-NP-Z1-9]{25,34})$/ };
 const addressFor = (m) => { const a = String(process.env[METHODS[m].env] || "").trim(); return ADDR_RE[METHODS[m].env].test(a) ? a : null; };
-const priceUsd = () => Math.max(1, Math.min(1000, parseFloat(process.env.CRYPTO_PRO_PRICE_USD) || 5));
+const site = () => require("./sitesettings.js").get();
+const priceUsd = () => Math.max(1, Math.min(1000, site().priceUsd || parseFloat(process.env.CRYPTO_PRO_PRICE_USD) || 5));
 const days = () => Math.max(1, Math.min(366, parseInt(process.env.CRYPTO_PRO_DAYS, 10) || 30));
 // The small deposit for a 7-day trial. It's kept as credit and taken off their first month.
-const depositUsd = () => Math.max(0.5, Math.min(50, parseFloat(process.env.TRIAL_DEPOSIT_USD) || 1));
-const DEPOSIT_TRIAL_DAYS = 7;
+const depositUsd = () => Math.max(0.5, Math.min(50, site().depositUsd || parseFloat(process.env.TRIAL_DEPOSIT_USD) || 1));
+const depositDays = () => site().depositTrialDays || 7;
 const enabled = () => db.available() && Object.keys(METHODS).some(addressFor);
 const err = (status, message) => Object.assign(new Error(message), { status });
 const hashKey = (chain, tx) => "cryptopay/used/" + crypto.createHash("sha256").update(chain + ":" + tx).digest("hex").slice(0, 40) + ".json";
@@ -82,7 +83,7 @@ async function quote(user, method, purpose = "pro") {
     : method === "eth" ? `ethereum:${address}?value=${inv.units}`
     : `ethereum:${USDC_ETH}/transfer?address=${address}&uint256=${inv.units}`;
   return { invoice: id, method, purpose: inv.purpose, uri, label: m.label, network: m.network, asset: m.short, address, amount: inv.amount, usd, creditUsed: credit,
-    days: inv.purpose === "deposit" ? DEPOSIT_TRIAL_DAYS : days(), expires: inv.expires, note: m.note || null };
+    days: inv.purpose === "deposit" ? depositDays() : days(), expires: inv.expires, note: m.note || null };
 }
 
 const rpc = async (url, method, params) => {
@@ -171,7 +172,7 @@ async function verify(user, invoiceId, txRaw, saveUser) {
   user.payments = [...(user.payments || []), { method: inv.method, amount: inv.amount, usd: inv.usd, tx, at: Date.now(), purpose: inv.purpose || "pro" }].slice(-50);
   if (inv.purpose === "deposit") {
     // 7-day trial, and the deposit becomes credit off the first month (if they'd already had a trial, it's just credit)
-    if (!user.trialEnds) { user.trialEnds = Date.now() + DEPOSIT_TRIAL_DAYS * 864e5; user.trialDeposit = true; }
+    if (!user.trialEnds) { user.trialEnds = Date.now() + depositDays() * 864e5; user.trialDeposit = true; }
     user.credit = Math.round(((user.credit || 0) + inv.usd) * 100) / 100;
     await saveUser(user);
     return { ok: true, deposit: true, until: user.trialEnds, credit: user.credit, amount: inv.amount, asset: m.short };
@@ -182,4 +183,4 @@ async function verify(user, invoiceId, txRaw, saveUser) {
   return { ok: true, until: user.cryptoUntil, amount: inv.amount, asset: m.short, creditUsed: inv.creditUsed || 0 };
 }
 
-module.exports = { enabled, publicConfig, quote, verify, depositUsd, METHODS, fmtUnits };
+module.exports = { enabled, publicConfig, quote, verify, depositUsd, depositDays, METHODS, fmtUnits };

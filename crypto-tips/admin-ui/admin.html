@@ -10,88 +10,125 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
 <style>
-  :root { --bg: #fff; --text: #0a0b0d; --dim: #5b616e; --alt: #eef0f3; --panel: #f7f8f9; --border: #e4e7eb; --accent: #0052ff; --buy: #098551; --sell: #cf202f; --warn: #9a5b00; }
+  :root { color-scheme: dark; --bg: #0b0c0f; --card: #13151a; --card2: #181b21; --text: #eef0f3; --dim: #8a919e; --alt: #1d2027; --panel: #0f1115; --border: #23262e; --line: #2c3039;
+    --accent: #4c82ff; --accent-bg: #15244a; --buy: #2bbd7e; --buy-bg: #0e2a1f; --sell: #f2626f; --sell-bg: #331418; --warn: #e6a93b; --warn-bg: #2e230e; }
   * { box-sizing: border-box; }
   body { margin: 0; font: 15px/1.5 Inter, system-ui, sans-serif; color: var(--text); background: var(--panel); }
-  header { position: sticky; top: 0; z-index: 5; background: #fff; border-bottom: 1px solid var(--border); padding: 12px 20px; display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+  header { position: sticky; top: 0; z-index: 5; background: var(--card); border-bottom: 1px solid var(--border); padding: 12px 20px; display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
   header h1 { font-size: 18px; margin: 0; display: flex; align-items: center; gap: 8px; }
   header nav { display: flex; gap: 4px; flex-wrap: wrap; margin-left: auto; }
   header nav button { background: none; border: 0; font: inherit; font-weight: 600; padding: 8px 12px; border-radius: 999px; color: var(--dim); cursor: pointer; }
-  header nav button.on { background: #e8efff; color: var(--accent); }
+  header nav button.on { background: var(--accent-bg); color: var(--accent); }
   main { max-width: 1180px; margin: 0 auto; padding: 20px 16px 60px; }
   .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 12px; }
-  .card { background: #fff; border: 1px solid var(--border); border-radius: 14px; padding: 16px; }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 16px; }
   .card h2 { font-size: 16px; margin: 0 0 10px; }
   .stat b { display: block; font-size: 28px; font-weight: 700; letter-spacing: -.02em; }
   .stat span { color: var(--dim); font-size: 13px; }
   .section { margin-top: 18px; }
   .muted { color: var(--dim); } .small { font-size: 13px; }
   .pill { display: inline-block; padding: 2px 9px; border-radius: 999px; font-size: 12px; font-weight: 600; background: var(--alt); color: var(--dim); }
-  .p-owner { background: #1a1a2e; color: #fff; } .p-subscription { background: #e6f4ec; color: var(--buy); } .p-comp { background: #e8efff; color: var(--accent); }
-  .p-trial { background: #fff3dc; color: var(--warn); } .p-lapsed, .p-sus { background: #fdeaea; color: var(--sell); }
+  .p-owner { background: #eef0f3; color: #0b0c0f; } .p-subscription { background: var(--buy-bg); color: var(--buy); } .p-comp { background: var(--accent-bg); color: var(--accent); }
+  .p-trial { background: var(--warn-bg); color: var(--warn); } .p-lapsed, .p-sus { background: var(--sell-bg); color: var(--sell); }
   .svc { display: flex; justify-content: space-between; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--alt); } .svc:last-child { border: 0; }
   .ok { color: var(--buy); font-weight: 600; } .off { color: var(--sell); font-weight: 600; }
   button.b, a.b { font: inherit; font-weight: 600; border: 0; border-radius: 999px; padding: 8px 14px; background: var(--alt); color: var(--text); cursor: pointer; text-decoration: none; display: inline-block; }
-  button.b.primary { background: var(--accent); color: #fff; } button.b.danger { background: #fdeaea; color: var(--sell); }
+  button.b.primary { background: var(--accent); color: #fff; } button.b.danger { background: var(--sell-bg); color: var(--sell); }
   button.b:disabled { opacity: .5; cursor: default; }
-  input, select, textarea { font: inherit; border: 1px solid var(--border); border-radius: 10px; padding: 8px 10px; background: #fff; color: var(--text); }
+  input, select, textarea { font: inherit; border: 1px solid var(--border); border-radius: 10px; padding: 8px 10px; background: var(--card); color: var(--text); }
   textarea { width: 100%; min-height: 70px; resize: vertical; }
   .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
   table { width: 100%; border-collapse: collapse; font-size: 14px; }
   th { text-align: left; font-size: 12px; color: var(--dim); font-weight: 600; padding: 8px; border-bottom: 1px solid var(--border); white-space: nowrap; }
   td { padding: 10px 8px; border-bottom: 1px solid var(--alt); vertical-align: top; }
-  tr.sel td { background: #f4f7ff; }
+  tr.sel td { background: #161d30; }
   .tablewrap { overflow-x: auto; }
   .detail { margin-top: 10px; background: var(--panel); border-radius: 12px; padding: 12px; }
   .detail .row { margin-top: 8px; }
-  .msg { margin-top: 10px; padding: 10px 12px; border-radius: 10px; background: #e6f4ec; color: var(--buy); font-weight: 500; }
-  .msg.err { background: #fdeaea; color: var(--sell); }
-  .temp { font-family: ui-monospace, monospace; font-size: 16px; background: #fff; border: 1px dashed var(--border); padding: 6px 10px; border-radius: 8px; user-select: all; }
-  .info { margin-top: 10px; background: #fff; border: 1px solid var(--border); border-radius: 12px; padding: 12px; }
+  .msg { margin-top: 10px; padding: 10px 12px; border-radius: 10px; background: var(--buy-bg); color: var(--buy); font-weight: 500; }
+  .msg.err { background: var(--sell-bg); color: var(--sell); }
+  .temp { font-family: ui-monospace, monospace; font-size: 16px; background: var(--card); border: 1px dashed var(--border); padding: 6px 10px; border-radius: 8px; user-select: all; }
+  .info { margin-top: 10px; background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 12px; }
   .info-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 10px; }
   .info-grid > div { display: grid; gap: 2px; }
   .info-sec { margin-top: 12px; } .chips { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
   table.mini { margin-top: 4px; font-size: 13px; } table.mini td, table.mini th { padding: 4px 8px; }
   /* Moderation */
-  .mod { margin-top: 12px; border: 1px solid #f0c9cd; background: linear-gradient(180deg, #fff7f7, #fff); border-radius: 14px; padding: 14px 16px; display: grid; gap: 12px; }
+  .mod { margin-top: 12px; border: 1px solid #4a2328; background: linear-gradient(180deg, #1a1215, #fff); border-radius: 14px; padding: 14px 16px; display: grid; gap: 12px; }
   .mod-head { display: flex; align-items: center; gap: 12px; } .mod-head > div { display: grid; flex: 1; } .mod-head b { font-size: 16px; } .mod-head span { font-size: 13px; color: var(--dim); }
-  .mod-icon { font-size: 22px; width: 40px; height: 40px; border-radius: 12px; background: #fdeaea; display: grid; place-items: center; }
+  .mod-icon { font-size: 22px; width: 40px; height: 40px; border-radius: 12px; background: var(--sell-bg); display: grid; place-items: center; }
   .mod-field { display: grid; gap: 6px; } .mod-field > span { font-size: 12px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--dim); }
   .mod-chips { display: flex; flex-wrap: wrap; gap: 6px; }
-  .chip { font: inherit; font-size: 13px; font-weight: 600; border: 1px solid var(--border); background: #fff; border-radius: 999px; padding: 6px 12px; cursor: pointer; }
-  .chip:hover { border-color: #c9a0a5; } .chip.on { background: #1a1a2e; color: #fff; border-color: #1a1a2e; } .chip.perm.on { background: var(--sell); border-color: var(--sell); }
+  .chip { font: inherit; font-size: 13px; font-weight: 600; border: 1px solid var(--border); background: var(--card); border-radius: 999px; padding: 6px 12px; cursor: pointer; }
+  .chip:hover { border-color: #7a3a42; } .chip.on { background: #eef0f3; color: #0b0c0f; border-color: #eef0f3; } .chip.perm.on { background: var(--sell); border-color: var(--sell); }
   .chip-input { width: 120px; border-radius: 999px; padding: 6px 12px; font-size: 13px; }
   .mod-note { width: 100%; }
   .mod-toggle { display: flex; gap: 10px; align-items: flex-start; font-size: 13px; color: var(--dim); } .mod-toggle input { margin-top: 3px; } .mod-toggle b { color: var(--text); }
-  .mod-summary { font-size: 14px; background: #fff; border: 1px dashed #f0c9cd; border-radius: 10px; padding: 8px 12px; }
-  .b.mod-ban { background: var(--sell); color: #fff; justify-self: start; padding: 10px 22px; } .b.mod-ban.armed { background: #8f0f1c; box-shadow: 0 0 0 3px #f6c2c8; }
-  .mod-banned { border-color: var(--sell); background: linear-gradient(180deg, #fdeaea, #fff); } .mod-banned .mod-icon { background: var(--sell); }
-  .mod-count { font-size: 13px; font-weight: 700; color: var(--sell); background: #fdeaea; border-radius: 999px; padding: 4px 10px; white-space: nowrap; } .mod-count.perm { background: #1a1a2e; color: #fff; }
-  .mod-reason { display: grid; gap: 2px; background: #fff; border-radius: 10px; padding: 8px 12px; border: 1px solid #f0c9cd; } .mod-reason span { font-size: 12px; color: var(--dim); }
-  .mod-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; } .b.mod-lift { background: #1a1a2e; color: #fff; }
+  .mod-summary { font-size: 14px; background: var(--card); border: 1px dashed #4a2328; border-radius: 10px; padding: 8px 12px; }
+  .b.mod-ban { background: var(--sell); color: #fff; justify-self: start; padding: 10px 22px; } .b.mod-ban.armed { background: #b3202e; box-shadow: 0 0 0 3px #5a1f26; }
+  .mod-banned { border-color: var(--sell); background: linear-gradient(180deg, var(--sell-bg), #fff); } .mod-banned .mod-icon { background: var(--sell); }
+  .mod-count { font-size: 13px; font-weight: 700; color: var(--sell); background: var(--sell-bg); border-radius: 999px; padding: 4px 10px; white-space: nowrap; } .mod-count.perm { background: #eef0f3; color: #0b0c0f; }
+  .mod-reason { display: grid; gap: 2px; background: var(--card); border-radius: 10px; padding: 8px 12px; border: 1px solid #4a2328; } .mod-reason span { font-size: 12px; color: var(--dim); }
+  .mod-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; } .b.mod-lift { background: #eef0f3; color: #0b0c0f; }
   .ban-list { display: grid; gap: 8px; } .ban-item { display: flex; align-items: center; gap: 12px; border: 1px solid var(--border); border-radius: 12px; padding: 10px 12px; }
-  .ban-item .avatar { width: 36px; height: 36px; border-radius: 50%; background: #fdeaea; color: var(--sell); display: grid; place-items: center; font-weight: 700; flex: none; }
+  .ban-item .avatar { width: 36px; height: 36px; border-radius: 50%; background: var(--sell-bg); color: var(--sell); display: grid; place-items: center; font-weight: 700; flex: none; }
   .ban-who { display: grid; flex: 1; min-width: 0; }
   pre { white-space: pre-wrap; word-break: break-word; font-size: 12px; background: var(--panel); padding: 10px; border-radius: 10px; margin: 0; }
   .gate { max-width: 440px; margin: 80px auto; text-align: center; }
   .links a { display: block; padding: 8px 0; color: var(--accent); font-weight: 500; text-decoration: none; border-bottom: 1px solid var(--alt); }
   @media (max-width: 640px) { .grid { grid-template-columns: repeat(2, 1fr); } .grid > .card:not(.stat) { grid-column: 1 / -1; } .stat b { font-size: 24px; } header nav { margin-left: 0; width: 100%; overflow-x: auto; flex-wrap: nowrap; } .hide-sm { display: none; } }
+
+  /* Console layout: sidebar + content */
+  body { background: var(--bg); }
+  .shell { display: grid; grid-template-columns: 248px 1fr; min-height: 100vh; }
+  .side { position: sticky; top: 0; height: 100vh; background: #0f1115; border-right: 1px solid var(--border); display: flex; flex-direction: column; padding: 18px 12px; gap: 4px; }
+  .brand { display: flex; align-items: center; gap: 10px; padding: 4px 10px 18px; } .brand b { font-size: 16px; display: block; } .brand span { font-size: 11px; color: var(--dim); letter-spacing: .12em; text-transform: uppercase; }
+  .side nav { display: grid; gap: 2px; }
+  .side nav button { display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; background: none; border: 0; color: var(--dim); font: inherit; font-weight: 600; font-size: 14px; padding: 10px 12px; border-radius: 10px; cursor: pointer; }
+  .side nav button:hover { background: var(--alt); color: var(--text); }
+  .side nav button.on { background: var(--accent-bg); color: #fff; box-shadow: inset 3px 0 0 var(--accent); }
+  .side nav button i { font-style: normal; width: 20px; text-align: center; font-size: 15px; }
+  .side .grp { font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: #5d6470; padding: 14px 12px 4px; }
+  .side-foot { margin-top: auto; display: grid; gap: 8px; padding: 12px; border-top: 1px solid var(--border); font-size: 13px; }
+  .trusted { display: flex; align-items: center; gap: 8px; color: var(--buy); font-weight: 600; } .trusted small { display: block; color: var(--dim); font-weight: 400; }
+  .side-foot a, .side-foot button { color: var(--dim); background: none; border: 0; padding: 0; font: inherit; text-align: left; cursor: pointer; text-decoration: none; } .side-foot a:hover, .side-foot button:hover { color: var(--text); }
+  .topbar { display: flex; align-items: center; gap: 12px; padding: 18px 28px 0; }
+  .topbar h1 { font-size: 22px; margin: 0; letter-spacing: -.01em; }
+  .topbar .live { margin-left: auto; font-size: 12px; color: var(--buy); display: flex; align-items: center; gap: 6px; } .topbar .live i { width: 8px; height: 8px; border-radius: 50%; background: var(--buy); box-shadow: 0 0 0 3px var(--buy-bg); }
+  main { max-width: 1240px; margin: 0; padding: 18px 28px 60px; }
+  .card { background: var(--card); border-color: var(--border); }
+  .stat { background: linear-gradient(180deg, var(--card2), var(--card)); } .stat b { font-variant-numeric: tabular-nums; }
+  input, select, textarea { background: var(--panel); color: var(--text); border-color: var(--line); }
+  button.b { background: var(--alt); color: var(--text); } button.b:hover { filter: brightness(1.2); } button.b.primary { background: var(--accent); color: #fff; }
+  th { color: var(--dim); border-color: var(--border); } td { border-color: var(--border); }
+  .detail { background: #10131a; border: 1px solid var(--border); }
+  .info, .mod-summary, .mod-reason { background: var(--card); border-color: var(--border); }
+  .chip { background: var(--card); color: var(--text); border-color: var(--line); }
+  pre, .temp { background: var(--panel); color: var(--text); }
+  .msg { background: var(--buy-bg); } .msg.err { background: var(--sell-bg); }
+  /* Sign-in / trust screens */
+  .lock { min-height: 100vh; display: grid; place-items: center; padding: 24px; background: radial-gradient(800px 400px at 50% -10%, #17244d, transparent 70%), var(--bg); }
+  .lock-card { width: 100%; max-width: 400px; background: var(--card); border: 1px solid var(--border); border-radius: 20px; padding: 28px; display: grid; gap: 14px; box-shadow: 0 30px 80px rgba(0,0,0,.5); }
+  .lock-card h2 { margin: 0; font-size: 22px; } .lock-card p { margin: 0; color: var(--dim); }
+  .lock-card label { display: grid; gap: 6px; font-size: 13px; font-weight: 600; color: var(--dim); } .lock-card input { padding: 12px 14px; font-size: 15px; }
+  .lock-card .go { font: inherit; font-weight: 700; padding: 13px; border-radius: 12px; border: 0; background: var(--accent); color: #fff; cursor: pointer; }
+  .lock-card .err { color: var(--sell); font-size: 14px; min-height: 1em; }
+  .lock-icon { width: 52px; height: 52px; border-radius: 14px; background: var(--accent-bg); display: grid; place-items: center; font-size: 26px; }
+  /* Site controls */
+  .ctl { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 14px 0; border-top: 1px solid var(--border); } .ctl:first-of-type { border-top: 0; }
+  .ctl > div:first-child { display: grid; gap: 2px; flex: 1; } .ctl b { font-size: 15px; } .ctl span { font-size: 13px; color: var(--dim); }
+  .tgl { width: 50px; height: 28px; border-radius: 999px; border: 0; background: var(--line); position: relative; cursor: pointer; flex: none; }
+  .tgl i { position: absolute; top: 3px; left: 3px; width: 22px; height: 22px; border-radius: 50%; background: #fff; transition: left .15s; }
+  .tgl.on { background: var(--buy); } .tgl.on i { left: 25px; } .tgl.danger.on { background: var(--sell); }
+  .ctl input[type=number] { width: 110px; }
+  .warn-banner { background: var(--sell-bg); border: 1px solid #5a1f26; color: #ffb3ba; border-radius: 12px; padding: 10px 14px; font-size: 14px; margin-bottom: 14px; }
+  .log-row { display: grid; grid-template-columns: 150px 120px 160px 1fr; gap: 10px; padding: 9px 4px; border-top: 1px solid var(--border); font-size: 13px; }
+  .log-row code { color: var(--accent); }
+  @media (max-width: 860px) { .shell { grid-template-columns: 1fr; } .side { position: static; height: auto; flex-direction: row; flex-wrap: wrap; align-items: center; padding: 10px; } .brand { padding: 4px 8px; } .side nav { display: flex; overflow-x: auto; width: 100%; } .side nav button { white-space: nowrap; width: auto; } .side .grp, .side-foot { display: none; } main, .topbar { padding-left: 14px; padding-right: 14px; } .log-row { grid-template-columns: 1fr; gap: 2px; } }
 </style>
 </head>
 <body>
-<header>
-  <h1><img src="/icon.svg" width="26" height="26" alt="" /> Admin</h1>
-  <a href="/" class="small muted">← Back to the site</a>
-  <nav id="tabs" hidden>
-    <button data-tab="overview" class="on">Overview</button>
-    <button data-tab="users">Users</button>
-    <button data-tab="announce">Announcement</button>
-    <button data-tab="notify">Notifications</button>
-    <button data-tab="bans">Bans</button>
-    <button data-tab="tools">Tools</button>
-  </nav>
-</header>
-<main id="main"><p class="muted">Loading…</p></main>
+<div id="app"><div class="lock"><p class="muted">Loading…</p></div></div>
 
 <script>
 (function () {
@@ -105,7 +142,7 @@
   async function api(op, body) {
     const r = await fetch(`/api/account?action=admin&op=${op}`, body ? { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) } : {});
     const d = await r.json().catch(() => ({}));
-    if (!r.ok) throw Object.assign(new Error(d.reason || "HTTP " + r.status), { status: r.status });
+    if (!r.ok) throw Object.assign(new Error(d.reason || "HTTP " + r.status), { status: r.status, needTrust: Boolean(d.needTrust) });
     return d;
   }
 
@@ -167,6 +204,7 @@
           <button class="b" data-act="extendTrial" data-days="7">Extend trial 7 days</button>
           <button class="b" data-act="resetAi">Reset AI questions</button>
           <button class="b" data-act="resetPassword">Temporary password</button>
+          <button class="b" data-act="signOut">Sign out everywhere</button>
           <button class="b danger" data-act="delete">Delete account</button></div>
         ${modHtml(u)}`}
         ${flash ? flashHtml() : ""}
@@ -298,10 +336,46 @@
         ${banList?.length ? `<table><tr><th>Address</th><th>Account</th><th>Ends</th><th>Reason</th><th></th></tr>${banList.map((b) => `<tr><td><code>${esc(b.mask || "hidden")}</code></td><td>${esc((users || []).find((u) => u.id === b.user)?.name || (b.user ? "deleted account" : "–"))}</td><td>${b.until ? `<span class="mod-count" data-count="${b.until}">${left(b.until)}</span>` : '<span class="mod-count perm">Permanent</span>'}</td><td class="small">${esc(b.reason || "")}</td><td><button class="b" data-unbanip="${esc(b.id)}">Lift</button></td></tr>`).join("")}</table>` : '<p class="muted">No blocked addresses.</p>'}
       </div>${flashHtml()}`);
   }
-  const RENDER = { bans: renderBans, overview: renderOverview, users: renderUsers, announce: renderAnnounce, notify: renderNotify, tools: renderTools };
+  // ── Site controls ──
+  let siteCfg = null, devices = null, auditLog = null;
+  function renderControls() {
+    const c = siteCfg, tg = (k, danger) => `<button class="tgl${c[k] ? " on" : ""}${danger ? " danger" : ""}" data-set="${k}" aria-pressed="${c[k]}"><i></i></button>`;
+    const num = (k, step, ph) => `<input type="number" step="${step}" data-num="${k}" value="${c[k] ?? ""}" placeholder="${ph}" />`;
+    show(`${c.maintenance ? `<div class="warn-banner">🛠 Maintenance mode is ON: visitors see "${esc(c.maintenanceMessage)}" instead of the app. You can still use it.</div>` : ""}
+      <div class="grid" style="grid-template-columns:repeat(auto-fill,minmax(360px,1fr))">
+        <div class="card"><h2>Switches</h2>
+          <div class="ctl"><div><b>Maintenance mode</b><span>Shows everyone a "back soon" screen. Admins can still use the site.</span></div>${tg("maintenance", true)}</div>
+          <div class="ctl"><div><b>Maintenance message</b><span><input data-text="maintenanceMessage" value="${esc(c.maintenanceMessage)}" maxlength="200" style="width:100%;margin-top:6px" /></span></div></div>
+          <div class="ctl"><div><b>New sign-ups</b><span>Turn off to stop new accounts (existing ones still sign in).</span></div>${tg("signupsOpen")}</div>
+          <div class="ctl"><div><b>Ask AI and AI second opinion</b><span>Turn off if the AI bill or Google limits are a problem.</span></div>${tg("aiEnabled")}</div>
+        </div>
+        <div class="card"><h2>Prices and trials</h2>
+          <div class="ctl"><div><b>Pro price (USD per month)</b><span>For crypto payments. Blank uses the default ($5).</span></div>${num("priceUsd", "0.5", "5")}</div>
+          <div class="ctl"><div><b>Free trial length (days)</b><span>0 turns the free trial off.</span></div>${num("freeTrialDays", "1", "3")}</div>
+          <div class="ctl"><div><b>Deposit trial length (days)</b><span>The trial people get for a small deposit.</span></div>${num("depositTrialDays", "1", "7")}</div>
+          <div class="ctl"><div><b>Trial deposit (USD)</b><span>Comes off their first month.</span></div>${num("depositUsd", "0.5", "1")}</div>
+          <div class="row" style="margin-top:10px"><button class="b primary" data-save-nums>Save prices and trials</button></div>
+        </div>
+      </div>${flashHtml()}`);
+  }
+  function renderDevices() {
+    show(`<div class="card"><h2>Devices that can use the admin controls</h2>
+      <p class="muted small">Admin actions need your admin account <b>and</b> one of these devices. Remove any you don't recognise; removing this device signs it out of the controls.</p>
+      <table><tr><th>Device</th><th>Added</th><th>Last used</th><th></th></tr>${(devices || []).map((d) => `<tr><td><b>${esc(d.name)}</b>${d.current ? ' <span class="pill p-subscription">This computer</span>' : ""}</td><td>${when(d.added)}</td><td>${ago(d.lastUsed)}</td>
+        <td class="row"><button class="b" data-dev-rename="${esc(d.id)}">Rename</button><button class="b danger" data-dev-remove="${esc(d.id)}">Remove</button></td></tr>`).join("")}</table>${flashHtml()}</div>`);
+  }
+  function renderAudit() {
+    show(`<div class="card"><h2>Everything done in the admin panel</h2>
+      ${(auditLog || []).length ? auditLog.map((x) => `<div class="log-row"><span class="muted">${new Date(x.at).toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}</span><b>${esc(x.by)}</b><code>${esc(x.op)}</code><span>${esc(x.detail)}</span></div>`).join("") : '<p class="muted">Nothing yet.</p>'}</div>`);
+  }
+  const RENDER = { controls: renderControls, devices: renderDevices, audit: renderAudit, bans: renderBans, overview: renderOverview, users: renderUsers, announce: renderAnnounce, notify: renderNotify, tools: renderTools };
   async function go(t) {
     tab = t; flash = null;
     document.querySelectorAll("#tabs button").forEach((b) => b.classList.toggle("on", b.dataset.tab === t));
+    const TT = { overview: "Overview", users: "Users", bans: "Bans", announce: "Announcements", notify: "Notifications", controls: "Site controls", devices: "Trusted devices", audit: "Activity log", tools: "Tools" }; if ($("ttl")) $("ttl").textContent = TT[t] || "";
+    if (t === "controls") { show('<p class="muted">Loading…</p>'); siteCfg = (await api("settings")).settings; }
+    if (t === "devices") { show('<p class="muted">Loading…</p>'); devices = (await api("devices")).devices; }
+    if (t === "audit") { show('<p class="muted">Loading…</p>'); auditLog = (await api("audit")).log; }
     if (t === "users" && !users) { show('<p class="muted">Loading accounts…</p>'); users = (await api("users")).users; }
     if (t === "bans") { show('<p class="muted">Loading bans…</p>'); banList = (await api("bans")).bans; if (!users) users = (await api("users")).users; }
     RENDER[t]();
@@ -314,6 +388,14 @@
     const o = e.target.closest("[data-open]"); if (o) { selected = selected === o.dataset.open ? null : o.dataset.open; flash = null; return renderUsers(); }
     const btn = e.target.closest("button"); if (!btn) return;
     try {
+      if (btn.dataset.set) { const k = btn.dataset.set; siteCfg = (await api("settings", { [k]: !siteCfg[k] })).settings; flash = { html: "Saved." }; return renderControls(); }
+      if (btn.hasAttribute("data-save-nums")) {
+        const body = {}; document.querySelectorAll("[data-num]").forEach((i) => (body[i.dataset.num] = i.value === "" ? null : +i.value));
+        const m = document.querySelector('[data-text="maintenanceMessage"]'); if (m) body.maintenanceMessage = m.value;
+        siteCfg = (await api("settings", body)).settings; flash = { html: "Prices and trials saved. The site uses them within about 15 seconds." }; return renderControls();
+      }
+      if (btn.dataset.devRemove) { if (!confirm("Remove this device from the admin controls?")) return; const r = await api("device", { action: "remove", id: btn.dataset.devRemove }); devices = r.devices; if (!devices.some((d) => d.current)) return location.reload(); flash = { html: "Device removed." }; return renderDevices(); }
+      if (btn.dataset.devRename) { const n = prompt("New name for this device:"); if (!n) return; devices = (await api("device", { action: "rename", id: btn.dataset.devRename, name: n })).devices; return renderDevices(); }
       if (btn.id === "ureload") { users = (await api("users")).users; return renderUsers(); }
       if (btn.dataset.liftuser) { await api("user", { id: btn.dataset.liftuser, action: "unban" }); users = (await api("users")).users; banList = (await api("bans")).bans; flash = { html: "Ban lifted." }; return renderBans(); }
       if (btn.dataset.unbanip) { await api("unbanip", { id: btn.dataset.unbanip }); banList = (await api("bans")).bans; flash = { html: "Ban lifted." }; return renderBans(); }
@@ -388,20 +470,75 @@
     }
   });
   document.addEventListener("input", (e) => { if (e.target.id === "uq") { e.target.dataset.focus = "1"; const pos = e.target.selectionStart; renderUsers(); const n = $("uq"); n.focus(); n.setSelectionRange(pos, pos); } });
-  document.addEventListener("change", (e) => {
+  document.addEventListener("change", async (e) => {
+    if (e.target.dataset?.text === "maintenanceMessage") { siteCfg = (await api("settings", { maintenanceMessage: e.target.value })).settings; flash = { html: "Message saved." }; return renderControls(); }
     if (e.target.id === "uf") renderUsers();
     if (e.target.id === "banCustom" && +e.target.value >= 1) { banDur = Math.min(3650, Math.round(+e.target.value)); banNote = $("banNote")?.value || banNote; renderUsers(); }
   });
 
-  (async () => {
-    try {
-      data = await api("overview");
-      $("tabs").hidden = false;
-      renderOverview();
-    } catch (e) {
-      show(`<div class="gate card"><h2>Admin only</h2><p class="muted">${e.status === 401 ? "Sign in on the site with the admin account first, then come back here." : esc(e.message)}</p><a class="b primary" href="/?tab=me">Go to sign in</a></div>`);
-    }
-  })();
+  // ── Getting in: sign in, then trust this computer once ──
+  const raw = (action, body) => fetch("/api/account?action=" + action, body ? { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) } : {})
+    .then(async (r) => ({ status: r.status, d: await r.json().catch(() => ({})) }));
+  const SITE = location.hostname.endsWith("vercel.app") ? "https://signal-tips.vercel.app/" : "/";
+  let who = null;
+  function lock(html) { $("app").innerHTML = `<div class="lock"><form class="lock-card" novalidate>${html}</form></div>`; $("app").querySelector("input")?.focus(); }
+  function signInScreen(err = "") {
+    lock(`<div class="lock-icon">🔐</div><h2>Signal Tips Control</h2><p>Admin sign-in. This page isn't linked from the public site.</p>
+      <label>Username<input name="u" autocomplete="username" autocapitalize="none" spellcheck="false" /></label>
+      <label>Password<input name="p" type="password" autocomplete="current-password" /></label>
+      <p class="err">${esc(err)}</p><button class="go">Sign in</button>`);
+    $("app").querySelector("form").onsubmit = async (e) => {
+      e.preventDefault(); const f = e.target;
+      const r = await raw("login", { email: f.u.value.trim(), password: f.p.value });
+      if (r.status !== 200) return signInScreen(r.d.reason || "Couldn't sign in.");
+      boot();
+    };
+  }
+  function trustScreen(err = "") {
+    const guess = (/Mac/.test(navigator.userAgent) ? "Mac" : /Windows/.test(navigator.userAgent) ? "Windows PC" : /iPhone|iPad/.test(navigator.userAgent) ? "iPhone" : /Android/.test(navigator.userAgent) ? "Android phone" : /CrOS/.test(navigator.userAgent) ? "Chromebook" : "Computer");
+    lock(`<div class="lock-icon">💻</div><h2>Trust this computer?</h2><p>Signed in as <b>${esc(who?.username || "")}</b>. Admin controls only work on devices you trust, so a stolen password alone isn't enough. Only do this on your own computer.</p>
+      <label>Name this device<input name="n" value="${esc(guess)}" maxlength="40" /></label>
+      <label>Confirm your password<input name="p" type="password" autocomplete="current-password" /></label>
+      <p class="err">${esc(err)}</p><button class="go">Trust this computer</button>
+      <button type="button" class="b" data-signout>Sign out</button>`);
+    $("app").querySelector("form").onsubmit = async (e) => {
+      e.preventDefault(); const f = e.target;
+      const r = await raw("adminTrust", { password: f.p.value, name: f.n.value });
+      if (r.status !== 200) return trustScreen(r.d.reason || "Couldn't trust this device.");
+      boot();
+    };
+  }
+  function consoleShell() {
+    const NAV = [["Monitor", [["overview", "📊", "Overview"], ["users", "👥", "Users"], ["bans", "⛔", "Bans"]]],
+      ["Communicate", [["announce", "📣", "Announcements"], ["notify", "🔔", "Notifications"]]],
+      ["Control", [["controls", "🎛️", "Site controls"], ["devices", "💻", "Trusted devices"], ["audit", "🧾", "Activity log"], ["tools", "🧰", "Tools"]]]];
+    $("app").innerHTML = `<div class="shell">
+      <aside class="side">
+        <div class="brand"><img src="/icon.svg" width="34" height="34" alt="" /><div><b>Signal Tips</b><span>Control</span></div></div>
+        <nav id="tabs">${NAV.map(([g, items]) => `<div class="grp">${g}</div>${items.map(([id, ic, t]) => `<button data-tab="${id}"><i>${ic}</i>${t}</button>`).join("")}`).join("")}</nav>
+        <div class="side-foot">
+          <div class="trusted">✓<div>Trusted device<small>${esc(who.device || "")} · ${esc(who.username || "")}</small></div></div>
+          <a href="${SITE}" target="_blank" rel="noopener">Open the public site ↗</a>
+          <button data-signout>Sign out</button>
+        </div>
+      </aside>
+      <div><div class="topbar"><h1 id="ttl">Overview</h1><span class="live"><i></i>Live</span></div><main id="main"><p class="muted">Loading…</p></main></div>
+    </div>`;
+  }
+  async function boot() {
+    const r = await raw("adminWho");
+    if (r.status === 404) { $("app").innerHTML = '<div class="lock"><p class="muted">Not found.</p></div>'; return; }
+    who = r.d;
+    if (!who.admin) return signInScreen(who.username ? "That account isn't the admin account." : "");
+    if (!who.deviceTrusted) return trustScreen();
+    consoleShell();
+    try { data = await api("overview"); go("overview"); }
+    catch (e) { if (e.needTrust) return trustScreen(); show(`<p class="msg err">${esc(e.message)}</p>`); }
+  }
+  document.addEventListener("click", async (e) => {
+    if (e.target.closest("[data-signout]")) { await raw("logout", {}); location.reload(); }
+  });
+  boot();
 })();
 </script>
 </body>

@@ -43,7 +43,7 @@
     try { if (u) localStorage.setItem("signedInNow", "1"); else if (loaded) localStorage.removeItem("signedInNow"); } catch {}
     document.body.classList.toggle("signedIn", Boolean(u));
     document.body.classList.toggle("isPro", window.isPro());
-    renderHeader(); renderPanel(); renderProBox(); renderGate(); renderFinish();
+    renderHeader(); renderPanel(); renderProBox(); renderGate(); renderFinish(); renderMaintenance();
     if (wasPro !== window.isPro()) document.dispatchEvent(new Event("plan-changed"));
   }
 
@@ -328,6 +328,15 @@
     catch (e) { toast("Couldn't confirm your payment: " + e.message); }
   }
 
+  // Maintenance mode (switched on in the admin panel): everyone but the owners sees a "back soon" screen
+  function renderMaintenance() {
+    const on = Boolean(cfg?.maintenance) && plan().kind !== "owner";
+    let el = $("maintScreen");
+    if (!on) { el?.remove(); return; }
+    if (!el) { el = document.createElement("div"); el.id = "maintScreen"; document.body.appendChild(el); }
+    el.innerHTML = `<div><div class="mt-icon">🛠</div><h1>We'll be right back</h1><p>${esc(cfg.maintenance.message || "")}</p><p class="mt-small">Signal Tips is being updated. Try again in a little while.</p></div>`;
+    document.documentElement.classList.remove("gate-wait");
+  }
   // Banned (by account or internet address): a full screen saying so, with the end date and reason
   function showBanned(d) {
     if ($("bannedScreen")) return;
@@ -451,6 +460,7 @@
   window.onSiteConfig = (c) => {
     cfg = c; renderPanel(); renderProBox(); renderAnnouncement(c.announcement);
     patchGate(); // fill in the sign-in options and prices that depend on site settings, without rebuilding the page
+    renderMaintenance();
   };
   // Site announcement from the admin panel, until the visitor closes it
   function renderAnnouncement(a) {

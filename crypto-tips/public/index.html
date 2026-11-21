@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
+<script>if (location.hostname === "signal-tips-control.vercel.app") location.replace("/control");</script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 <title>Crypto Signal Tips</title>
 <link rel="manifest" href="manifest.webmanifest" />
@@ -1090,9 +1091,12 @@
   @media (max-width: 520px) { .cp-sendgrid { grid-template-columns: 1fr; } .cp-qr { justify-self: center; } .cp-price b { font-size: 38px; } .cp-steps li span { display: none; } }
   /* Sign-in page: no flash of the app, no dark edges when the page bounces on phones */
   html.gate-wait, html.gate-wait body, html.gated-html, html.gated-html body { background: #fff !important; }
-  html.gated-html body > *:not(#gate):not(dialog):not(#bannedScreen):not(#finishAcct):not(#emergency):not(#toasts) { visibility: hidden; }
+  html.gated-html body > *:not(#gate):not(dialog):not(#bannedScreen):not(#finishAcct):not(#emergency):not(#maintScreen):not(#toasts) { visibility: hidden; }
   #gate { overscroll-behavior: contain; -webkit-overflow-scrolling: touch; padding-top: env(safe-area-inset-top); }
   .lg-coin img, .lg-table img { transition: none; }
+  #maintScreen { position: fixed; inset: 0; z-index: 9999; background: radial-gradient(800px 400px at 50% -10%, #17244d, transparent 70%), #0a0b0d; color: #fff; display: grid; place-items: center; padding: 24px; text-align: center; }
+  #maintScreen h1 { font-size: clamp(32px, 6vw, 56px); margin: 16px 0 10px; letter-spacing: -.02em; } #maintScreen p { color: #c5cad3; font-size: 18px; max-width: 520px; margin: 0 auto; }
+  #maintScreen .mt-icon { font-size: 54px; } #maintScreen .mt-small { font-size: 14px; color: #7d838e; margin-top: 16px; }
 </style>
 <script>try { if (!localStorage.getItem("signedInNow")) { document.documentElement.classList.add("gate-wait"); setTimeout(() => document.documentElement.classList.remove("gate-wait"), 5000); } } catch {}</script>
 <script>try { var t = JSON.parse(localStorage.getItem("theme") || '"dark"'); if (t === "system") t = matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"; document.documentElement.dataset.theme = t; var st = JSON.parse(localStorage.getItem("settings") || "{}"); if (st.reduceMotion) document.documentElement.classList.add("reduce-motion"); } catch (e) { document.documentElement.dataset.theme = "dark"; }</script>

@@ -96,6 +96,7 @@ async function userAction(id, op, arg = {}) {
     case "revokePro": u.comp = null; note = "Free Pro removed. (A paid subscription, if any, is managed in Stripe.)"; break;
     case "extendTrial": u.trialEnds = Math.max(u.trialEnds || 0, Date.now()) + days * DAY; note = `Trial now ends ${new Date(u.trialEnds).toDateString()}.`; break;
     case "resetAi": u.ai = null; note = "AI questions for this month reset to 0."; break;
+    case "signOut": u.sessionsFrom = Date.now(); note = "Signed out on every device."; break;
     case "suspend": case "ban": {
       if (isOwner) throw err(400, "Owner accounts can't be banned.");
       const d = Math.max(0, Math.min(3650, parseInt(arg.days, 10) || 0)), reason = String(arg.reason || "").trim().slice(0, 200);
