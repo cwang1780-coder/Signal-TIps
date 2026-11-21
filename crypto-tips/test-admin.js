@@ -6,7 +6,8 @@ const path = require("path");
 process.env.ACCOUNTS_DIR = fs.mkdtempSync(path.join(os.tmpdir(), "admin-test-"));
 delete process.env.BLOB_READ_WRITE_TOKEN; delete process.env.VERCEL; delete process.env.STRIPE_SECRET_KEY;
 delete process.env.GEMINI_API_KEY; delete process.env.ANTHROPIC_API_KEY;
-process.env.OWNER_EMAILS = "boss@example.com";
+process.env.OWNER_EMAILS = "boss@example.com,eason@example.com";
+process.env.ADMIN_ACCOUNTS = "boss@example.com"; // only this owner may use the admin panel
 const { accountHandler, configHandler } = require("./handlers.js");
 
 async function call(action, { method = "GET", body, cookie, op } = {}) {
@@ -25,14 +26,19 @@ let boss;
   const sam = await call("signup", { method: "POST", body: { email: "sam@example.com", password: "sampass123" } });
   await call("signup", { method: "POST", body: { email: "kim@example.com", password: "kimpass123" } });
 
-  // Only owners get in
+  // Only the admin account gets in: not regular users, not other owners
   assert.strictEqual((await call("admin", { cookie: sam.cookie })).status, 403);
+  const eason = (await call("signup", { method: "POST", body: { email: "eason@example.com", password: "easonpass1" } })).cookie;
+  assert.strictEqual((await call("admin", { cookie: eason })).status, 403, "another owner can't open the admin panel");
+  assert.strictEqual((await call("me", { cookie: eason })).body.user.admin, undefined);
+  assert.strictEqual((await call("me", { cookie: boss })).body.user.admin, true);
+  await call("admin", { op: "users", cookie: boss }); // still works for the admin
   assert.strictEqual((await call("admin")).status, 401);
 
   const ov = (await admin("overview")).body;
-  assert.strictEqual(ov.users, 3);
-  assert.strictEqual(ov.signups.last24h, 3);
-  assert.strictEqual(ov.byPlan.owner, 1);
+  assert.strictEqual(ov.users, 4);
+  assert.strictEqual(ov.signups.last24h, 4);
+  assert.strictEqual(ov.byPlan.owner, 2);
   assert.strictEqual(ov.services.ai, false);
 
   let list = (await admin("users")).body.users;
@@ -76,7 +82,7 @@ let boss;
   // Delete
   r = await admin("user", { id: samId, action: "delete" });
   assert.strictEqual(r.body.deleted, true);
-  assert.strictEqual((await admin("overview")).body.users, 2);
+  assert.strictEqual((await admin("overview")).body.users, 3);
 
   // Changes must be same-site JSON posts
   const forged = await call("admin", { op: "announce", method: "POST", cookie: boss, body: undefined });

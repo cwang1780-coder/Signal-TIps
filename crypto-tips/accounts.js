@@ -182,9 +182,13 @@ async function deleteAccount(u, password) {
   await db.delKey(userKey(u.id));
 }
 
-const publicUser = (u, plan) => ({ email: u.email, created: u.created, plan, aiUsed: aiUsed(u), trialDays: TRIAL_DAYS });
+// Who can open the admin panel: only these accounts (ADMIN_ACCOUNTS in Vercel, comma separated; default "colin"),
+// and only if they're also owners. Other owners keep everything unlocked but don't get the admin panel.
+const admins = () => String(process.env.ADMIN_ACCOUNTS || "colin").split(",").map(normEmail).filter(Boolean);
+const isAdmin = (u) => Boolean(u) && admins().includes(u.email) && owners().includes(u.email);
+const publicUser = (u, plan) => ({ email: u.email, created: u.created, plan, aiUsed: aiUsed(u), trialDays: TRIAL_DAYS, ...(isAdmin(u) ? { admin: true } : {}) });
 
 module.exports = {
-  signup, login, userFromRequest, planOf, startTrial, countAi, aiUsed, savePrefs, changePassword, deleteAccount, saveUser, getUser,
+  signup, login, userFromRequest, isAdmin, planOf, startTrial, countAi, aiUsed, savePrefs, changePassword, deleteAccount, saveUser, getUser,
   makeToken, readToken, sessionCookie, clearCookie, publicUser, hashPassword, checkPassword, emailId, TRIAL_DAYS, available: db.available,
 };

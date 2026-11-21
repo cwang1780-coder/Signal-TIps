@@ -266,7 +266,7 @@
       $("tabs").hidden = false;
       renderOverview();
     } catch (e) {
-      show(`<div class="gate card"><h2>Owner accounts only</h2><p class="muted">${e.status === 401 ? "Sign in on the site with an owner account first, then come back here." : esc(e.message)}</p><a class="b primary" href="/?tab=me">Go to sign in</a></div>`);
+      show(`<div class="gate card"><h2>Admin only</h2><p class="muted">${e.status === 401 ? "Sign in on the site with the admin account first, then come back here." : esc(e.message)}</p><a class="b primary" href="/?tab=me">Go to sign in</a></div>`);
     }
   })();
 })();

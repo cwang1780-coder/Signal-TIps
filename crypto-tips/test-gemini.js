@@ -17,7 +17,7 @@ const mock = http.createServer(async (req, res) => {
   if (mode === "429") { res.writeHead(429, { "Content-Type": "application/json" }); return res.end(JSON.stringify({ error: { code: 429, message: "Resource exhausted", status: "RESOURCE_EXHAUSTED" } })); }
   if (req.url.includes(":generateContent")) { res.writeHead(200, { "Content-Type": "application/json" }); return res.end(JSON.stringify({ candidates: [{ content: { role: "model", parts: [{ text: "OK" }] }, finishReason: "STOP" }] })); }
   res.writeHead(200, { "Content-Type": "text/event-stream" });
-  if (mode === "slow") return; // never answers: the app must give up by itself
+  if (mode === "slow" || (mode === "slowfirst" && req.url.includes("gemini-3.8-flash"))) return; // never answers: the app must move on by itself
   const chunk = (text, finishReason) => `data: ${JSON.stringify({ candidates: [{ content: { role: "model", parts: [{ text }] }, ...(finishReason ? { finishReason } : {}) }] })}\r\n\r\n`;
   res.end(chunk("BTC looks ") + chunk("**weak**.", mode === "safety" ? "SAFETY" : "STOP"));
 });
@@ -39,13 +39,21 @@ const mock = http.createServer(async (req, res) => {
   assert.ok(b.contents[2].parts[0].text.includes("Question: Sell BTC?") && b.contents[2].parts[0].text.includes('"rsi":30'));
   assert.ok(JSON.stringify(b.systemInstruction || b.system_instruction).includes("Crypto Signal Tips"), "system prompt sent");
 
-  assert.strictEqual(b.generationConfig?.thinkingConfig?.thinkingLevel || b.generation_config?.thinking_config?.thinking_level, "LOW", "light thinking for quick answers");
+  assert.strictEqual(b.generationConfig?.thinkingConfig?.thinkingLevel || b.generation_config?.thinking_config?.thinking_level, "MINIMAL", "minimal thinking for quick answers");
 
   mode = "slow"; out = ""; process.env.GEMINI_TIMEOUT_MS = "300";
   const t0 = Date.now();
   await ai.ask({ question: "x", snapshot: {} }, (t) => (out += t));
-  assert.ok(Date.now() - t0 < 5000 && /took too long/.test(out), "a stuck answer is cut off: " + out);
+  assert.ok(Date.now() - t0 < 5000 && /didn't answer in time/.test(out), "a stuck answer is cut off: " + out);
   delete process.env.GEMINI_TIMEOUT_MS;
+
+  // The first model hangs: after the first-word limit it moves to another model, which answers
+  mode = "slowfirst"; out = ""; process.env.GEMINI_FIRST_MS = "300";
+  const t1 = Date.now();
+  await ai.ask({ question: "x", snapshot: {} }, (t) => (out += t));
+  assert.strictEqual(out, "BTC looks **weak**.", out);
+  assert.ok(Date.now() - t1 < 5000 && !captured.url.includes("gemini-3.8-flash"), captured.url);
+  delete process.env.GEMINI_FIRST_MS;
 
   mode = "safety"; out = "";
   await ai.ask({ question: "x", snapshot: {} }, (t) => (out += t));
@@ -57,8 +65,9 @@ const mock = http.createServer(async (req, res) => {
   assert.strictEqual(out, "BTC looks **weak**.");
   assert.ok(captured.url.includes("gemini-9.1-flash:streamGenerateContent"), captured.url);
   // Everything busy: a clear message, not "error 503"
-  mode = "allbusy";
-  await assert.rejects(ai.ask({ question: "x", snapshot: {} }, () => {}), (e) => /overloaded right now/.test(ai.friendlyError(e)));
+  mode = "allbusy"; out = "";
+  await ai.ask({ question: "x", snapshot: {} }, (t) => (out += t));
+  assert.ok(/very busy right now/.test(out), out);
 
   mode = "429";
   await assert.rejects(ai.ask({ question: "x", snapshot: {} }, () => {}), (e) => /free Gemini limit/.test(ai.friendlyError(e)));

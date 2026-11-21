@@ -138,7 +138,7 @@ async function askHandler(req, res) {
 async function askDiag(req, res) {
   const user = await accounts.userFromRequest(req).catch(() => null);
   const plan = user ? await accounts.planOf(user) : null;
-  if (plan?.kind !== "owner") return json(res, 403, { reason: "Sign in with an owner account first, then open this page again." });
+  if (plan?.kind !== "owner" || !accounts.isAdmin(user)) return json(res, 403, { reason: "Sign in with the admin account first, then open this page again." });
   json(res, 200, await ai.diagnose());
 }
 
@@ -328,7 +328,7 @@ async function accountHandler(req, res) {
 
     // Admin panel (owner accounts only). Reads are GET; changes are same-site JSON POSTs (checked above).
     if (action === "admin") {
-      if ((await accounts.planOf(u)).kind !== "owner") return send(403, { reason: "Only owner accounts can open the admin panel." });
+      if (!accounts.isAdmin(u)) return send(403, { reason: "The admin panel is only for the site's admin account." });
       const op = new URL(req.url, "http://x").searchParams.get("op") || "overview";
       if (req.method === "GET") {
         if (op === "overview") return send(200, await admin.overview());

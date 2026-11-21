@@ -61,48 +61,62 @@ async function askGemini({ question, history, snapshot }, onText) {
   const { GoogleGenAI } = require("@google/genai");
   if (!gemini) gemini = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY, ...(process.env.GEMINI_BASE_URL ? { httpOptions: { baseUrl: process.env.GEMINI_BASE_URL } } : {}) });
   const contents = buildMessages({ question, history, snapshot }).map((m) => ({ role: m.role === "assistant" ? "model" : "user", parts: [{ text: m.content }] }));
-  // Light thinking keeps answers quick; a hard limit means it can never hang (the server itself stops at 60 s)
-  const abort = new AbortController(), timer = setTimeout(() => abort.abort(), +process.env.GEMINI_TIMEOUT_MS || 45_000);
-  let light = true; // dropped if a model doesn't accept the thinking setting
-  const start = (model) => gemini.models.generateContentStream({ model, contents, config: {
-    systemInstruction: SYSTEM, maxOutputTokens: 8192, abortSignal: abort.signal, ...(light ? { thinkingConfig: { thinkingLevel: "LOW" } } : {}) } });
-  let finish = null, blocked = null, any = false;
-  try {
-    let stream;
-    let model = geminiModel || GEMINI_MODEL;
-    const tried = new Set();
-    for (let attempt = 0; ; attempt++) {
-      try { stream = await start(model); break; }
-      catch (e) {
-        if (attempt > 5 || abort.signal.aborted) throw e;
-        if (e?.status === 400 && /thinking/i.test(e.message) && light) { light = false; continue; }
-        // Google's servers busy (common on the free tier): wait a moment and retry, then try another Flash model
-        if (busy(e)) {
-          tried.add(model);
-          await new Promise((r) => setTimeout(r, 800 + attempt * 700));
-          if (tried.size === 1 && attempt === 0) continue; // one retry on the same model first
-          const alt = (await flashModels().catch(() => [])).find((n) => !tried.has(n));
-          if (alt) { console.error("[ai]", model, "busy; trying", alt); model = alt; }
-          continue;
+  const total = +process.env.GEMINI_TIMEOUT_MS || 38_000;      // the whole answer (the handler's deadline is 40 s)
+  const firstWord = +process.env.GEMINI_FIRST_MS || 12_000;    // each try must start answering within this, or we move on
+  const t0 = Date.now(), left = () => total - (Date.now() - t0);
+  let thinking = { thinkingLevel: "MINIMAL" }; // fastest start; dropped if a model doesn't accept it
+  let model = geminiModel || GEMINI_MODEL;
+  const tried = new Set();
+  let finish = null, blocked = null, any = false, lastErr = null;
+
+  for (let attempt = 0; attempt < 6 && left() > 2000; attempt++) {
+    const ctl = new AbortController();
+    const cap = setTimeout(() => ctl.abort(), Math.min(left(), any ? left() : firstWord));
+    try {
+      const stream = await gemini.models.generateContentStream({ model, contents, config: {
+        systemInstruction: SYSTEM, maxOutputTokens: 8192, abortSignal: ctl.signal, ...(thinking ? { thinkingConfig: thinking } : {}) } });
+      for await (const chunk of stream) {
+        const t = chunk.text;
+        if (t) {
+          if (!any) { clearTimeout(cap); setTimeout(() => ctl.abort(), left()); } // answer started: allow the rest of the time
+          any = true; onText(t);
         }
-        if (e?.status !== 404) throw e;
-        const next = await pickGeminiModel().catch(() => null);
-        if (!next || next === (geminiModel || GEMINI_MODEL)) throw e;
-        console.error("[ai] Gemini model", geminiModel || GEMINI_MODEL, "not found; using", next);
-        geminiModel = next; model = next;
+        finish = chunk.candidates?.[0]?.finishReason || finish;
+        blocked = chunk.promptFeedback?.blockReason || blocked;
       }
+      clearTimeout(cap);
+      break; // done
+    } catch (e) {
+      clearTimeout(cap);
+      lastErr = e;
+      if (any) { // it had started: keep what we have
+        onText(ctl.signal.aborted ? "\n\n_(Stopped: the AI took too long to finish.)_" : "\n\n_(The answer was cut off. Try again.)_");
+        return { stopReason: "partial" };
+      }
+      const slow = ctl.signal.aborted;
+      if (e?.status === 400 && /thinking/i.test(e.message) && thinking) { thinking = thinking.thinkingLevel === "MINIMAL" ? { thinkingLevel: "LOW" } : null; continue; }
+      if (e?.status === 404) {
+        const next = await pickGeminiModel().catch(() => null);
+        if (!next || next === model) throw e;
+        console.error("[ai] Gemini model", model, "not found; using", next);
+        geminiModel = next; model = next; continue;
+      }
+      if (slow || busy(e)) {
+        // Overloaded or stuck: try the next Flash model (lite ones are usually the least busy)
+        tried.add(model);
+        const alt = (await flashModels().catch(() => [])).find((n) => !tried.has(n));
+        console.error("[ai]", model, slow ? "too slow to start" : "busy", alt ? "; trying " + alt : "; no other model");
+        if (alt) model = alt; else if (!slow) await new Promise((r) => setTimeout(r, 1000));
+        continue;
+      }
+      throw e;
     }
-    for await (const chunk of stream) {
-      const t = chunk.text;
-      if (t) { any = true; onText(t); }
-      finish = chunk.candidates?.[0]?.finishReason || finish;
-      blocked = chunk.promptFeedback?.blockReason || blocked;
-    }
-  } catch (e) {
-    if (!abort.signal.aborted) throw e;
-    onText(any ? "\n\n_(The AI took too long and was stopped. Try a shorter question.)_" : "The AI took too long to answer. Try again, or ask a shorter question.");
+  }
+  if (!any && !finish) {
+    if (lastErr && !busy(lastErr) && !(lastErr.name === "AbortError" || /abort/i.test(lastErr.message || ""))) throw lastErr;
+    onText("Google's AI is very busy right now and didn't answer in time (we tried " + (tried.size || 1) + " model" + (tried.size > 1 ? "s" : "") + "). Try again in a minute.");
     return { stopReason: "timeout" };
-  } finally { clearTimeout(timer); }
+  }
   if (blocked || finish === "SAFETY" || finish === "PROHIBITED_CONTENT") onText("\n\n_The AI declined to answer this one. Try rephrasing the question._");
   else if (finish === "MAX_TOKENS") onText("\n\n_(Answer cut off — try a narrower question.)_");
   else if (!any) onText("_The AI didn't return an answer. Try again._");
@@ -175,7 +189,7 @@ async function diagnose() {
   });
   const model = geminiModel || GEMINI_MODEL;
   await step(`one-line answer from ${model} (no streaming)`, async () => {
-    const r = await g.models.generateContent({ model, contents: "Reply with just: OK", config: { maxOutputTokens: 50, thinkingConfig: { thinkingLevel: "LOW" } } });
+    const r = await g.models.generateContent({ model, contents: "Reply with just: OK", config: { maxOutputTokens: 50, thinkingConfig: { thinkingLevel: "MINIMAL" } } });
     return JSON.stringify({ text: r.text, finishReason: r.candidates?.[0]?.finishReason || null });
   });
   await step(`streamed answer from ${model}`, async () => {

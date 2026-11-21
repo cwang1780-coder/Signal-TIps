@@ -129,7 +129,7 @@
 
   // ── Me tab: account panel ──
   function planLine(p) {
-    if (p.kind === "owner") return `<span class="plan-badge pro">Owner</span> Everything is unlocked for you. <a href="/admin" class="admin-link">Open the admin panel →</a>`;
+    if (p.kind === "owner") return `<span class="plan-badge pro">Owner</span> Everything is unlocked for you.${user?.admin ? ` <a href="/admin" class="admin-link">Open the admin panel →</a>` : ""}`;
     if (p.kind === "comp") return `<span class="plan-badge pro">Pro</span> ${p.until ? "Free until " + new Date(p.until).toLocaleDateString(undefined, { month: "short", day: "numeric" }) : "Free, courtesy of the site"}.`;
     if (p.kind === "trial") return `<span class="plan-badge pro">Pro trial</span> Ends ${new Date(p.until).toLocaleDateString(undefined, { month: "short", day: "numeric" })}.`;
     if (p.kind === "subscription") return `<span class="plan-badge pro">Pro</span> ${p.cancelAtPeriodEnd ? "Ends" : "Renews"} ${p.periodEnd ? new Date(p.periodEnd * 1000).toLocaleDateString(undefined, { month: "short", day: "numeric" }) : ""}.`;
