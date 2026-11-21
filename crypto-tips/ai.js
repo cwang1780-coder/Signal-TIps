@@ -1,8 +1,11 @@
-// "Ask AI" — answers questions about the app's live signals and your holdings using Claude.
-// Server-side only: the Anthropic API key never reaches the browser.
+// "Ask AI" — answers questions about the app's live signals and your holdings.
+// Two providers: Claude (ANTHROPIC_API_KEY) or Google Gemini (GEMINI_API_KEY, has a free tier).
+// Gemini is used when its key is set, unless AI_PROVIDER=anthropic. Server-side only: keys never reach the browser.
 const Anthropic = require("@anthropic-ai/sdk").default;
 
 const MODEL = process.env.AI_MODEL || "claude-opus-5-5";
+const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-flash-latest"; // Google's alias for its current Flash model
+const provider = () => (process.env.GEMINI_API_KEY && process.env.AI_PROVIDER !== "anthropic" ? "gemini" : "anthropic");
 
 const SYSTEM = `You are the assistant inside "Crypto Signal Tips", a personal app that rates coins BUY/SELL/HOLD from technical indicators on live Coinbase data and shows the user's holdings.
 
@@ -33,7 +36,29 @@ function getClient() {
 }
 
 function hasCredentials() {
-  return Boolean(process.env.ANTHROPIC_API_KEY || process.env.ANTHROPIC_AUTH_TOKEN || process.env.ANTHROPIC_PROFILE);
+  return Boolean(process.env.GEMINI_API_KEY || process.env.ANTHROPIC_API_KEY || process.env.ANTHROPIC_AUTH_TOKEN || process.env.ANTHROPIC_PROFILE);
+}
+
+let gemini;
+// Gemini: same system prompt and messages; its roles are "user" and "model"
+async function askGemini({ question, history, snapshot }, onText) {
+  const { GoogleGenAI } = require("@google/genai");
+  if (!gemini) gemini = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY, ...(process.env.GEMINI_BASE_URL ? { httpOptions: { baseUrl: process.env.GEMINI_BASE_URL } } : {}) });
+  const contents = buildMessages({ question, history, snapshot }).map((m) => ({ role: m.role === "assistant" ? "model" : "user", parts: [{ text: m.content }] }));
+  const stream = await gemini.models.generateContentStream({
+    model: GEMINI_MODEL, contents, config: { systemInstruction: SYSTEM, maxOutputTokens: 8192 },
+  });
+  let finish = null, blocked = null, any = false;
+  for await (const chunk of stream) {
+    const t = chunk.text;
+    if (t) { any = true; onText(t); }
+    finish = chunk.candidates?.[0]?.finishReason || finish;
+    blocked = chunk.promptFeedback?.blockReason || blocked;
+  }
+  if (blocked || finish === "SAFETY" || finish === "PROHIBITED_CONTENT") onText("\n\n_The AI declined to answer this one. Try rephrasing the question._");
+  else if (finish === "MAX_TOKENS") onText("\n\n_(Answer cut off — try a narrower question.)_");
+  else if (!any) onText("_The AI didn't return an answer. Try again._");
+  return { stopReason: finish };
 }
 
 // history: [{role:"user"|"assistant", content:string}] (previous turns, plain text)
@@ -59,6 +84,7 @@ function buildMessages({ question, history = [], snapshot }) {
 
 // Streams the answer as plain text via onText. Returns { stopReason }.
 async function ask({ question, history, snapshot }, onText) {
+  if (provider() === "gemini") return askGemini({ question, history, snapshot }, onText);
   const stream = getClient().beta.messages.stream({
     model: MODEL,
     max_tokens: 16000,
@@ -82,6 +108,14 @@ async function ask({ question, history, snapshot }, onText) {
 }
 
 function friendlyError(e) {
+  const G = (() => { try { return require("@google/genai").ApiError; } catch { return null; } })();
+  if (G && e instanceof G) {
+    if (e.status === 400 && /api key/i.test(e.message)) return "The Gemini API key was rejected. Check GEMINI_API_KEY.";
+    if (e.status === 401 || e.status === 403) return "The Gemini API key was rejected or can't use this model. Check GEMINI_API_KEY.";
+    if (e.status === 429) return "The free Gemini limit is used up for now. Wait a minute (or until tomorrow for the daily limit) and try again.";
+    if (e.status === 400 || e.status === 404) return `AI service error (${e.status}): ${String(e.message).slice(0, 300)}`;
+    return `AI service error (${e.status}). Try again shortly.`;
+  }
   if (e instanceof Anthropic.AuthenticationError) return "The Anthropic API key was rejected. Check ANTHROPIC_API_KEY.";
   if (e instanceof Anthropic.PermissionDeniedError) return "This API key can't use the AI model. Check your Anthropic account.";
   if (e instanceof Anthropic.RateLimitError) return "Too many AI requests right now — wait a moment and try again.";
@@ -97,4 +131,4 @@ function friendlyError(e) {
   return "AI request failed: " + (e?.message || e);
 }
 
-module.exports = { ask, buildMessages, friendlyError, hasCredentials, SYSTEM, MODEL };
+module.exports = { ask, buildMessages, friendlyError, hasCredentials, provider, SYSTEM, MODEL, GEMINI_MODEL };
