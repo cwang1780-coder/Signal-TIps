@@ -42,13 +42,20 @@ function hasCredentials() {
 
 let gemini, geminiModel = null;
 // If Google retires or renames the model, ask which models this key can use and take the newest "gemini-X-flash"
-async function pickGeminiModel() {
+// Flash models this key can use, newest first; "-lite" versions after the full ones (cached for 30 minutes)
+let flashCache = { at: 0, list: [] };
+async function flashModels() {
+  if (flashCache.list.length && Date.now() - flashCache.at < 30 * 60_000) return flashCache.list;
   const pager = await gemini.models.list();
   const names = (pager.page || []).filter((m) => !m.supportedActions || m.supportedActions.includes("generateContent"))
-    .map((m) => String(m.name || "").replace(/^models\//, "")).filter((n) => /^gemini-\d+(\.\d+)?-flash$/.test(n));
-  names.sort((a, b) => parseFloat(b.match(/\d+(\.\d+)?/)[0]) - parseFloat(a.match(/\d+(\.\d+)?/)[0]));
-  return names[0] || null;
+    .map((m) => String(m.name || "").replace(/^models\//, "")).filter((n) => /^gemini-\d+(\.\d+)?-flash(-lite)?$/.test(n));
+  const ver = (n) => parseFloat(n.match(/\d+(\.\d+)?/)[0]);
+  names.sort((a, b) => (a.endsWith("-lite") - b.endsWith("-lite")) || ver(b) - ver(a));
+  flashCache = { at: Date.now(), list: names };
+  return names;
 }
+async function pickGeminiModel() { return (await flashModels()).find((n) => !n.endsWith("-lite")) || null; }
+const busy = (e) => [500, 502, 503, 504].includes(e?.status) || /overloaded|unavailable|high demand/i.test(e?.message || "");
 // Gemini: same system prompt and messages; its roles are "user" and "model"
 async function askGemini({ question, history, snapshot }, onText) {
   const { GoogleGenAI } = require("@google/genai");
@@ -62,16 +69,27 @@ async function askGemini({ question, history, snapshot }, onText) {
   let finish = null, blocked = null, any = false;
   try {
     let stream;
+    let model = geminiModel || GEMINI_MODEL;
+    const tried = new Set();
     for (let attempt = 0; ; attempt++) {
-      try { stream = await start(geminiModel || GEMINI_MODEL); break; }
+      try { stream = await start(model); break; }
       catch (e) {
-        if (attempt > 2) throw e;
+        if (attempt > 5 || abort.signal.aborted) throw e;
         if (e?.status === 400 && /thinking/i.test(e.message) && light) { light = false; continue; }
+        // Google's servers busy (common on the free tier): wait a moment and retry, then try another Flash model
+        if (busy(e)) {
+          tried.add(model);
+          await new Promise((r) => setTimeout(r, 800 + attempt * 700));
+          if (tried.size === 1 && attempt === 0) continue; // one retry on the same model first
+          const alt = (await flashModels().catch(() => [])).find((n) => !tried.has(n));
+          if (alt) { console.error("[ai]", model, "busy; trying", alt); model = alt; }
+          continue;
+        }
         if (e?.status !== 404) throw e;
         const next = await pickGeminiModel().catch(() => null);
         if (!next || next === (geminiModel || GEMINI_MODEL)) throw e;
         console.error("[ai] Gemini model", geminiModel || GEMINI_MODEL, "not found; using", next);
-        geminiModel = next;
+        geminiModel = next; model = next;
       }
     }
     for await (const chunk of stream) {
@@ -176,6 +194,7 @@ function friendlyError(e) {
     if (e.status === 400 && /api key/i.test(e.message)) return "The Gemini API key was rejected. Check GEMINI_API_KEY.";
     if (e.status === 401 || e.status === 403) return "The Gemini API key was rejected or can't use this model. Check GEMINI_API_KEY.";
     if (e.status === 429) return "The free Gemini limit is used up for now. Wait a minute (or until tomorrow for the daily limit) and try again.";
+    if ([500, 502, 503, 504].includes(e.status)) return "Google's AI is overloaded right now (that's on Google's side). We tried several times and a backup model. Try again in a minute.";
     if (e.status === 400 || e.status === 404) return `AI service error (${e.status}): ${String(e.message).slice(0, 300)}`;
     return `AI service error (${e.status}). Try again shortly.`;
   }

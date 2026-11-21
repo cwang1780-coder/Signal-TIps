@@ -12,6 +12,7 @@ const mock = http.createServer(async (req, res) => {
       { name: "models/gemini-9.9-flash-tts", supportedGenerationMethods: ["generateContent"] }, { name: "models/gemini-12-flash", supportedGenerationMethods: ["embedContent"] } ] }));
   }
   captured = { url: req.url, headers: req.headers, body: JSON.parse(body) };
+  if ((mode === "busy" && req.url.includes("gemini-3.8-flash")) || mode === "allbusy") { res.writeHead(503, { "Content-Type": "application/json" }); return res.end(JSON.stringify({ error: { code: 503, message: "The model is overloaded. Please try again later.", status: "UNAVAILABLE" } })); }
   if (mode === "404" && req.url.includes("gemini-3.8-flash")) { res.writeHead(404, { "Content-Type": "application/json" }); return res.end(JSON.stringify({ error: { code: 404, message: "models/gemini-3.8-flash is not found", status: "NOT_FOUND" } })); }
   if (mode === "429") { res.writeHead(429, { "Content-Type": "application/json" }); return res.end(JSON.stringify({ error: { code: 429, message: "Resource exhausted", status: "RESOURCE_EXHAUSTED" } })); }
   if (req.url.includes(":generateContent")) { res.writeHead(200, { "Content-Type": "application/json" }); return res.end(JSON.stringify({ candidates: [{ content: { role: "model", parts: [{ text: "OK" }] }, finishReason: "STOP" }] })); }
@@ -49,6 +50,15 @@ const mock = http.createServer(async (req, res) => {
   mode = "safety"; out = "";
   await ai.ask({ question: "x", snapshot: {} }, (t) => (out += t));
   assert.ok(out.includes("declined"));
+
+  // Google busy (503): retries, then answers from another Flash model
+  mode = "busy"; out = "";
+  await ai.ask({ question: "x", snapshot: {} }, (t) => (out += t));
+  assert.strictEqual(out, "BTC looks **weak**.");
+  assert.ok(captured.url.includes("gemini-9.1-flash:streamGenerateContent"), captured.url);
+  // Everything busy: a clear message, not "error 503"
+  mode = "allbusy";
+  await assert.rejects(ai.ask({ question: "x", snapshot: {} }, () => {}), (e) => /overloaded right now/.test(ai.friendlyError(e)));
 
   mode = "429";
   await assert.rejects(ai.ask({ question: "x", snapshot: {} }, () => {}), (e) => /free Gemini limit/.test(ai.friendlyError(e)));

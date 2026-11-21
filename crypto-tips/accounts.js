@@ -56,9 +56,13 @@ function passwordProblem(pw) {
 
 // ── sessions (stateless, signed) ──
 function makeToken(id) {
-  const body = b64url(JSON.stringify({ id, exp: Date.now() + SESSION_DAYS * 864e5 }));
+  const body = b64url(JSON.stringify({ id, iat: Date.now(), exp: Date.now() + SESSION_DAYS * 864e5 }));
   const sig = b64url(crypto.createHmac("sha256", secret()).update(body).digest());
   return `${body}.${sig}`;
+}
+// When a session token was issued (0 for tokens made before this was recorded)
+function tokenIssued(tok) {
+  try { return JSON.parse(Buffer.from(String(tok).split(".")[0].replace(/-/g, "+").replace(/_/g, "/"), "base64").toString()).iat || 0; } catch { return 0; }
 }
 function readToken(tok) {
   const [body, sig] = String(tok || "").split(".");
@@ -111,12 +115,18 @@ async function login(email, password) {
   // Same message and similar timing whether or not the account exists.
   const ok = u ? checkPassword(String(password || ""), u.pw) : (checkPassword("x", hashPassword("y")), false);
   if (!ok) throw err(401, "Wrong email or password.");
+  if (u.banned) throw err(403, "This account has been suspended. Contact the site owner.");
+  u.lastLogin = Date.now();
+  await saveUser(u).catch(() => {});
   return u;
 }
 
 async function userFromRequest(req) {
-  const id = readToken(cookieValue(req));
-  return id ? getUser(id) : null;
+  const tok = cookieValue(req), id = readToken(tok);
+  const u = id ? await getUser(id) : null;
+  if (!u || u.banned) return null; // suspended accounts are signed out
+  if (u.sessionsFrom && tokenIssued(tok) < u.sessionsFrom) return null; // password was reset: older sessions end
+  return u;
 }
 
 const owners = () => [...String(process.env.OWNER_EMAILS || "").split(",").map(normEmail).filter(Boolean), ...ownerSeeds().map((o) => o.name)];
@@ -130,6 +140,8 @@ async function planOf(u) {
     if (c.ok) return { pro: true, kind: "subscription", aiLimit: pro.monthlyLimit(), cancelAtPeriodEnd: c.cancelAtPeriodEnd, periodEnd: c.periodEnd, status: c.status };
     if (c.status) return { pro: false, kind: "lapsed", status: c.status, reason: c.reason, trialUsed: Boolean(u.trialEnds) };
   }
+  // Free Pro given by the owner in the admin panel
+  if (u.comp && (u.comp.until == null || u.comp.until > Date.now())) return { pro: true, kind: "comp", until: u.comp.until, aiLimit: pro.monthlyLimit() };
   if (u.trialEnds && u.trialEnds > Date.now()) return { pro: true, kind: "trial", until: u.trialEnds, aiLimit: TRIAL_AI_LIMIT };
   return { pro: false, kind: "free", trialUsed: Boolean(u.trialEnds) };
 }
