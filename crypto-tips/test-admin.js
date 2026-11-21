@@ -22,13 +22,13 @@ const admin = (op, body) => call("admin", { op, method: body ? "POST" : "GET", b
 let boss;
 
 (async () => {
-  boss = (await call("signup", { method: "POST", body: { email: "boss@example.com", password: "bosspass123" } })).cookie;
-  const sam = await call("signup", { method: "POST", body: { email: "sam@example.com", password: "sampass123" } });
-  await call("signup", { method: "POST", body: { email: "kim@example.com", password: "kimpass123" } });
+  boss = (await call("signup", { method: "POST", body: { email: "boss@example.com", username: "boss", password: "bosspass123" } })).cookie;
+  const sam = await call("signup", { method: "POST", body: { email: "sam@example.com", username: "sam", password: "sampass123" } });
+  await call("signup", { method: "POST", body: { email: "kim@example.com", username: "kim", password: "kimpass123" } });
 
   // Only the admin account gets in: not regular users, not other owners
   assert.strictEqual((await call("admin", { cookie: sam.cookie })).status, 403);
-  const eason = (await call("signup", { method: "POST", body: { email: "eason@example.com", password: "easonpass1" } })).cookie;
+  const eason = (await call("signup", { method: "POST", body: { email: "eason@example.com", username: "eason", password: "easonpass1" } })).cookie;
   assert.strictEqual((await call("admin", { cookie: eason })).status, 403, "another owner can't open the admin panel");
   assert.strictEqual((await call("me", { cookie: eason })).body.user.admin, undefined);
   assert.strictEqual((await call("me", { cookie: boss })).body.user.admin, true);
@@ -62,7 +62,7 @@ let boss;
   r = await admin("user", { id: samId, action: "suspend" });
   assert.strictEqual(r.body.user.suspended, true);
   assert.strictEqual((await call("me", { cookie: sam.cookie })).body.user, null, "suspended sessions end");
-  assert.strictEqual((await call("login", { method: "POST", body: { email: "sam@example.com", password: "sampass123" } })).status, 403);
+  assert.strictEqual((await call("login", { method: "POST", body: { email: "sam@example.com", username: "sam", password: "sampass123" } })).status, 403);
   await admin("user", { id: samId, action: "unsuspend" });
 
   // Temporary password: old password and old sessions stop working, the new one works
@@ -70,8 +70,8 @@ let boss;
   const temp = r.body.tempPassword;
   assert.ok(/^[A-Za-z0-9]{8,}$/.test(temp));
   assert.strictEqual((await call("me", { cookie: sam.cookie })).body.user, null, "old sessions are signed out");
-  assert.strictEqual((await call("login", { method: "POST", body: { email: "sam@example.com", password: "sampass123" } })).status, 401);
-  const again = await call("login", { method: "POST", body: { email: "sam@example.com", password: temp } });
+  assert.strictEqual((await call("login", { method: "POST", body: { email: "sam@example.com", username: "sam", password: "sampass123" } })).status, 401);
+  const again = await call("login", { method: "POST", body: { email: "sam@example.com", username: "sam", password: temp } });
   assert.strictEqual(again.status, 200);
   assert.ok((await call("me", { cookie: again.cookie })).body.user, "a fresh session works");
 

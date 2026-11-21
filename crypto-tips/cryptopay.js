@@ -29,6 +29,9 @@ const ADDR_RE = { CRYPTO_SOL_ADDRESS: /^[1-9A-HJ-NP-Za-km-z]{32,44}$/, CRYPTO_ET
 const addressFor = (m) => { const a = String(process.env[METHODS[m].env] || "").trim(); return ADDR_RE[METHODS[m].env].test(a) ? a : null; };
 const priceUsd = () => Math.max(1, Math.min(1000, parseFloat(process.env.CRYPTO_PRO_PRICE_USD) || 5));
 const days = () => Math.max(1, Math.min(366, parseInt(process.env.CRYPTO_PRO_DAYS, 10) || 30));
+// The small deposit for a 7-day trial. It's kept as credit and taken off their first month.
+const depositUsd = () => Math.max(0.5, Math.min(50, parseFloat(process.env.TRIAL_DEPOSIT_USD) || 1));
+const DEPOSIT_TRIAL_DAYS = 7;
 const enabled = () => db.available() && Object.keys(METHODS).some(addressFor);
 const err = (status, message) => Object.assign(new Error(message), { status });
 const hashKey = (chain, tx) => "cryptopay/used/" + crypto.createHash("sha256").update(chain + ":" + tx).digest("hex").slice(0, 40) + ".json";
@@ -52,10 +55,13 @@ async function spotUsd(sym) {
   return v;
 }
 
-async function quote(user, method) {
+async function quote(user, method, purpose = "pro") {
   const m = METHODS[method], address = m && addressFor(method);
   if (!address) throw err(400, "That coin isn't available for payment.");
-  const usd = priceUsd();
+  if (purpose === "deposit" && user.trialEnds) throw err(409, "You've already used your trial on this account.");
+  // A deposit is small; a Pro payment has any deposit credit taken off
+  const credit = purpose === "deposit" ? 0 : Math.min(user.credit || 0, priceUsd() - 0.5);
+  const usd = purpose === "deposit" ? depositUsd() : Math.round((priceUsd() - credit) * 100) / 100;
   // The unique tail is always worth well under a dollar: up to 999 sats for BTC, otherwise up to 9999 of the last digits
   const tail = BigInt(crypto.randomInt(1, m.spot === "BTC" ? 999 : 9999));
   let units;
@@ -67,9 +73,10 @@ async function quote(user, method) {
     units = (BigInt(Math.ceil((usd / px) * 10 ** keep)) + tail) * scale;
   }
   const id = crypto.randomBytes(12).toString("hex");
-  const inv = { id, user: user.id, method, address, units: units.toString(), amount: fmtUnits(units, m.decimals), usd, created: Date.now(), expires: Date.now() + 3 * 3600e3 };
+  const inv = { id, user: user.id, method, purpose: purpose === "deposit" ? "deposit" : "pro", creditUsed: credit, address, units: units.toString(), amount: fmtUnits(units, m.decimals), usd, created: Date.now(), expires: Date.now() + 3 * 3600e3 };
   await db.putJSON(`cryptopay/invoices/${id}.json`, inv);
-  return { invoice: id, method, label: m.label, network: m.network, asset: m.short, address, amount: inv.amount, usd, days: days(), expires: inv.expires, note: m.note || null };
+  return { invoice: id, method, purpose: inv.purpose, label: m.label, network: m.network, asset: m.short, address, amount: inv.amount, usd, creditUsed: credit,
+    days: inv.purpose === "deposit" ? DEPOSIT_TRIAL_DAYS : days(), expires: inv.expires, note: m.note || null };
 }
 
 const rpc = async (url, method, params) => {
@@ -155,10 +162,18 @@ async function verify(user, invoiceId, txRaw, saveUser) {
   await db.putJSON(hashKey(chain, tx), { invoice: inv.id, user: user.id, at: Date.now() });
   inv.paid = { tx, at: Date.now() };
   await db.putJSON(`cryptopay/invoices/${inv.id}.json`, inv);
+  user.payments = [...(user.payments || []), { method: inv.method, amount: inv.amount, usd: inv.usd, tx, at: Date.now(), purpose: inv.purpose || "pro" }].slice(-50);
+  if (inv.purpose === "deposit") {
+    // 7-day trial, and the deposit becomes credit off the first month (if they'd already had a trial, it's just credit)
+    if (!user.trialEnds) { user.trialEnds = Date.now() + DEPOSIT_TRIAL_DAYS * 864e5; user.trialDeposit = true; }
+    user.credit = Math.round(((user.credit || 0) + inv.usd) * 100) / 100;
+    await saveUser(user);
+    return { ok: true, deposit: true, until: user.trialEnds, credit: user.credit, amount: inv.amount, asset: m.short };
+  }
+  user.credit = Math.max(0, Math.round(((user.credit || 0) - (inv.creditUsed || 0)) * 100) / 100);
   user.cryptoUntil = Math.max(user.cryptoUntil || 0, Date.now()) + days() * 864e5;
-  user.payments = [...(user.payments || []), { method: inv.method, amount: inv.amount, usd: inv.usd, tx, at: Date.now() }].slice(-50);
   await saveUser(user);
-  return { ok: true, until: user.cryptoUntil, amount: inv.amount, asset: m.short };
+  return { ok: true, until: user.cryptoUntil, amount: inv.amount, asset: m.short, creditUsed: inv.creditUsed || 0 };
 }
 
-module.exports = { enabled, publicConfig, quote, verify, METHODS, fmtUnits };
+module.exports = { enabled, publicConfig, quote, verify, depositUsd, METHODS, fmtUnits };

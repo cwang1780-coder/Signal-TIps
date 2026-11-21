@@ -91,6 +91,29 @@ const pad = (a) => "0x" + a.slice(2).toLowerCase().padStart(64, "0");
   assert.ok((await cp.verify(await accounts.getUser(bob.id), q5.invoice, tokTx, accounts.saveUser)).ok);
   assert.strictEqual((await accounts.getUser(bob.id)).payments.length, 3);
 
+  // 7-day trial with a $1 deposit, which then comes off the first month
+  let cara = await accounts.signup("cara@example.com", "carapass12");
+  const dq = await cp.quote(cara, "usdc-sol", "deposit");
+  assert.strictEqual(dq.purpose, "deposit");
+  assert.strictEqual(dq.days, 7);
+  assert.ok(/^1\.00\d{2,4}$/.test(dq.amount), dq.amount);
+  const dsig = "4".repeat(88);
+  txs[dsig] = solUsdc(SOL_ADDR, units(dq.amount, 6));
+  const dr = await cp.verify(cara, dq.invoice, dsig, accounts.saveUser);
+  assert.ok(dr.deposit && dr.until > Date.now() + 6.9 * 864e5, "7-day trial");
+  cara = await accounts.getUser(cara.id);
+  assert.strictEqual(cara.credit, 1);
+  assert.strictEqual((await accounts.planOf(cara)).kind, "trial");
+  await assert.rejects(cp.quote(cara, "usdc-sol", "deposit"), /already used your trial/);
+  const pq = await cp.quote(cara, "usdc-sol");
+  assert.ok(/^4\.00\d{2,4}$/.test(pq.amount), "first month is $5 minus the $1 deposit: " + pq.amount);
+  const psig = "3".repeat(88);
+  txs[psig] = solUsdc(SOL_ADDR, units(pq.amount, 6));
+  await cp.verify(cara, pq.invoice, psig, accounts.saveUser);
+  cara = await accounts.getUser(cara.id);
+  assert.strictEqual(cara.credit, 0, "credit used up");
+  assert.strictEqual((await cp.quote(cara, "usdc-sol")).usd, 5, "back to the full price after");
+
   // Off when no address is set
   delete process.env.CRYPTO_SOL_ADDRESS; delete process.env.CRYPTO_ETH_ADDRESS; delete process.env.CRYPTO_BTC_ADDRESS;
   assert.strictEqual(cp.publicConfig(), null);

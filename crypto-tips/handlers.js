@@ -13,6 +13,16 @@ const accounts = require("./accounts.js");
 const push = require("./push.js");
 const admin = require("./admin.js");
 const cryptopay = require("./cryptopay.js");
+const oauth = require("./oauth.js");
+
+// The body of a form POST (Apple's sign-in callback), whether or not the platform already parsed it
+async function readForm(req) {
+  if (req.body && typeof req.body === "object") return req.body;
+  if (typeof req.body === "string") return Object.fromEntries(new URLSearchParams(req.body));
+  let body = "";
+  for await (const chunk of req) { body += chunk; if (body.length > 20_000) break; }
+  return Object.fromEntries(new URLSearchParams(body));
+}
 
 const ON_VERCEL = Boolean(process.env.VERCEL);
 let cache = { at: 0, data: null };
@@ -335,6 +345,22 @@ async function accountHandler(req, res) {
   if (!accounts.available()) return send(503, { reason: "Accounts aren't set up on this site yet." });
   const host = req.headers.host || "";
   if (!/^[a-z0-9.-]+(:\d+)?$/i.test(host)) return send(400, { reason: "Bad host" });
+  // Sign in with Google / Apple: these are browser redirects, not JSON calls
+  if (action === "oauth" || action === "oauthCallback") {
+    const q = new URL(req.url, "http://x").searchParams, provider = q.get("provider");
+    const go = (location, cookies) => { res.writeHead(302, { Location: location, "Cache-Control": "no-store", ...(cookies ? { "Set-Cookie": cookies } : {}) }); res.end(); };
+    try {
+      if (action === "oauth") { const s = oauth.start(provider, originOf(req), isHttps(req)); return go(s.location, [s.cookie]); }
+      const params = req.method === "POST" ? await readForm(req) : Object.fromEntries(q);
+      const who = await oauth.finish(provider, params, req.headers.cookie, originOf(req));
+      const u = await accounts.oauthUser(provider, who.email, who.sub);
+      u.lastSeen = 0; await accounts.touch(u, req).catch(() => {});
+      return go("/?signedIn=" + provider, [accounts.sessionCookie(accounts.makeToken(u.id), isHttps(req)), who.clearCookie]);
+    } catch (e) {
+      if (!e.status) console.error("[oauth]", provider, e.message);
+      return go("/?authError=" + encodeURIComponent(e.status ? e.message : "Sign-in failed. Try again."));
+    }
+  }
   // Changes must be same-site JSON posts (blocks other websites from acting for a signed-in visitor).
   if (req.method === "POST" || req.method === "PUT") {
     const origin = req.headers.origin;
@@ -345,7 +371,7 @@ async function accountHandler(req, res) {
       if (req.method !== "POST") return send(405, { reason: "POST only" });
       const b = await readJson(req);
       if (action === "login") await new Promise((r) => setTimeout(r, 300)); // slow down password guessing
-      const u = action === "signup" ? await accounts.signup(b.email, b.password) : await accounts.login(b.email, b.password);
+      const u = action === "signup" ? await accounts.signup(b.email, b.password, String(b.username ?? "")) : await accounts.login(b.email, b.password);
       u.lastSeen = 0; await accounts.touch(u, req).catch(() => {}); // record device, country and the visit
       return send(200, { user: accounts.publicUser(u, await accounts.planOf(u)) }, accounts.sessionCookie(accounts.makeToken(u.id), isHttps(req)));
     }
@@ -378,13 +404,20 @@ async function accountHandler(req, res) {
       if (req.method !== "POST") return send(405, { reason: "POST only" });
       if (!cryptopay.enabled()) return send(503, { reason: "Crypto payments aren't switched on yet." });
       const b = await readJson(req);
-      if (action === "cryptoQuote") return send(200, await cryptopay.quote(u, String(b.method || "")));
+      if (action === "cryptoQuote") return send(200, await cryptopay.quote(u, String(b.method || ""), b.purpose === "deposit" ? "deposit" : "pro"));
       const r = await cryptopay.verify(u, b.invoice, b.tx, accounts.saveUser);
       return send(200, { ...r, user: accounts.publicUser(u, await accounts.planOf(u)) });
     }
     if (action === "sync") {
       if (req.method === "PUT") { const b = await readJson(req); return send(200, { updated: await accounts.savePrefs(u, b.prefs) }); }
       return send(200, { prefs: u.prefs?.data || null, updated: u.prefs?.updated || null });
+    }
+    // Fill in a missing email or username (Google/Apple sign-ups and older accounts)
+    if (action === "profile") {
+      if (req.method !== "POST") return send(405, { reason: "POST only" });
+      const b = await readJson(req);
+      await accounts.completeProfile(u, { email: b.email, username: b.username });
+      return send(200, { user: accounts.publicUser(u, await accounts.planOf(u)) });
     }
     if (action === "password") { const b = await readJson(req); await accounts.changePassword(u, b.current, b.next); return send(200, { ok: true }); }
     if (action === "delete") { const b = await readJson(req); await accounts.deleteAccount(u, b.password); return send(200, { ok: true }, accounts.clearCookie(isHttps(req))); }
@@ -443,6 +476,8 @@ async function configHandler(req, res) {
     accounts: accounts.available(), trialDays: accounts.TRIAL_DAYS, aiConfigured: ai.hasCredentials(), freeTrench: FREE_TRENCH,
     announcement: accounts.available() ? await admin.getAnnouncement().catch(() => null) : null,
     cryptoPay: cryptopay.publicConfig(),
+    oauth: oauth.enabled(),
+    trial: { freeDays: accounts.TRIAL_DAYS, depositDays: accounts.DEPOSIT_TRIAL_DAYS, depositUsd: cryptopay.depositUsd(), depositAvailable: cryptopay.enabled() },
     pushKey: accounts.available() && push.webConfigured() ? push.publicKey() : null, apnsPush: accounts.available() && push.apnsConfigured() }));
 }
 

@@ -8,7 +8,8 @@ const pro = require("./pro.js");
 
 const COOKIE = "st_sess";
 const SESSION_DAYS = 30;
-const TRIAL_DAYS = 7;
+const TRIAL_DAYS = 3;          // free trial, nothing to pay
+const DEPOSIT_TRIAL_DAYS = 7;  // trial with a small deposit (paid in crypto, taken off the first month)
 const TRIAL_AI_LIMIT = 20;
 const PREFS_MAX = 60_000; // bytes of synced settings per account
 
@@ -84,17 +85,78 @@ const clearCookie = (secure) => `${COOKIE}=; Path=/; HttpOnly; SameSite=Lax; Max
 const getUser = (id) => db.getJSON(userKey(id));
 const saveUser = (u) => db.putJSON(userKey(u.id), u);
 
-async function signup(email, password) {
+// Usernames and added emails point at the account they belong to (so either can be used to sign in)
+const usernameKey = (name) => `usernames/${emailId("user:" + normEmail(name))}.json`;
+const emailKey = (email) => `emails/${emailId("mail:" + normEmail(email))}.json`;
+const usernameOf = (u) => u?.username || (u && !isEmail(u.email) ? u.email : null); // old accounts used a username as their login
+const emailOf = (u) => u?.contactEmail || (u && isEmail(u.email) ? u.email : null);
+
+async function usernameTaken(name) {
+  name = normEmail(name);
+  return Boolean(ownerSeed(name) || (await db.getJSON(usernameKey(name))) || (await getUser(emailId(name))));
+}
+async function emailTaken(email) {
   email = normEmail(email);
-  if (!validEmail(email)) throw err(400, "Enter an email address, or a username of 3 to 30 letters and numbers.");
+  return Boolean((await getUser(emailId(email))) || (await db.getJSON(emailKey(email))));
+}
+function usernameProblem(name) {
+  if (!isUsername(String(name || ""))) return "Pick a username of 3 to 30 letters, numbers, dots, dashes or underscores (starting with a letter or number).";
+  return null;
+}
+
+// New accounts need an email AND a username. (Called without a username only by older internal code.)
+async function signup(email, password, username) {
+  email = normEmail(email);
+  if (username !== undefined) {
+    if (!isEmail(email)) throw err(400, "Enter your email address.");
+    const ub = usernameProblem(username);
+    if (ub) throw err(400, ub);
+  } else if (!validEmail(email)) throw err(400, "Enter an email address, or a username of 3 to 30 letters and numbers.");
   const bad = passwordProblem(password);
   if (bad) throw err(400, bad);
   const id = emailId(email);
-  if (await getUser(id) || ownerSeed(email)) throw err(409, "That name is already taken. Sign in instead.");
-  const u = { id, email, pw: hashPassword(password), created: Date.now(), lastLogin: Date.now(), trialEnds: null, subId: null, ai: null, prefs: null };
+  if (await getUser(id) || ownerSeed(email) || (isEmail(email) && (await db.getJSON(emailKey(email))))) throw err(409, isEmail(email) ? "There's already an account with that email. Sign in instead." : "That name is already taken. Sign in instead.");
+  if (username !== undefined && (await usernameTaken(username))) throw err(409, "That username is taken. Try another one.");
+  const u = { id, email, ...(username !== undefined ? { username: normEmail(username) } : {}), pw: hashPassword(password), created: Date.now(), lastLogin: Date.now(), trialEnds: null, subId: null, ai: null, prefs: null };
+  await saveUser(u);
+  if (u.username) await db.putJSON(usernameKey(u.username), { id });
+  return u;
+}
+
+// Sign in with Google or Apple: find the account with that email, or make a new one (it then needs a username)
+async function oauthUser(provider, email, sub) {
+  email = normEmail(email);
+  if (!isEmail(email)) throw err(400, "Your " + provider + " account didn't share an email address.");
+  let u = await getUser(emailId(email));
+  if (!u) { const link = await db.getJSON(emailKey(email)); if (link?.id) u = await getUser(link.id); }
+  if (u?.banned) throw err(403, "This account has been suspended. Contact the site owner.");
+  if (!u) u = { id: emailId(email), email, pw: null, created: Date.now(), trialEnds: null, subId: null, ai: null, prefs: null };
+  u.oauth = { ...(u.oauth || {}), [provider]: String(sub || "").slice(0, 200) };
+  u.lastLogin = Date.now(); u.logins = (u.logins || 0) + 1;
   await saveUser(u);
   return u;
 }
+
+// Fill in what an account is missing: an email (older username-only accounts) or a username (Google/Apple sign-ups)
+async function completeProfile(u, { email, username } = {}) {
+  if (!usernameOf(u)) {
+    const ub = usernameProblem(username);
+    if (ub) throw err(400, ub);
+    if (await usernameTaken(username)) throw err(409, "That username is taken. Try another one.");
+    u.username = normEmail(username);
+    await db.putJSON(usernameKey(u.username), { id: u.id });
+  }
+  if (!emailOf(u)) {
+    email = normEmail(email);
+    if (!isEmail(email)) throw err(400, "Enter your email address.");
+    if (await emailTaken(email)) throw err(409, "That email is already used by another account.");
+    u.contactEmail = email;
+    await db.putJSON(emailKey(email), { id: u.id });
+  }
+  await saveUser(u);
+  return u;
+}
+const needs = (u) => [...(emailOf(u) ? [] : ["email"]), ...(usernameOf(u) ? [] : ["username"])];
 
 // Owner accounts can be set up without a database write: OWNER_ACCOUNT / OWNER_ACCOUNTS = "name:scrypt$salt$hash"
 // (password hashes, never passwords), several separated by ";". Each is created the first time its owner signs in.
@@ -107,14 +169,17 @@ const ownerSeed = (name) => ownerSeeds().find((o) => o.name === name) || null;
 async function login(email, password) {
   email = normEmail(email);
   let u = validEmail(email) ? await getUser(emailId(email)) : null;
+  if (!u && isEmail(email)) { const link = await db.getJSON(emailKey(email)); if (link?.id) u = await getUser(link.id); }
+  if (!u && isUsername(email)) { const link = await db.getJSON(usernameKey(email)); if (link?.id) u = await getUser(link.id); }
   const seed = ownerSeed(email);
   if (!u && seed && checkPassword(String(password || ""), seed.pw)) {
     u = { id: emailId(email), email, pw: seed.pw, created: Date.now(), trialEnds: null, subId: null, ai: null, prefs: null };
     await saveUser(u);
   }
   // Same message and similar timing whether or not the account exists.
+  if (u && !u.pw && u.oauth) throw err(401, `This account signs in with ${Object.keys(u.oauth).map((p) => p[0].toUpperCase() + p.slice(1)).join(" or ")}. Use that button instead.`);
   const ok = u ? checkPassword(String(password || ""), u.pw) : (checkPassword("x", hashPassword("y")), false);
-  if (!ok) throw err(401, "Wrong email or password.");
+  if (!ok) throw err(401, "Wrong email, username or password.");
   if (u.banned) throw err(403, "This account has been suspended. Contact the site owner.");
   u.lastLogin = Date.now();
   u.logins = (u.logins || 0) + 1;
@@ -145,7 +210,7 @@ async function planOf(u) {
   if (u.cryptoUntil && u.cryptoUntil > Date.now()) return { pro: true, kind: "crypto", until: u.cryptoUntil, aiLimit: pro.monthlyLimit() };
   // Free Pro given by the owner in the admin panel
   if (u.comp && (u.comp.until == null || u.comp.until > Date.now())) return { pro: true, kind: "comp", until: u.comp.until, aiLimit: pro.monthlyLimit() };
-  if (u.trialEnds && u.trialEnds > Date.now()) return { pro: true, kind: "trial", until: u.trialEnds, aiLimit: TRIAL_AI_LIMIT };
+  if (u.trialEnds && u.trialEnds > Date.now()) return { pro: true, kind: "trial", until: u.trialEnds, aiLimit: TRIAL_AI_LIMIT, deposit: Boolean(u.trialDeposit) };
   return { pro: false, kind: "free", trialUsed: Boolean(u.trialEnds) };
 }
 
@@ -173,7 +238,7 @@ async function savePrefs(u, prefs) {
 }
 
 async function changePassword(u, current, next) {
-  if (!checkPassword(String(current || ""), u.pw)) throw err(401, "Your current password isn't right.");
+  if (u.pw && !checkPassword(String(current || ""), u.pw)) throw err(401, "Your current password isn't right.");
   const bad = passwordProblem(next);
   if (bad) throw err(400, bad);
   u.pw = hashPassword(next);
@@ -181,8 +246,10 @@ async function changePassword(u, current, next) {
 }
 
 async function deleteAccount(u, password) {
-  if (!checkPassword(String(password || ""), u.pw)) throw err(401, "Enter your password to delete your account.");
+  if (u.pw ? !checkPassword(String(password || ""), u.pw) : String(password || "").toLowerCase() !== "delete") throw err(401, u.pw ? "Enter your password to delete your account." : "Type DELETE to confirm.");
   await db.delKey(userKey(u.id));
+  if (u.username) await db.delKey(usernameKey(u.username)).catch(() => {});
+  if (u.contactEmail) await db.delKey(emailKey(u.contactEmail)).catch(() => {});
 }
 
 // Who can open the admin panel: only these accounts (ADMIN_ACCOUNTS in Vercel, comma separated; default "colin"),
@@ -208,9 +275,10 @@ async function touch(u, req) {
   await saveUser(u);
 }
 
-const publicUser = (u, plan) => ({ email: u.email, created: u.created, plan, aiUsed: aiUsed(u), trialDays: TRIAL_DAYS, ...(isAdmin(u) ? { admin: true } : {}) });
+const publicUser = (u, plan) => ({ email: emailOf(u) || u.email, username: usernameOf(u), needs: needs(u), created: u.created, plan, aiUsed: aiUsed(u), trialDays: TRIAL_DAYS,
+  credit: u.credit || 0, ...(isAdmin(u) ? { admin: true } : {}) });
 
 module.exports = {
-  signup, login, userFromRequest, isAdmin, touch, planOf, startTrial, countAi, aiUsed, savePrefs, changePassword, deleteAccount, saveUser, getUser,
+  signup, login, userFromRequest, isAdmin, touch, oauthUser, completeProfile, usernameOf, emailOf, needs, DEPOSIT_TRIAL_DAYS, planOf, startTrial, countAi, aiUsed, savePrefs, changePassword, deleteAccount, saveUser, getUser,
   makeToken, readToken, sessionCookie, clearCookie, publicUser, hashPassword, checkPassword, emailId, TRIAL_DAYS, available: db.available,
 };

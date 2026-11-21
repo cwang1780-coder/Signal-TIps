@@ -3,7 +3,7 @@
 (function () {
   const $ = (id) => document.getElementById(id);
   const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-  let cfg = null, order = null;
+  let cfg = null, order = null, purpose = "pro", site = null;
   const post = (action, body) => fetch("/api/account?action=" + action, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) })
     .then(async (r) => { const d = await r.json().catch(() => ({})); if (!r.ok) throw new Error(d.reason || "Something went wrong (" + r.status + ")"); return d; });
 
@@ -14,8 +14,10 @@
   }
   function choose() {
     order = null;
-    sheet(`<span class="pro-badge">₿ Pay with crypto</span>
-      <h2>$${cfg.priceUsd} for ${cfg.days} days of Pro</h2>
+    const credit = purpose === "pro" ? window.accountUser?.()?.credit || 0 : 0, t = site?.trial;
+    sheet(`<span class="pro-badge">₿ ${purpose === "deposit" ? "Trial deposit" : "Pay with crypto"}</span>
+      <h2>${purpose === "deposit" ? `$${t?.depositUsd} for a ${t?.depositDays}-day Pro trial` : `$${Math.max(0.5, cfg.priceUsd - credit)} for ${cfg.days} days of Pro`}</h2>
+      ${purpose === "deposit" ? `<p class="small">Your $${t?.depositUsd} comes off your first month of Pro, so it's not an extra cost.</p>` : credit ? `<p class="small">Includes your $${credit} deposit credit.</p>` : ""}
       <p class="muted small">Pay from any wallet (Exodus, Phantom, Coinbase Wallet…). No card, no account with a payment company. Pick a coin:</p>
       <div class="cp-methods">${cfg.methods.map((m) => `<button class="cp-m" data-cp-method="${esc(m.id)}"><b>${esc(m.label)}</b><span class="muted small">${esc(m.network)}${m.note ? " · " + esc(m.note) : ""}</span></button>`).join("")}</div>
       <p class="muted small">It's a one-time payment for ${cfg.days} days. Nothing renews by itself; pay again any time to add more days.</p>`);
@@ -43,7 +45,7 @@
 
   async function start(method) {
     sheet(`<p class="muted">Getting your exact amount…</p>`);
-    try { order = await post("cryptoQuote", { method }); pay(); }
+    try { order = await post("cryptoQuote", { method, purpose }); pay(); }
     catch (e) { sheet(`<p style="color:var(--sell)">${esc(e.message)}</p><button class="pill" data-cp-back>Back</button>`); }
   }
   async function check() {
@@ -52,8 +54,8 @@
     btn.disabled = true; msg.className = "cp-msg small"; msg.textContent = "Checking the blockchain…";
     try {
       const r = await post("cryptoVerify", { invoice: order.invoice, tx });
-      sheet(`<span class="pro-badge">✓ Paid</span><h2>You're Pro!</h2>
-        <p>Thanks! We received ${esc(r.amount || order.amount)} ${esc(r.asset || order.asset)}. Pro is on until <b>${new Date(r.until).toLocaleDateString(undefined, { month: "long", day: "numeric", year: "numeric" })}</b>.</p>
+      sheet(`<span class="pro-badge">✓ Paid</span><h2>${r.deposit ? "Your trial has started!" : "You're Pro!"}</h2>
+        <p>Thanks! We received ${esc(r.amount || order.amount)} ${esc(r.asset || order.asset)}. ${r.deposit ? "Your Pro trial" : "Pro"} is on until <b>${new Date(r.until).toLocaleDateString(undefined, { month: "long", day: "numeric", year: "numeric" })}</b>.${r.deposit ? ` Your $${r.credit} comes off your first month.` : ""}</p>
         <button class="primary pill lg" data-close-sheet>Start using Pro</button>`);
       window.refreshPro?.();
       window.toast?.("Payment received. Pro is on.");
@@ -62,7 +64,9 @@
     }
   }
 
-  window.payWithCrypto = () => {
+  window.payWithCrypto = (p = "pro") => {
+    if (p !== purpose) order = null;
+    purpose = p;
     if (!cfg) return window.toast?.("Crypto payments aren't switched on yet.");
     if (!window.accountUser?.()) { window.toast?.("Create a free account or sign in first, so the payment goes to your account."); return document.querySelector('[data-pw="signup"], [data-auth="signup"]')?.click(); }
     order ? pay() : choose();
@@ -70,11 +74,12 @@
   document.addEventListener("click", async (e) => {
     const m = e.target.closest("[data-cp-method]"); if (m) return start(m.dataset.cpMethod);
     if (e.target.closest("[data-cp-back]")) return choose();
-    if (e.target.closest("[data-crypto-pay]")) return window.payWithCrypto();
+    if (e.target.closest("[data-crypto-pay]")) return window.payWithCrypto("pro");
+    if (e.target.closest("[data-crypto-deposit]")) return window.payWithCrypto("deposit");
     const c = e.target.closest("[data-cp-copy]");
     if (c) { try { await navigator.clipboard.writeText(c.dataset.cpCopy); c.textContent = "Copied ✓"; setTimeout(() => (c.textContent = c.dataset.cpCopy.length > 20 ? "Copy address" : "Copy amount"), 1500); } catch {} }
   });
   document.addEventListener("submit", (e) => { if (e.target.closest("[data-cp-form]")) { e.preventDefault(); check(); } });
   const prev = window.onSiteConfig;
-  window.onSiteConfig = (c) => { prev?.(c); cfg = c.cryptoPay || null; document.querySelectorAll("[data-crypto-pay]").forEach((b) => (b.hidden = !cfg)); };
+  window.onSiteConfig = (c) => { prev?.(c); cfg = c.cryptoPay || null; site = c; document.querySelectorAll("[data-crypto-pay]").forEach((b) => (b.hidden = !cfg)); };
 })();
